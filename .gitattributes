@@ -1,10 +1,17 @@
 .gitattributes text eol=lf
 .gitignore text eol=lf
 
-# Eth
+# Ethereum
 *.sol text eol=lf
+.soliumignore text eol=lf
+.soliumrc.json text eol=lf
 
-# JS
+# Docker
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+
+# HTML/JS
+*.html text eol=lf
 *.js text eol=lf
 *.css text eol=lf
 
