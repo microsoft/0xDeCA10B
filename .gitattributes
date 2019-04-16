@@ -1,0 +1,22 @@
+.gitattributes text eol=lf
+.gitignore text eol=lf
+
+# Eth
+*.sol text eol=lf
+
+# JS
+*.js text eol=lf
+*.css text eol=lf
+
+# Python
+*.py text eol=lf
+
+# Miscellaneous
+*.csv text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.sh text eol=lf
+*.tsv text eol=lf
+*.txt text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
