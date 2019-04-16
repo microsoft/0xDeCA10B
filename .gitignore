@@ -1,3 +1,21 @@
+build/
+
+# DB
+db.sqlite
+
+# Libraries
+SafeMath.sol
+SignedSafeMath.sol
+
+# The blockchain.
+blockchain_db
+
+# Generated contract configs
+client/src/contracts/*.json
+
+# Training
+embedding_cache.json
+
 # Logs
 logs
 *.log
