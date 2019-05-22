@@ -14,6 +14,7 @@ Dockerfile text eol=lf
 *.html text eol=lf
 *.js text eol=lf
 *.css text eol=lf
+yarn.lock text eol=lf
 
 # Python
 *.py text eol=lf

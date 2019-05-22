@@ -1,0 +1,45 @@
+saved_runs/
+
+*.egg-info/
+__pycache__/
+*.py[ucod]
+.project
+.cproject
+*.cover
+.settings
+.pydevproject
+.idea/
+Debug
+.vscode
+
+# OS X
+.DS_Store
+scripts/tmp*
+*.rej
+
+# Git merge conflicts orig files
+*.orig
+*.rej
+
+# Spyder IDE
+.spyderproject
+
+# Logs
+*.log
+logs/
+
+# Temp Files
+*~
+*.back
+*.back1
+*.bak
+*.bak1
+*.swp
+*.temp
+*.tmp
+.~lock*
+*.save
+*.sort
+*.sav
+*.asv
+\#*\#
