@@ -49,6 +49,7 @@ contract('VpaClassifier', function (accounts) {
     // Low default times for testing.
     const refundTimeS = 15;
     const ownerClaimWaitTimeS = 20;
+    const anyAddressClaimWaitTimeS = 20;
     // Weight for deposit cost in wei.
     const costWeight = 1E15;
 
@@ -77,6 +78,7 @@ contract('VpaClassifier', function (accounts) {
     incentiveMechanism = await Stakeable64.new(
       refundTimeS,
       ownerClaimWaitTimeS,
+      anyAddressClaimWaitTimeS,
       costWeight
     );
     console.log(`  Deployed incentive mechanism to ${incentiveMechanism.address}.`);

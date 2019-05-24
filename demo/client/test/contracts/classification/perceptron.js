@@ -8,6 +8,7 @@ contract('CollaborativeTrainer with Perceptron', function (accounts) {
 
   const refundTimeS = 1;
   const ownerClaimWaitTimeS = 2;
+  const anyAddressClaimWaitTimeS = 3;
 
   const classifications = ["Negative", "Positive"];
   const weights = convertData([0, 5, -1]);
@@ -46,6 +47,7 @@ contract('CollaborativeTrainer with Perceptron', function (accounts) {
       return Stakeable64.new(
         refundTimeS,
         ownerClaimWaitTimeS,
+        anyAddressClaimWaitTimeS,
         costWeight
       ).then(inc => {
         incentiveMechanism = inc;
@@ -211,7 +213,7 @@ contract('CollaborativeTrainer with Perceptron', function (accounts) {
                 .then((result) => {
                   var badAddCost = result;
                   return instance.addData([0, 1], 0, { from: badContributor, value: badAddCost }).then((result) => {
-                    var badAddedTime = new Date().getTime();
+                    const badAddedTime = new Date().getTime();
 
                     var e = result.logs.filter(e => e.event == 'AddData')[0];
                     assert.exists(e, "AddData event not found.");
@@ -246,14 +248,14 @@ contract('CollaborativeTrainer with Perceptron', function (accounts) {
                                 });
                               },
                                 // Delay enough time to allow a refund.
-                                Math.max((new Date().getTime() - badAddedTime) + refundTimeS * 1000 + 1 * 1000), 0);
+                                refundTimeS * 1000 - (new Date().getTime() - badAddedTime));
                             });
                           });
                         });
                       });
                     },
                       // Delay enough time to allow a refund.
-                      Math.max((new Date().getTime() - addedTime) + refundTimeS * 1000 + 1 * 1000), 0);
+                      refundTimeS * 1000 - (new Date().getTime() - addedTime));
                   });
                 });
             });

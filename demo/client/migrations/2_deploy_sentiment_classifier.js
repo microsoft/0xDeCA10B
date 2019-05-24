@@ -24,6 +24,7 @@ module.exports = function (deployer) {
 
   // Low default times for testing.
   const refundTimeS = 15;
+  const anyAddressClaimWaitTimeS = 20;
   const ownerClaimWaitTimeS = 20;
   // Weight for deposit cost in wei.
   const costWeight = 1E15;
@@ -50,6 +51,7 @@ module.exports = function (deployer) {
     return deployer.deploy(Stakeable64,
       refundTimeS,
       ownerClaimWaitTimeS,
+      anyAddressClaimWaitTimeS,
       costWeight
     ).then(incentiveMechanism => {
       console.log(`  Deployed incentive mechanism to ${incentiveMechanism.address}.`);
