@@ -286,8 +286,8 @@ class Model extends React.Component {
     return this.state.incentiveMechanism.methods.lastUpdateTimeS().call()
       .then(parseInt)
       .then(lastUpdateTimeS => {
-        var now = new Date().getTime() / 1000;
-        var divisor = now - lastUpdateTimeS;
+        const now = Math.floor(new Date().getTime() / 1000);
+        let divisor = now - lastUpdateTimeS;
         if (divisor === 0) {
           divisor = 1;
         } else {
