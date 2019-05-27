@@ -7,7 +7,7 @@ const DataHandler64 = artifacts.require("./data/DataHandler64");
 const Classifier = artifacts.require("./classification/Perceptron");
 const Stakeable64 = artifacts.require("./incentive/Stakeable64");
 
-module.exports = function (deployer) {
+module.exports = async function (deployer) {
   // Information to persist to the DB.
   const modelInfo = {
     name: "IMDB Review Sentiment Classifier",
@@ -34,12 +34,9 @@ module.exports = function (deployer) {
   var data = fs.readFileSync('./src/ml-models/imdb-sentiment-model.json', 'utf8');
   var model = JSON.parse(data);
 
-  // Don't use all the words since it takes too long to load
-  // and we don't need them all just for simple testing.
-  var maxNumWords = 100;
-
-  // There are 18 decimal places.
-  var weights = convertData(model['coef'].slice(0, maxNumWords));
+  const weights = convertData(model['coef']);
+  const initNumWords = 250;
+  const numWordsPerUpdate = 250;
 
   console.log(`Deploying IMDB model with ${weights.length} weights.`);
   var intercept = web3.utils.toBN(model['intercept'] * toFloat);
@@ -55,8 +52,17 @@ module.exports = function (deployer) {
       costWeight
     ).then(incentiveMechanism => {
       console.log(`  Deployed incentive mechanism to ${incentiveMechanism.address}.`);
+      console.log(`Deploying classifier.`);
       return deployer.deploy(Classifier,
-        classifications, weights, intercept, learningRate).then(classifier => {
+        classifications, weights.slice(0, initNumWords), intercept, learningRate,
+        { gas: 7.9E6 }).then(async classifier => {
+          console.log(`  Deployed classifier to ${classifier.address}.`);
+          for (let i = initNumWords; i < weights.length; i += numWordsPerUpdate) {
+            await classifier.initializeWeights(i, weights.slice(i, i + numWordsPerUpdate),
+              { gas: 7.9E6 });
+            console.log(`  Added weights ${i + numWordsPerUpdate}`);
+          }
+
           console.log(`Deploying collaborative trainer contract.`);
           return deployer.deploy(CollaborativeTrainer64,
             dataHandler.address,

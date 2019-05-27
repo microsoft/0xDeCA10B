@@ -32,8 +32,34 @@ contract Perceptron is Classifier64 {
         }
     }
 
+    /**
+     * Initialize weights for the model.
+     * Made to be called just after the contract is created and never again.
+     * @param startIndex The index to start placing `_weights` into the model's weights.
+     * @param _weights The weights to set for the model.
+     */
+    function initializeWeights(uint64 startIndex, int80[] memory _weights) public onlyOwner {
+        for (uint64 i = 0; i < _weights.length; ++i) {
+            weights[startIndex + i] = _weights[i];
+        }
+    }
+
     function norm(int64[] memory /* data */) public pure returns (uint) {
         revert("Normalization is not required.");
+    }
+
+    function predict(int64[] memory data) public view returns (uint64) {
+        int m = intercept;
+        for (uint i = 0; i < data.length; ++i) {
+            // `update` assumes this check is done.
+            require(data[i] >= 0, "Not all indices are >= 0.");
+            m = m.add(weights[uint64(data[i])]);
+        }
+        if (m <= 0) {
+            return 0;
+        } else {
+            return 1;
+        }
     }
 
     function update(int64[] memory data, uint64 classification) public onlyOwner {
@@ -56,35 +82,6 @@ contract Perceptron is Classifier64 {
                     weights[uint64(data[i])] -= change;
                 }
             }
-        }
-    }
-
-    /**
-     * Check if two arrays of training data are equal.
-     */
-    function isDataEqual(uint24[] memory d1, uint24[] memory d2) public pure returns (bool) {
-        if (d1.length != d2.length) {
-            return false;
-        }
-        for (uint i = 0; i < d1.length; ++i) {
-            if (d1[i] != d2[i]) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    function predict(int64[] memory data) public view returns (uint64) {
-        int m = intercept;
-        for (uint i = 0; i < data.length; ++i) {
-            // `update` assumes this check is done.
-            require(data[i] >= 0, "Not all indices are >= 0.");
-            m = m.add(weights[uint64(data[i])]);
-        }
-        if (m <= 0) {
-            return 0;
-        } else {
-            return 1;
         }
     }
 
