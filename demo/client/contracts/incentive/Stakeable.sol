@@ -62,15 +62,18 @@ contract Stakeable is Ownable, IncentiveMechanism {
     uint128 public totalGoodDataCount = 0;
 
     constructor(
+        // Parameters in chronological order.
         uint32 _refundWaitTimeS,
         uint32 _ownerClaimWaitTimeS,
+        uint32 _anyAddressClaimWaitTimeS,
         uint80 _costWeight
     ) Ownable() public {
-        require(_refundWaitTimeS < _ownerClaimWaitTimeS, "Claim time must be greater than the refund time.");
+        require(_refundWaitTimeS <= _ownerClaimWaitTimeS, "Owner claim wait time must be at least the refund wait time.");
+        require(_ownerClaimWaitTimeS <= _anyAddressClaimWaitTimeS, "Owner claim wait time must be less than the any address claim wait time.");
 
         refundWaitTimeS = _refundWaitTimeS;
         ownerClaimWaitTimeS = _ownerClaimWaitTimeS;
-        anyAddressClaimWaitTimeS = ownerClaimWaitTimeS + 5 days;
+        anyAddressClaimWaitTimeS = _anyAddressClaimWaitTimeS;
         costWeight = _costWeight;
 
         lastUpdateTimeS = now; // solium-disable-line security/no-block-members
@@ -105,8 +108,9 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
     constructor(
         uint32 _refundWaitTimeS,
         uint32 _ownerClaimWaitTimeS,
+        uint32 _anyAddressClaimWaitTimeS,
         uint80 _costWeight
-    ) Stakeable(_refundWaitTimeS, _ownerClaimWaitTimeS, _costWeight) public {
+    ) Stakeable(_refundWaitTimeS, _ownerClaimWaitTimeS, _anyAddressClaimWaitTimeS, _costWeight) public {
         // solium-disable-previous-line no-empty-blocks
     }
 
@@ -129,7 +133,7 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
         // Make sure deposit can be taken.
         require(!claimedBySubmitter, "Deposit already claimed by submitter.");
         require(refundAmount > 0, "There is no reward left to claim.");
-        require(now - addedTime > refundWaitTimeS, "Not enough time has passed."); // solium-disable-line security/no-block-members
+        require(now - addedTime >= refundWaitTimeS, "Not enough time has passed."); // solium-disable-line security/no-block-members
         require(prediction == classification, "The model doesn't agree with your contribution.");
 
         numGoodDataPerAddress[submitter] += 1;
@@ -146,24 +150,32 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
         returns (uint rewardAmount) {
         // Make sure deposit can be taken.
 
-        // Don't allow someone to claim back their own deposit if their data was wrong.
-        // They can still claim it from another address but they will have had to have sent good data from that address.
-        require(reporter != originalAuthor, "Cannot take your own deposit. Ask for a refund instead.");
-
-        require(!claimedByReporter, "Deposit already claimed by reporter.");
         require(claimableAmount > 0, "There is no reward left to claim.");
-        require(now - addedTime > refundWaitTimeS, "Not enough time has passed."); // solium-disable-line security/no-block-members
-        require(prediction != classification, "The model should not agree with the contribution.");
-
-        uint numGoodForReporter = numGoodDataPerAddress[reporter];
-        require(numGoodForReporter > 0, "The sender has not sent any good data.");
-        // Weight the reward by the proportion of good data sent (maybe square the resulting value).
-        // One nice reason to do this is to discourage someone from adding bad data through one address
-        // and then just using another address to get their full deposit back.
-        rewardAmount = initialDeposit.mul(numGoodForReporter).div(totalGoodDataCount);
-        if (rewardAmount == 0 || rewardAmount > claimableAmount) {
-            // There is too little left to divide up. Just give everything to this reporter.
+        uint timeSinceAddedS = now - addedTime; // solium-disable-line security/no-block-members
+        if (timeSinceAddedS >= ownerClaimWaitTimeS && reporter == owner) {
             rewardAmount = claimableAmount;
+        } else if (timeSinceAddedS >= anyAddressClaimWaitTimeS) {
+            // Enough time has passed, give the entire remaining deposit to the reporter.
+            rewardAmount = claimableAmount;
+        } else {
+            // Don't allow someone to claim back their own deposit if their data was wrong.
+            // They can still claim it from another address but they will have had to have sent good data from that address.
+            require(reporter != originalAuthor, "Cannot take your own deposit. Ask for a refund instead.");
+
+            require(!claimedByReporter, "Deposit already claimed by reporter.");
+            require(timeSinceAddedS >= refundWaitTimeS, "Not enough time has passed.");
+            require(prediction != classification, "The model should not agree with the contribution.");
+
+            uint numGoodForReporter = numGoodDataPerAddress[reporter];
+            require(numGoodForReporter > 0, "The sender has not sent any good data.");
+            // Weight the reward by the proportion of good data sent (maybe square the resulting value).
+            // One nice reason to do this is to discourage someone from adding bad data through one address
+            // and then just using another address to get their full deposit back.
+            rewardAmount = initialDeposit.mul(numGoodForReporter).div(totalGoodDataCount);
+            if (rewardAmount == 0 || rewardAmount > claimableAmount) {
+                // There is too little left to divide up. Just give everything to this reporter.
+                rewardAmount = claimableAmount;
+            }
         }
     }
 }
