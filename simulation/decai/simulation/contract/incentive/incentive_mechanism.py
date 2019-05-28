@@ -3,14 +3,16 @@ from abc import ABC, abstractmethod
 import math
 
 from decai.simulation.contract.data.data_handler import StoredData
+from decai.simulation.contract.objects import SmartContract
 
 
-class IncentiveMechanism(ABC):
+class IncentiveMechanism(ABC, SmartContract):
     """
     Defines incentives for others to contribute "good" quality data.
     """
 
     def __init__(self):
+        super().__init__()
         self.refund_time_s = math.inf
         """
         Amount of time to wait to get a refund back.

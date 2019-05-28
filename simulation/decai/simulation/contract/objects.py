@@ -24,6 +24,11 @@ class RejectException(Exception):
     pass
 
 
+class SmartContract(object):
+    def __init__(self):
+        self.address = f'{type(self).__name__}-{id(self)}'
+
+
 @singleton
 class TimeMock(object):
     """

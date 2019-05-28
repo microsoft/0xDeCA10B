@@ -5,7 +5,7 @@ from typing import Dict
 import numpy as np
 from injector import inject, singleton
 
-from decai.simulation.contract.objects import RejectException, TimeMock
+from decai.simulation.contract.objects import RejectException, SmartContract, TimeMock
 
 
 @dataclass
@@ -30,13 +30,14 @@ class StoredData:
 
 
 @singleton
-class DataHandler(object):
+class DataHandler(SmartContract):
     """
     Stores added training data and corresponding meta-data.
     """
 
     @inject
     def __init__(self, time_method: TimeMock):
+        super().__init__()
         self._time = time_method
         self._added_data: Dict[tuple: StoredData] = dict()
 

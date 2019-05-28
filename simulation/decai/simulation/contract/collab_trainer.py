@@ -7,10 +7,10 @@ from decai.simulation.contract.balances import Balances
 from decai.simulation.contract.classification.classifier import Classifier
 from decai.simulation.contract.data.data_handler import DataHandler
 from decai.simulation.contract.incentive.incentive_mechanism import IncentiveMechanism
-from decai.simulation.contract.objects import Msg, TimeMock
+from decai.simulation.contract.objects import Msg, SmartContract, TimeMock
 
 
-class CollaborativeTrainer(ABC):
+class CollaborativeTrainer(ABC, SmartContract):
     """
     Base class for the main interface to create simulations of a training model in a smart contract.
     """
@@ -23,7 +23,7 @@ class CollaborativeTrainer(ABC):
                  model: Classifier,
                  time_method: TimeMock,
                  ):
-        self.address = f'{type(self).__name__}-{id(self)}'
+        super().__init__()
         self.data_handler = data_handler
         self.im = incentive_mechanism
         self.model = model
@@ -132,7 +132,7 @@ class DefaultCollaborativeTrainer(CollaborativeTrainer):
     def report(self, msg: Msg, data, classification, added_time: int, original_author: str):
         claimed_by_reporter, stored_data = \
             self.data_handler.handle_report(msg.sender, data, classification, added_time, original_author)
-        prediction = lambda : self.model.predict(data)
+        prediction = lambda: self.model.predict(data)
         reward_amount = self.im.handle_report(msg.sender, stored_data, claimed_by_reporter, prediction)
         self.data_handler.update_claimable_amount(msg.sender, stored_data, reward_amount)
         self._balances.send(self.address, msg.sender, reward_amount)

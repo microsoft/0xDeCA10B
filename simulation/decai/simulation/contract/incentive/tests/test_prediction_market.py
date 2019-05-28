@@ -43,6 +43,9 @@ class TestPredictionMarket(unittest.TestCase):
         # TODO Maybe use custom simpler data.
         initializer_address = 'initializer'
         total_bounty = 100_000
+        self.balances.initialize(initializer_address, total_bounty)
+        self.balances.send(initializer_address, self.im.address, total_bounty)
+
         (x_train, y_train), (x_test, y_test) = self.data.load_data()
         x_test = x_test[:test_amount]
         y_test = y_test[:test_amount]
@@ -73,14 +76,13 @@ class TestPredictionMarket(unittest.TestCase):
         # Commitment Phase
         test_reveal_index = self.im.initialize_market(initializer_address, total_bounty, test_dataset_hashes,
                                                       min_length_s, min_num_contributions)
-        assert 0 <= test_reveal_index <= len(test_dataset_hashes)
+        assert 0 <= test_reveal_index < len(test_dataset_hashes)
         self.im.reveal_init_test_set(test_sets[test_reveal_index])
 
-
         # Participation Phase
-        # Data should get submitted.
         value = 100
         for i in range(min_num_contributions):
             self.im.handle_add_data(value, x_remaining[i], y_remaining[i])
 
+        # Reward Phase
         self.im.end_market(initializer_address, test_sets)

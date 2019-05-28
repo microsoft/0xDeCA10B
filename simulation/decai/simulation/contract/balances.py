@@ -3,26 +3,28 @@ from typing import Dict
 
 from injector import inject, singleton
 
+from decai.simulation.contract.objects import Address
+
 
 @singleton
 class Balances(object):
     @inject
     def __init__(self,
                  logger: Logger):
-        self._balances: Dict[str: float] = dict()
+        self._balances: Dict[Address: float] = dict()
         self._logger = logger
 
-    def __contains__(self, address):
+    def __contains__(self, address: Address):
         return address in self._balances
 
-    def __getitem__(self, address: str) -> float:
+    def __getitem__(self, address: Address) -> float:
         return self._balances[address]
 
-    def initialize(self, address: str, start_balance: float):
+    def initialize(self, address: Address, start_balance: float):
         assert address not in self._balances, f"'{address}' already has a balance."
         self._balances[address] = start_balance
 
-    def send(self, sending_address, receiving_address, amount):
+    def send(self, sending_address: Address, receiving_address: Address, amount):
         assert amount >= 0
         if amount > 0:
             sender_balance = self._balances[sending_address]

@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 
+from decai.simulation.contract.objects import SmartContract
 
-class Classifier(ABC):
+
+class Classifier(ABC, SmartContract):
     """
     A classifier that can take a data sample as input and return a predict classification/label for the data.
     """
