@@ -5,7 +5,7 @@ from typing import Dict
 import numpy as np
 from injector import inject, singleton
 
-from decai.simulation.contract.objects import RejectException, SmartContract, TimeMock
+from decai.simulation.contract.objects import Address, RejectException, SmartContract, TimeMock
 
 
 @dataclass
@@ -61,7 +61,7 @@ class DataHandler(SmartContract):
         stored_data: StoredData = self._added_data.get(key)
         return stored_data
 
-    def handle_add_data(self, sender, cost, data, classification):
+    def handle_add_data(self, contributor_address: Address, cost, data, classification):
         """
         Log an attempt to add data
 
@@ -71,10 +71,10 @@ class DataHandler(SmartContract):
         :param classification: The label for `data`.
         """
         current_time_s = self._time()
-        key = self._get_key(data, classification, current_time_s, sender)
+        key = self._get_key(data, classification, current_time_s, contributor_address)
         if key in self._added_data:
             raise RejectException("Data has already been added.")
-        d = StoredData(classification, current_time_s, sender, cost, cost)
+        d = StoredData(classification, current_time_s, contributor_address, cost, cost)
         self._added_data[key] = d
 
     def handle_refund(self, submitter, data, classification, added_time: int) -> (float, bool, StoredData):

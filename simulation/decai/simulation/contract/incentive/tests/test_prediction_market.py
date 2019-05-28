@@ -46,6 +46,9 @@ class TestPredictionMarket(unittest.TestCase):
         self.balances.initialize(initializer_address, total_bounty)
         self.balances.send(initializer_address, self.im.address, total_bounty)
 
+        contributor_address = 'contributor'
+        self.balances.initialize(contributor_address, 10_000)
+
         (x_train, y_train), (x_test, y_test) = self.data.load_data()
         x_test = x_test[:test_amount]
         y_test = y_test[:test_amount]
@@ -82,7 +85,10 @@ class TestPredictionMarket(unittest.TestCase):
         # Participation Phase
         value = 100
         for i in range(min_num_contributions):
-            self.im.handle_add_data(value, x_remaining[i], y_remaining[i])
+            cost = self.im.handle_add_data(contributor_address, value, x_remaining[i], y_remaining[i])
+            self.balances.send(contributor_address, self.im.address, cost)
 
         # Reward Phase
         self.im.end_market(initializer_address, test_sets)
+
+    # TODO Test

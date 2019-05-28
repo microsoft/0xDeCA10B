@@ -48,14 +48,15 @@ class PredictionMarket(IncentiveMechanism):
 
         # TODO Distribute bounty.
 
+
         # Signal that no market is running.
         self._market_start_time_s = None
 
-    def handle_add_data(self, msg_value: float, data, classification) -> float:
-        if msg_value <= self.min_stake:
-            raise RejectException("Not enough stake was given.")
+    def handle_add_data(self, contributor_address: Address, msg_value: float, data, classification) -> float:
         result = self.min_stake
-        self._market_data.append((data, classification))
+        if result > msg_value:
+            raise RejectException(f"Did not pay enough. Sent {msg_value} < {result}")
+        self._market_data.append((contributor_address, result, data, classification))
         return result
 
     def handle_refund(self, submitter: Address, stored_data: StoredData,

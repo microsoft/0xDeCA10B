@@ -109,7 +109,7 @@ class DefaultCollaborativeTrainer(CollaborativeTrainer):
     def add_data(self, msg: Msg, data, classification):
         # Consider making sure duplicate data isn't added until it's been claimed.
 
-        cost = self.im.handle_add_data(msg.value, data, classification)
+        cost = self.im.handle_add_data(msg.sender, msg.value, data, classification)
         self.data_handler.handle_add_data(msg.sender, cost, data, classification)
         self.model.update(data, classification)
 

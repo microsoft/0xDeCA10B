@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import math
 
 from decai.simulation.contract.data.data_handler import StoredData
-from decai.simulation.contract.objects import SmartContract
+from decai.simulation.contract.objects import Address, SmartContract
 
 
 class IncentiveMechanism(ABC, SmartContract):
@@ -41,10 +41,11 @@ class IncentiveMechanism(ABC, SmartContract):
         pass
 
     @abstractmethod
-    def handle_add_data(self, msg_value: float, data, classification) -> float:
+    def handle_add_data(self, contributor_address: Address, msg_value: float, data, classification) -> float:
         """
         Determine if the request to add data is acceptable.
 
+        :param contributor_address: The address of the one attempting to add data
         :param msg_value: The value sent with the initial transaction to add data.
         :param data: A single sample of training data for the model.
         :param classification: The label for `data`.

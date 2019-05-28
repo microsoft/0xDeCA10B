@@ -7,7 +7,7 @@ from injector import Module, inject, singleton
 from decai.simulation.contract.balances import Balances
 from decai.simulation.contract.data.data_handler import StoredData
 from decai.simulation.contract.incentive.incentive_mechanism import IncentiveMechanism
-from decai.simulation.contract.objects import RejectException, TimeMock
+from decai.simulation.contract.objects import Address, RejectException, TimeMock
 
 
 @singleton
@@ -74,7 +74,7 @@ class Stakeable(IncentiveMechanism):
             result = 1
         return result
 
-    def handle_add_data(self, msg_value: float, data, classification) -> float:
+    def handle_add_data(self, contributor_address: Address, msg_value: float, data, classification) -> float:
         result = self.get_next_add_data_cost(data, classification)
         if result > msg_value:
             raise RejectException(f"Did not pay enough. Sent {msg_value} < {result}")
