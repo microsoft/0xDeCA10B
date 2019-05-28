@@ -1,12 +1,12 @@
 import os
 
-from injector import Module, inject, singleton
+from injector import Module, inject
 from sklearn.linear_model import SGDClassifier
 
 from decai.simulation.contract.classification.classifier import Classifier
 
 
-@singleton
+# Purposely not a singleton so that it is easy to get a model that has not been initialized.
 class PerceptronClassifier(Classifier):
     """
     A mock for the smart contract to train models.

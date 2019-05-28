@@ -189,6 +189,8 @@ class Simulator(object):
             x_remaining, y_remaining = x_train[init_idx:], y_train[init_idx:]
 
             self._decai.model.init_model(x_init_data, y_init_data)
+            if hasattr(self._decai.im, 'model'):
+                self._decai.im.init_model(x_init_data, y_init_data)
             if self._logger.isEnabledFor(logging.DEBUG):
                 s = self._decai.model.evaluate(x_init_data, y_init_data)
                 self._logger.debug("Initial training data evaluation: %s", s)

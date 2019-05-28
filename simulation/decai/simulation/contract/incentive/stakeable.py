@@ -51,6 +51,11 @@ class Stakeable(IncentiveMechanism):
                 self._balances.send(sender, agent_address, int(value * num_good / self.total_num_good_data))
 
     def get_next_add_data_cost(self, data, classification) -> float:
+        """
+        :param data: A single sample of training data for the model.
+        :param classification: The label for `data`.
+        :return: The current cost to update a model with a specific sample of training data.
+        """
         current_time_s = int(self._time())
         # TODO Limit how many times a data point can be added if the model already classifies right for it?
         # TODO Add cost to flip all data?

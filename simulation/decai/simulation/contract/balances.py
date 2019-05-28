@@ -24,14 +24,15 @@ class Balances(object):
 
     def send(self, sending_address, receiving_address, amount):
         assert amount >= 0
-        sender_balance = self._balances[sending_address]
-        if sender_balance < amount:
-            self._logger.warning(f"'{sending_address} has {sender_balance} < {amount}.\n"
-                                 f"Will only send {sender_balance}.")
-            amount = sender_balance
+        if amount > 0:
+            sender_balance = self._balances[sending_address]
+            if sender_balance < amount:
+                self._logger.warning(f"'{sending_address} has {sender_balance} < {amount}.\n"
+                                     f"Will only send {sender_balance}.")
+                amount = sender_balance
 
-        self._balances[sending_address] -= amount
-        if receiving_address not in self._balances:
-            self.initialize(receiving_address, amount)
-        else:
-            self._balances[receiving_address] += amount
+            self._balances[sending_address] -= amount
+            if receiving_address not in self._balances:
+                self.initialize(receiving_address, amount)
+            else:
+                self._balances[receiving_address] += amount

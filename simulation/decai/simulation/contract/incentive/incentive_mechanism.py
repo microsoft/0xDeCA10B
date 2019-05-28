@@ -39,15 +39,6 @@ class IncentiveMechanism(ABC):
         pass
 
     @abstractmethod
-    def get_next_add_data_cost(self, data, classification):
-        """
-        :param data: A single sample of training data for the model.
-        :param classification: The label for `data`.
-        :return: The current cost to update a model with a specific sample of training data.
-        """
-        pass
-
-    @abstractmethod
     def handle_add_data(self, msg_value: float, data, classification) -> float:
         """
         Determine if the request to add data is acceptable.

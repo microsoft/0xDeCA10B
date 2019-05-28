@@ -4,6 +4,8 @@ from unittest.mock import Mock
 
 from injector import inject, singleton
 
+Address = str
+
 
 @dataclass
 class Msg:
@@ -13,7 +15,7 @@ class Msg:
     :param sender: The sender's address.
     :param value: Amount sent with the message.
     """
-    sender: str
+    sender: Address
     # Need to use float since the numbers might be large. They should still actually be integers.
     value: float
 
