@@ -1,4 +1,5 @@
 import random
+from hashlib import sha256
 from logging import Logger
 
 from injector import Module, inject, singleton
@@ -26,10 +27,13 @@ class PredictionMarket(IncentiveMechanism):
 
         self._balances = balances
         self._logger = logger
-        self._model = model
+        self.model = model
         self._time = time_method
 
         self._market_start_time_s = None
+
+    def distribute_payment_for_prediction(self, sender, value):
+        pass
 
     def initialize_market(self, initializer_address: Address, total_bounty: int, test_dataset_hashes: list,
                           # Ending criteria:
@@ -46,10 +50,20 @@ class PredictionMarket(IncentiveMechanism):
         self._market_data = []
         self._market_start_time_s = self._time()
 
-        return (self.test_reveal_index)
+        return self.test_reveal_index
+
+    def reveal_init_test_set(self, test_set):
+        assert self.test_reveal_index is not None, "The initial test set has already been revealed."
+        self.reveal_test_set(self.test_reveal_index, test_set)
+        self.test_reveal_index = None
+
+    def reveal_test_set(self, index, test_set):
+        test_set_hash = self.hash_test_set(test_set)
+        assert test_set_hash == self.test_dataset_hashes[index]
 
     def end_market(self, msg_sender: Address, test_datasets: list):
         assert msg_sender == self.initializer_address
+        assert self.test_reveal_index is None, "The initial test set has not been revealed."
         if len(self._market_data) < self.min_length_s and self._time() < self._market_start_time_s + self.min_length_s:
             raise RejectException("Can't end the market yet.")
         # TODO Verify test_datasets matches the hashes.
@@ -76,7 +90,10 @@ class PredictionMarket(IncentiveMechanism):
         result = 0
         return result
 
+    def hash_test_set(self, test_set):
+        return sha256(str(test_set).encode()).hexdigest()
 
-class StakeableImModule(Module):
+
+class PredictionMarketImModule(Module):
     def configure(self, binder):
         self.bind = binder.bind(IncentiveMechanism, to=PredictionMarket)
