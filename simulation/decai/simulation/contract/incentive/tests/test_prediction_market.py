@@ -1,4 +1,6 @@
+import random
 import unittest
+from collections import defaultdict
 from typing import cast
 
 from injector import Injector
@@ -38,13 +40,14 @@ class TestPredictionMarket(unittest.TestCase):
         initializer_address = 'initializer'
         total_bounty = 100_000
         self.balances.initialize(initializer_address, total_bounty)
-        self.balances.send(initializer_address, self.im.address, total_bounty)
 
         good_contributor_address = 'good_contributor'
-        self.balances.initialize(good_contributor_address, 10_000)
+        initial_good_balance = 10_000
+        self.balances.initialize(good_contributor_address, initial_good_balance)
 
         bad_contributor_address = 'bad_contributor'
-        self.balances.initialize(bad_contributor_address, 10_000)
+        initial_bad_balance = 10_000
+        self.balances.initialize(bad_contributor_address, initial_bad_balance)
 
         (x_train, y_train), (x_test, y_test) = self.data.load_data()
         x_test = x_test[:test_amount]
@@ -71,17 +74,21 @@ class TestPredictionMarket(unittest.TestCase):
         min_length_s = 100
         min_num_contributions = min(len(x_remaining), 100)
 
-        # Initially deployed model.
-        self.im.model.init_model(x_init_data, y_init_data)
-
         # Commitment Phase
-        test_reveal_index = self.im.initialize_market(initializer_address, total_bounty, test_dataset_hashes,
+        # Seed randomness for consistency.
+        random.seed(0xDeCA10B)
+        test_reveal_index = self.im.initialize_market(initializer_address, total_bounty,
+                                                      x_init_data, y_init_data,
+                                                      test_dataset_hashes,
                                                       min_length_s, min_num_contributions)
         assert 0 <= test_reveal_index < len(test_dataset_hashes)
+        # For consistency.
+        assert test_reveal_index == 4
         self.im.reveal_init_test_set(test_sets[test_reveal_index])
 
         # Participation Phase
         value = 100
+        total_deposits = defaultdict(float)
         for i in range(min_num_contributions):
             data = x_remaining[i]
             classification = y_remaining[i]
@@ -92,10 +99,30 @@ class TestPredictionMarket(unittest.TestCase):
                 classification = 1 - classification
             cost = self.im.handle_add_data(contributor, value, data, classification)
             self.balances.send(contributor, self.im.address, cost)
+            total_deposits[contributor] += cost
 
         # Reward Phase
         self.im.end_market(initializer_address, test_sets)
 
-        assert self.balances[good_contributor_address] > self.balances[bad_contributor_address]
+        # General checks that should be true for a market with a reasonably sensitive model.
+        self.assertLess(self.balances[self.im.address], total_bounty)
+        self.assertLess(0, self.balances[self.im.address])
 
-        # TODO Test more.
+        self.assertLess(self.balances[bad_contributor_address], initial_bad_balance)
+        self.assertLess(initial_good_balance, self.balances[good_contributor_address])
+        self.assertLess(self.balances[bad_contributor_address], self.balances[good_contributor_address])
+        self.assertLessEqual(self.balances[good_contributor_address] - self.balances[bad_contributor_address],
+                             total_bounty)
+        self.assertEqual(initial_good_balance + initial_bad_balance + total_bounty,
+                         self.balances[good_contributor_address] + self.balances[bad_contributor_address] +
+                         self.balances[self.im.address],
+                         "Should be a zero-sum.")
+
+        self.assertEqual(initial_bad_balance - total_deposits[bad_contributor_address],
+                         self.balances[bad_contributor_address],
+                         "The bad contributor should lose all of their deposits.")
+
+        # Specific checks for the randomness seed set.
+        self.assertEqual(9994, self.balances[bad_contributor_address])
+        self.assertEqual(49998.5, self.balances[good_contributor_address])
+        self.assertEqual(60007.5, self.balances[self.im.address])
