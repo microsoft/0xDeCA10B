@@ -10,12 +10,8 @@ from decai.simulation.contract.incentive.incentive_mechanism import IncentiveMec
 from decai.simulation.contract.incentive.prediction_market import PredictionMarketImModule, PredictionMarket
 from decai.simulation.contract.objects import TimeMock
 from decai.simulation.data.data_loader import DataLoader
-from decai.simulation.data.imdb_data_loader import ImdbDataModule
+from decai.simulation.data.tests.test_data_loader import TestDataModule
 from decai.simulation.logging_module import LoggingModule
-
-
-def _ground_truth(data):
-    return data[0] * data[2]
 
 
 class TestPredictionMarket(unittest.TestCase):
@@ -23,7 +19,7 @@ class TestPredictionMarket(unittest.TestCase):
     def setUpClass(cls):
         inj = Injector([
             DefaultCollaborativeTrainerModule,
-            ImdbDataModule,
+            TestDataModule,
             LoggingModule,
             PerceptronModule,
             PredictionMarketImModule,
@@ -36,24 +32,26 @@ class TestPredictionMarket(unittest.TestCase):
         assert isinstance(cls.im, PredictionMarket)
 
     def test_market(self):
-        init_train_data_portion = 0.08
+        init_train_data_portion = 0.25
         test_amount = 100
 
-        # TODO Maybe use a custom or even a rule-based model.
-        # TODO Maybe use custom simpler data.
         initializer_address = 'initializer'
         total_bounty = 100_000
         self.balances.initialize(initializer_address, total_bounty)
         self.balances.send(initializer_address, self.im.address, total_bounty)
 
-        contributor_address = 'contributor'
-        self.balances.initialize(contributor_address, 10_000)
+        good_contributor_address = 'good_contributor'
+        self.balances.initialize(good_contributor_address, 10_000)
+
+        bad_contributor_address = 'bad_contributor'
+        self.balances.initialize(bad_contributor_address, 10_000)
 
         (x_train, y_train), (x_test, y_test) = self.data.load_data()
         x_test = x_test[:test_amount]
         y_test = y_test[:test_amount]
 
         init_idx = int(len(x_train) * init_train_data_portion)
+        assert init_idx > 0
 
         x_init_data, y_init_data = x_train[:init_idx], y_train[:init_idx]
         x_remaining, y_remaining = x_train[init_idx:], y_train[init_idx:]
@@ -71,7 +69,7 @@ class TestPredictionMarket(unittest.TestCase):
 
         # Ending criteria:
         min_length_s = 100
-        min_num_contributions = 100
+        min_num_contributions = min(len(x_remaining), 100)
 
         # Initially deployed model.
         self.im.model.init_model(x_init_data, y_init_data)
@@ -85,10 +83,19 @@ class TestPredictionMarket(unittest.TestCase):
         # Participation Phase
         value = 100
         for i in range(min_num_contributions):
-            cost = self.im.handle_add_data(contributor_address, value, x_remaining[i], y_remaining[i])
-            self.balances.send(contributor_address, self.im.address, cost)
+            data = x_remaining[i]
+            classification = y_remaining[i]
+            if i % 2 == 0:
+                contributor = good_contributor_address
+            else:
+                contributor = bad_contributor_address
+                classification = 1 - classification
+            cost = self.im.handle_add_data(contributor, value, data, classification)
+            self.balances.send(contributor, self.im.address, cost)
 
         # Reward Phase
         self.im.end_market(initializer_address, test_sets)
 
-    # TODO Test
+        assert self.balances[good_contributor_address] > self.balances[bad_contributor_address]
+
+        # TODO Test more.

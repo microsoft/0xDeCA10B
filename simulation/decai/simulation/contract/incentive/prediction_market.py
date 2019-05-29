@@ -1,7 +1,11 @@
 import random
+from collections import defaultdict
+from dataclasses import dataclass
 from hashlib import sha256
 from logging import Logger
+from typing import Union
 
+import numpy as np
 from injector import Module, inject, singleton
 
 from decai.simulation.contract.balances import Balances
@@ -13,6 +17,12 @@ from decai.simulation.contract.objects import Address, RejectException, TimeMock
 
 @singleton
 class PredictionMarket(IncentiveMechanism):
+    @dataclass
+    class Contribution:
+        contributor_address: Address
+        deposit: Union[int, float]
+        data: np.array
+        classification: int
 
     @inject
     def __init__(self,
@@ -40,14 +50,37 @@ class PredictionMarket(IncentiveMechanism):
     def end_market(self, msg_sender: Address, test_sets: list):
         assert msg_sender == self.initializer_address
         assert self._init_test_set_revealed, "The initial test set has not been revealed."
-        if len(self._market_data) < self.min_length_s and self._time() < self._market_start_time_s + self.min_length_s:
+        if len(self._market_data) < self.min_num_contributions \
+                and self._time() < self._market_start_time_s + self.min_length_s:
             raise RejectException("Can't end the market yet.")
+
+        all_test_data = []
         for i, test_set in enumerate(test_sets):
             if i != self.test_reveal_index:
                 self.verify_test_set(i, test_set)
+                all_test_data += test_set
+
+        test_data, test_labels = list(zip(*all_test_data))
 
         # TODO Distribute bounty.
+        balances = defaultdict(int)
+        for contribution in self._market_data:
+            balances[contribution.contributor_address] += contribution.deposit
 
+        # Compute scores.
+        scores = defaultdict(float)
+        prev_acc = self.model.evaluate(test_data, test_labels)
+        for contribution in self._market_data:
+            self.model.update(contribution.data, contribution.classification)
+            # TODO Consider not evaluating if same address as next?
+            acc = self.model.evaluate(test_data, test_labels)
+            score = acc - prev_acc
+            scores[contribution.contributor_address] += score
+            prev_acc = acc
+
+        # TODO Find min score
+        # Remove address with min score.
+        # Restart process with initial model.
 
         # Signal that no market is running.
         self._market_start_time_s = None
@@ -56,7 +89,7 @@ class PredictionMarket(IncentiveMechanism):
         result = self.min_stake
         if result > msg_value:
             raise RejectException(f"Did not pay enough. Sent {msg_value} < {result}")
-        self._market_data.append((contributor_address, result, data, classification))
+        self._market_data.append(self.Contribution(contributor_address, result, data, classification))
         return result
 
     def handle_refund(self, submitter: Address, stored_data: StoredData,
