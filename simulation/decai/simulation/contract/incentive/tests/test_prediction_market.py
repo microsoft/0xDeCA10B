@@ -35,7 +35,6 @@ class TestPredictionMarket(unittest.TestCase):
 
     def test_market(self):
         init_train_data_portion = 0.25
-        test_amount = 100
 
         initializer_address = 'initializer'
         total_bounty = 100_000
@@ -50,8 +49,6 @@ class TestPredictionMarket(unittest.TestCase):
         self.balances.initialize(bad_contributor_address, initial_bad_balance)
 
         (x_train, y_train), (x_test, y_test) = self.data.load_data()
-        x_test = x_test[:test_amount]
-        y_test = y_test[:test_amount]
 
         init_idx = int(len(x_train) * init_train_data_portion)
         assert init_idx > 0
@@ -61,14 +58,7 @@ class TestPredictionMarket(unittest.TestCase):
 
         # Split test set into pieces.
         num_pieces = 10
-        test_sets = []
-        test_dataset_hashes = []
-        for i in range(num_pieces):
-            start = int(i / num_pieces * len(x_test))
-            end = int((i + 1) / num_pieces * len(x_test))
-            test_set = list(zip(x_test[start:end], y_test[start:end]))
-            test_sets.append(test_set)
-            test_dataset_hashes.append(self.im.hash_test_set(test_set))
+        test_dataset_hashes, test_sets = self.im.get_test_set_hashes(num_pieces, x_test, y_test)
 
         # Ending criteria:
         min_length_s = 100
@@ -124,5 +114,5 @@ class TestPredictionMarket(unittest.TestCase):
 
         # Specific checks for the randomness seed set.
         self.assertEqual(9994, self.balances[bad_contributor_address])
-        self.assertEqual(49998.5, self.balances[good_contributor_address])
-        self.assertEqual(60007.5, self.balances[self.im.address])
+        self.assertEqual(49997, self.balances[good_contributor_address])
+        self.assertEqual(60009, self.balances[self.im.address])

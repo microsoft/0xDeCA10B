@@ -6,7 +6,7 @@ from logging import Logger
 from typing import Union
 
 import numpy as np
-from injector import Module, inject, singleton
+from injector import inject, Module, singleton
 
 from decai.simulation.contract.balances import Balances
 from decai.simulation.contract.classification.classifier import Classifier
@@ -118,6 +118,25 @@ class PredictionMarket(IncentiveMechanism):
 
         # Signal that no market is running.
         self._market_start_time_s = None
+
+    def get_test_set_hashes(self, num_pieces, x_test, y_test):
+        """
+        Break the test set into `num_pieces` and returns their hashes.
+        :param num_pieces: The number of pieces to break the test set into.
+        :param x_test:
+        :param y_test:
+        :return:
+        """
+        test_sets = []
+        test_dataset_hashes = []
+        assert len(x_test) == len(y_test) >= num_pieces
+        for i in range(num_pieces):
+            start = int(i / num_pieces * len(x_test))
+            end = int((i + 1) / num_pieces * len(x_test))
+            test_set = list(zip(x_test[start:end], y_test[start:end]))
+            test_sets.append(test_set)
+            test_dataset_hashes.append(self.im.hash_test_set(test_set))
+        return test_dataset_hashes, test_sets
 
     def handle_add_data(self, contributor_address: Address, msg_value: float, data, classification) -> float:
         result = self.min_stake

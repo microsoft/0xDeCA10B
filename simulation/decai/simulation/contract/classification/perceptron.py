@@ -1,6 +1,6 @@
 import os
 
-from injector import Module, inject
+from injector import inject, Module
 from sklearn.linear_model import SGDClassifier
 
 from decai.simulation.contract.classification.classifier import Classifier
@@ -25,7 +25,7 @@ class PerceptronClassifier(Classifier):
     def init_model(self, training_data, labels):
         self._model = SGDClassifier(loss='perceptron',
                                     n_jobs=max(1, os.cpu_count() - 2),
-                                    random_state=3,
+                                    random_state=0xDeCA1B,
                                     learning_rate='optimal',
                                     # Don't really care about tol, just setting it to remove a warning.
                                     tol=1e-3,

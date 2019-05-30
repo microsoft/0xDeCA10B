@@ -20,7 +20,8 @@ from tqdm import tqdm
 
 from decai.simulation.contract.balances import Balances
 from decai.simulation.contract.collab_trainer import CollaborativeTrainer
-from decai.simulation.contract.objects import Msg, RejectException, TimeMock
+from decai.simulation.contract.incentive.prediction_market import PredictionMarket
+from decai.simulation.contract.objects import Address, Msg, RejectException, TimeMock
 from decai.simulation.data.data_loader import DataLoader
 
 
@@ -29,7 +30,7 @@ class Agent:
     """
     A user to run in the simulator.
     """
-    address: str
+    address: Address
     start_balance: float
     mean_deposit: float
     stdev_deposit: float

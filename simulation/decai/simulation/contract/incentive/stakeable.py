@@ -2,7 +2,7 @@ from collections import Counter
 from logging import Logger
 
 import math
-from injector import Module, inject, singleton
+from injector import inject, Module,singleton
 
 from decai.simulation.contract.balances import Balances
 from decai.simulation.contract.data.data_handler import StoredData

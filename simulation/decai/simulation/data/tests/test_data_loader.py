@@ -1,7 +1,7 @@
 from logging import Logger
 
 import numpy as np
-from injector import Binder, Module, inject
+from injector import Binder, inject, Module
 
 from ..data_loader import DataLoader
 
