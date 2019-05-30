@@ -34,7 +34,7 @@ class Runner(object):
 
     def run(self):
         initializer_address = 'initializer'
-        total_bounty = 100_000
+        total_bounty = 1_000_000
         init_train_data_portion = 0.08
 
         # Set up the agents that will act in the simulation.
@@ -70,7 +70,7 @@ class Runner(object):
         test_dataset_hashes, test_sets = self._im.get_test_set_hashes(num_pieces, x_test, y_test)
 
         # Ending criteria:
-        min_length_s = 1000_000
+        min_length_s = 1_000_000
         min_num_contributions = len(x_remaining)
 
         test_reveal_index = self._im.initialize_market(initializer_address, total_bounty,
@@ -95,6 +95,9 @@ class Runner(object):
                          # baseline_accuracy=0.8484,
 
                          init_train_data_portion=init_train_data_portion,
+
+                         initializer_address=initializer_address,
+                         test_sets=test_sets
                          )
 
 

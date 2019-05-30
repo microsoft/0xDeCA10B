@@ -84,6 +84,8 @@ class Simulator(object):
                  agents: List[Agent],
                  baseline_accuracy: float = None,
                  init_train_data_portion: float = 0.1,
+                 initializer_address: Address = None,
+                 test_sets: list = None,
                  ):
         """
         Run a simulation.
@@ -190,8 +192,7 @@ class Simulator(object):
             x_remaining, y_remaining = x_train[init_idx:], y_train[init_idx:]
 
             self._decai.model.init_model(x_init_data, y_init_data)
-            if hasattr(self._decai.im, 'model'):
-                self._decai.im.init_model(x_init_data, y_init_data)
+
             if self._logger.isEnabledFor(logging.DEBUG):
                 s = self._decai.model.evaluate(x_init_data, y_init_data)
                 self._logger.debug("Initial training data evaluation: %s", s)
@@ -340,6 +341,10 @@ class Simulator(object):
 
             self._logger.info("Done going through data.")
             pbar.set_description(f"{desc} ({len(unclaimed_data)} unclaimed)")
+
+            if isinstance(self._decai.im, PredictionMarket):
+                # TODO Plot balance during calculation.
+                self._decai.im.end_market(initializer_address, test_sets)
 
             with open(save_path, 'w') as f:
                 json.dump(save_data, f, separators=(',', ':'))

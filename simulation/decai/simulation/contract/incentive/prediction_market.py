@@ -135,7 +135,7 @@ class PredictionMarket(IncentiveMechanism):
             end = int((i + 1) / num_pieces * len(x_test))
             test_set = list(zip(x_test[start:end], y_test[start:end]))
             test_sets.append(test_set)
-            test_dataset_hashes.append(self.im.hash_test_set(test_set))
+            test_dataset_hashes.append(self.hash_test_set(test_set))
         return test_dataset_hashes, test_sets
 
     def handle_add_data(self, contributor_address: Address, msg_value: float, data, classification) -> float:
