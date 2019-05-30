@@ -82,27 +82,29 @@ class PredictionMarket(IncentiveMechanism):
             scores = defaultdict(float)
 
             prev_acc = self.model.evaluate(test_data, test_labels)
-            prev_contributor = None
-            for contribution in self._market_data:
-                if contribution.contributor_address in participants:
-                    self.model.update(contribution.data, contribution.classification)
-                    # TODO Don't evaluate if same address is next.
+            for i, contribution in enumerate(self._market_data):
+                self.model.update(contribution.data, contribution.classification)
+                if i + 1 >= len(self._market_data) \
+                        or self._market_data[i + 1].contributor_address != contribution.contributor_address:
+                    # Next contributor is different.
                     acc = self.model.evaluate(test_data, test_labels)
                     score = acc - prev_acc
                     scores[contribution.contributor_address] += score
                     prev_acc = acc
 
             # Find min score and remove that address from the list.
-            contributor_address, min_score = min(scores.items(), key=lambda x: x[1])
-            self._logger.debug("Minimum score: \"%s\": %s", contributor_address, min_score)
+            worst_contributor, min_score = min(scores.items(), key=lambda x: x[1])
+            self._logger.debug("Minimum score: \"%s\": %s", worst_contributor, min_score)
             if min_score < 0:
-                num_rounds = balances[contributor_address] / -min_score
+                num_rounds = balances[worst_contributor] / -min_score
                 if num_rounds > remaining_bounty:
                     num_rounds = remaining_bounty
                 remaining_bounty -= num_rounds
                 for participant in participants:
                     balances[participant] += scores[participant] * num_rounds
-                participants.remove(contributor_address)
+                participants.remove(worst_contributor)
+                self._market_data = list(
+                    filter(lambda c: c.contributor_address != worst_contributor, self._market_data))
             else:
                 num_rounds = remaining_bounty
                 remaining_bounty = 0
