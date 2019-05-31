@@ -1,6 +1,7 @@
 import random
 from collections import defaultdict
 from dataclasses import dataclass
+from enum import Enum
 from hashlib import sha256
 from logging import Logger
 from typing import Dict, Union
@@ -23,6 +24,11 @@ class PredictionMarket(IncentiveMechanism):
         deposit: Union[int, float]
         data: np.array
         classification: int
+
+    class MarketState(Enum):
+        # TODO Add states and use this enum.
+        STARTED = 0
+        PROCESSING = 1
 
     @inject
     def __init__(self,
@@ -50,35 +56,6 @@ class PredictionMarket(IncentiveMechanism):
     def distribute_payment_for_prediction(self, sender, value):
         pass
 
-    def process_contribution(self):
-        if self._next_data_index == 0:
-            # TODO Restart
-            self._logger.debug("Re-initializing model.", )
-            self.model.init_model(self._x_init_data, self._y_init_data)
-            self._prev_acc = self.model.evaluate(self._test_data, self._test_labels)
-            self._worst_contributor = None
-            self._min_score = float('inf')
-
-        contribution = self._market_data[self._next_data_index]
-        self.model.update(contribution.data, contribution.classification)
-        self._next_data_index += 1
-        need_restart = self._next_data_index >= len(self._market_data)
-        if need_restart \
-                or self._market_data[self._next_data_index].contributor_address != contribution.contributor_address:
-            # Next contributor is different.
-            acc = self.model.evaluate(self._test_data, self._test_labels)
-            score_change = acc - self._prev_acc
-            new_score = self._scores[contribution.contributor_address] + score_change
-            self._scores[contribution.contributor_address] = new_score
-            if (score_change < 0 and self._scores[contribution.contributor_address] < self._min_score) \
-                    or self._worst_contributor == contribution.contributor_address:
-                self._min_score = self._scores[contribution.contributor_address]
-                self._worst_contributor = contribution.contributor_address
-
-            self._prev_acc = acc
-            if need_restart:
-                self._next_data_index = 0
-
     def end_market(self, msg_sender: Address, test_sets: list):
         # TODO Split into separate function calls
         # so that it's more like what would really happen in Ethereum to reduce gas costs.
@@ -102,10 +79,8 @@ class PredictionMarket(IncentiveMechanism):
 
         self._logger.debug("Re-initializing model.", )
 
-        participants = set(self._market_balances.keys())
-        remaining_bounty = self.total_bounty
-        while remaining_bounty > 0 and len(participants) > 0:
-            self._logger.debug("Remaining bounty: %s", remaining_bounty)
+        while self.remaining_bounty_rounds > 0 and len(self._market_participants) > 0:
+            self._logger.debug("Remaining bounty rounds: %s", self.remaining_bounty_rounds)
 
             self._logger.debug("Computing scores.", )
             self._scores = defaultdict(float)
@@ -113,25 +88,7 @@ class PredictionMarket(IncentiveMechanism):
             for _ in self._market_data:
                 self.process_contribution()
 
-            # Find min score and remove that address from the list.
-            self._logger.debug("Minimum score: \"%s\": %s", self._worst_contributor, self._min_score)
-            if self._min_score < 0:
-                num_rounds = self._market_balances[self._worst_contributor] / -self._min_score
-                if num_rounds > remaining_bounty:
-                    num_rounds = remaining_bounty
-                remaining_bounty -= num_rounds
-                for participant in participants:
-                    self._market_balances[participant] += self._scores[participant] * num_rounds
-                participants.remove(self._worst_contributor)
-                self._market_data = list(
-                    filter(lambda c: c.contributor_address != self._worst_contributor, self._market_data))
-            else:
-                num_rounds = remaining_bounty
-                remaining_bounty = 0
-                for participant in participants:
-                    self._market_balances[participant] += self._scores[participant] * num_rounds
-                break
-
+        # TODO Separate into another function for contributors to claim their reward, maybe through handle_refund or handle_report.
         for contributor, balance in self._market_balances.items():
             if balance > 0:
                 self._balances.send(self.address, contributor, balance)
@@ -165,6 +122,7 @@ class PredictionMarket(IncentiveMechanism):
             raise RejectException(f"Did not pay enough. Sent {msg_value} < {result}")
         self._market_data.append(self.Contribution(contributor_address, result, data, classification))
         self._market_balances[contributor_address] += result
+        self._market_participants.add(contributor_address)
         return result
 
     def handle_refund(self, submitter: Address, stored_data: StoredData,
@@ -189,6 +147,7 @@ class PredictionMarket(IncentiveMechanism):
         assert self._next_data_index is None, "The market end has already been triggered."
         self.initializer_address = initializer_address
         self.total_bounty = total_bounty
+        self.remaining_bounty_rounds = self.total_bounty
         self._x_init_data = x_init_data
         self._y_init_data = y_init_data
         self.test_dataset_hashes = test_dataset_hashes
@@ -206,6 +165,58 @@ class PredictionMarket(IncentiveMechanism):
         self._init_test_set_revealed = False
 
         return self.test_reveal_index
+
+    def process_contribution(self):
+        if self._next_data_index == 0:
+            # The paper implies that we should not retrain the model and instead only train once.
+            # The problem there is that a contributor is affected by bad contributions
+            # between them and the last counted contribution.
+            # So this will be implemented with retraining for now,
+            # though this might not be feasible with gas limits in Ethereum.
+            self._logger.debug("Re-initializing model.", )
+            self.model.init_model(self._x_init_data, self._y_init_data)
+
+            self._prev_acc = self.model.evaluate(self._test_data, self._test_labels)
+            self._worst_contributor = None
+            self._min_score = float('inf')
+
+        contribution = self._market_data[self._next_data_index]
+        self.model.update(contribution.data, contribution.classification)
+        self._next_data_index += 1
+        need_restart = self._next_data_index >= len(self._market_data)
+        if need_restart \
+                or self._market_data[self._next_data_index].contributor_address != contribution.contributor_address:
+            # Next contributor is different.
+            acc = self.model.evaluate(self._test_data, self._test_labels)
+            score_change = acc - self._prev_acc
+            new_score = self._scores[contribution.contributor_address] + score_change
+            self._scores[contribution.contributor_address] = new_score
+            if (score_change < 0 and self._scores[contribution.contributor_address] < self._min_score) \
+                    or self._worst_contributor == contribution.contributor_address:
+                self._min_score = self._scores[contribution.contributor_address]
+                self._worst_contributor = contribution.contributor_address
+
+            self._prev_acc = acc
+            if need_restart:
+                self._next_data_index = 0
+
+                # Find min score and remove that address from the list.
+                self._logger.debug("Minimum score: \"%s\": %s", self._worst_contributor, self._min_score)
+                if self._min_score < 0:
+                    num_rounds = self._market_balances[self._worst_contributor] / -self._min_score
+                    if num_rounds > self.remaining_bounty_rounds:
+                        num_rounds = self.remaining_bounty_rounds
+                    self.remaining_bounty_rounds -= num_rounds
+                    for participant in self._market_participants:
+                        self._market_balances[participant] += self._scores[participant] * num_rounds
+                    self._market_participants.remove(self._worst_contributor)
+                    self._market_data = list(
+                        filter(lambda c: c.contributor_address != self._worst_contributor, self._market_data))
+                else:
+                    num_rounds = self.remaining_bounty_rounds
+                    self.remaining_bounty_rounds = 0
+                    for participant in self._market_participants:
+                        self._market_balances[participant] += self._scores[participant] * num_rounds
 
     def reveal_init_test_set(self, test_set):
         assert not self._init_test_set_revealed, "The initial test set has already been revealed."
