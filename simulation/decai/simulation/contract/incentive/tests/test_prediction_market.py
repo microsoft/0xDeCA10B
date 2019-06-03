@@ -93,9 +93,19 @@ class TestPredictionMarket(unittest.TestCase):
 
         # Reward Phase
         self.im.end_market(initializer_address, test_sets)
+        while self.im.remaining_bounty_rounds > 0:
+            self.im.process_contribution()
+
+        # Collect rewards.
+        for contributor in [good_contributor_address, bad_contributor_address]:
+            # Don't need to pass the right StoredData.
+            # noinspection PyTypeChecker
+            self.im.handle_refund(contributor, None, 0, False, None)
 
         # General checks that should be true for a market with a reasonably sensitive model.
-        self.assertLess(self.balances[self.im.address], total_bounty)
+        self.assertLess(self.balances[self.im.address], total_bounty,
+                        f"Some of the bounty should be distributed.\n"
+                        f"Balances: {self.balances}")
         self.assertLess(0, self.balances[self.im.address])
 
         self.assertLess(self.balances[bad_contributor_address], initial_bad_balance)

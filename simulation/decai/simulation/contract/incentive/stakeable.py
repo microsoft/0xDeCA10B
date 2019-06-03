@@ -95,6 +95,8 @@ class Stakeable(IncentiveMechanism):
         current_time_s = int(self._time())
         if current_time_s - stored_data.time <= self.refund_time_s:
             raise RejectException("Not enough time has passed.")
+        if callable(prediction):
+            prediction = prediction()
         if prediction != stored_data.classification:
             raise RejectException("The model doesn't agree with your contribution.")
 

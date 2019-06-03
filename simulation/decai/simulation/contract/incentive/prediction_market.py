@@ -77,22 +77,6 @@ class PredictionMarket(IncentiveMechanism):
 
         self._test_data, self._test_labels = list(zip(*all_test_data))
 
-        self._logger.debug("Re-initializing model.", )
-
-        while self.remaining_bounty_rounds > 0 and len(self._market_participants) > 0:
-            self._logger.debug("Remaining bounty rounds: %s", self.remaining_bounty_rounds)
-
-            self._logger.debug("Computing scores.", )
-            self._scores = defaultdict(float)
-
-            for _ in self._market_data:
-                self.process_contribution()
-
-        # TODO Separate into another function for contributors to claim their reward, maybe through handle_refund or handle_report.
-        for contributor, balance in self._market_balances.items():
-            if balance > 0:
-                self._balances.send(self.address, contributor, balance)
-
         # Signal that no market is running.
         self._market_start_time_s = None
 
@@ -122,18 +106,25 @@ class PredictionMarket(IncentiveMechanism):
             raise RejectException(f"Did not pay enough. Sent {msg_value} < {result}")
         self._market_data.append(self.Contribution(contributor_address, result, data, classification))
         self._market_balances[contributor_address] += result
-        self._market_participants.add(contributor_address)
         return result
 
     def handle_refund(self, submitter: Address, stored_data: StoredData,
                       claimable_amount: float, claimed_by_submitter: bool,
                       prediction) -> float:
-        result = 0
+        assert self.remaining_bounty_rounds == 0, "The reward phase has not finished processing contributions."
+        result = self._market_balances[submitter]
+        self._logger.debug("Reward for \"%s\": %s", submitter, result)
+        if result > 0:
+            self._balances.send(self.address, submitter, result)
+            del self._market_balances[submitter]
+
         return result
 
     def handle_report(self, reporter: Address, stored_data: StoredData, claimed_by_reporter: bool, prediction) -> float:
-        result = 0
-        return result
+        # TODO Let them take another person's reward.
+
+        return self.handle_refund(stored_data.sender, stored_data, stored_data.claimable_amount,
+                                  stored_data.claimed_by[stored_data.sender], prediction)
 
     def hash_test_set(self, test_set):
         return sha256(str(test_set).encode()).hexdigest()
@@ -155,9 +146,9 @@ class PredictionMarket(IncentiveMechanism):
         self.min_stake = 1
         self.min_length_s = min_length_s
         self.min_num_contributions = min_num_contributions
+        self.market_end_time = None
 
         self._market_data = []
-        self._market_participants = set()
         self._market_start_time_s = self._time()
 
         self._balances.send(initializer_address, self.address, total_bounty)
@@ -167,7 +158,12 @@ class PredictionMarket(IncentiveMechanism):
         return self.test_reveal_index
 
     def process_contribution(self):
+        assert self.remaining_bounty_rounds > 0, "The market has ended."
+
         if self._next_data_index == 0:
+            self._logger.debug("Remaining bounty rounds: %s", self.remaining_bounty_rounds)
+            self._logger.debug("Computing scores.", )
+            self._scores = defaultdict(float)
             # The paper implies that we should not retrain the model and instead only train once.
             # The problem there is that a contributor is affected by bad contributions
             # between them and the last counted contribution.
@@ -207,16 +203,17 @@ class PredictionMarket(IncentiveMechanism):
                     if num_rounds > self.remaining_bounty_rounds:
                         num_rounds = self.remaining_bounty_rounds
                     self.remaining_bounty_rounds -= num_rounds
-                    for participant in self._market_participants:
-                        self._market_balances[participant] += self._scores[participant] * num_rounds
-                    self._market_participants.remove(self._worst_contributor)
+                    for participant, score in self._scores.items():
+                        self._market_balances[participant] += score * num_rounds
                     self._market_data = list(
                         filter(lambda c: c.contributor_address != self._worst_contributor, self._market_data))
                 else:
+                    self._logger.debug("Dividing remaining bounty amongst all remaining contributors.")
                     num_rounds = self.remaining_bounty_rounds
                     self.remaining_bounty_rounds = 0
-                    for participant in self._market_participants:
-                        self._market_balances[participant] += self._scores[participant] * num_rounds
+                    self.market_end_time = self._time()
+                    for participant, score in self._scores.items():
+                        self._market_balances[participant] += score * num_rounds
 
     def reveal_init_test_set(self, test_set):
         assert not self._init_test_set_revealed, "The initial test set has already been revealed."
