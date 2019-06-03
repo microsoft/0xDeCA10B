@@ -1,6 +1,7 @@
 import os
 import sys
 
+import math
 from injector import inject, Injector
 
 from decai.simulation.contract.balances import Balances
@@ -34,7 +35,7 @@ class Runner(object):
 
     def run(self):
         initializer_address = 'initializer'
-        total_bounty = 1_000_000
+        total_bounty = 100_000
         init_train_data_portion = 0.08
 
         # Set up the agents that will act in the simulation.
@@ -98,7 +99,7 @@ class Runner(object):
 
                          initializer_address=initializer_address,
                          test_sets=test_sets,
-                         accuracy_plot_wait_s=60 * 60 * 24 * 50,
+                         accuracy_plot_wait_s=math.inf,
                          )
 
 

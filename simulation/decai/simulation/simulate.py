@@ -372,11 +372,14 @@ class Simulator(object):
                         if stored_data.sender == agent.address:
                             data = key[0]
                             break
-                    assert data is not None, f"No data submitted by \"{agent.address}\" was found."
-                    self._decai.refund(msg, data, stored_data.classification, stored_data.time)
-                    balance = self._balances[agent.address]
-                    doc.add_next_tick_callback(
-                        partial(plot_cb, agent=agent, t=current_time, b=balance))
+                    if data is not None:
+                        self._decai.refund(msg, data, stored_data.classification, stored_data.time)
+                        balance = self._balances[agent.address]
+                        doc.add_next_tick_callback(
+                            partial(plot_cb, agent=agent, t=current_time, b=balance))
+                    else:
+                        self._logger.warning("No data submitted by \"%s\" was found."
+                                             "\nWill not update it's balance.", agent.address)
 
                 accuracy = self._decai.im.model.evaluate(x_test, y_test)
                 t = self._time()
