@@ -91,7 +91,7 @@ class TestPredictionMarket(unittest.TestCase):
             else:
                 contributor = bad_contributor_address
                 classification = 1 - classification
-            cost = self.im.handle_add_data(contributor, value, data, classification)
+            cost, _ = self.im.handle_add_data(contributor, value, data, classification)
             self.balances.send(contributor, self.im.owner, cost)
             total_deposits[contributor] += cost
 
