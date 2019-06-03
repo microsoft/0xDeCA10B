@@ -36,8 +36,8 @@ class Runner(object):
     def run(self):
         initializer_address = 'initializer'
         total_bounty = 100_000
-        init_train_data_portion = 0.08
-        train_size = 19_000
+        init_train_data_portion = 0.01
+        train_size = 5_000
 
         # Set up the agents that will act in the simulation.
         agents = [

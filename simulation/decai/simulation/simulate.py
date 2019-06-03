@@ -357,6 +357,7 @@ class Simulator(object):
                 self._decai.im.end_market(initializer_address, test_sets)
                 with tqdm(desc="Processing contributions",
                           unit_scale=True, mininterval=2, unit=" contributions",
+                          total=self._decai.im.get_num_contributions_in_market(),
                           ) as pbar:
                     while self._decai.im.remaining_bounty_rounds > 0:
                         self._decai.im.process_contribution()
@@ -366,6 +367,7 @@ class Simulator(object):
                             accuracy = self._decai.im.prev_acc
                             doc.add_next_tick_callback(
                                 partial(plot_accuracy_cb, t=self._time(), a=accuracy))
+                            pbar.total += self._decai.im.get_num_contributions_in_market()
 
                 self._time.set_time(self._time() + 60)
                 for agent in agents:

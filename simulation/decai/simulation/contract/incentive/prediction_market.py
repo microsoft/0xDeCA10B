@@ -69,7 +69,7 @@ class PredictionMarket(IncentiveMechanism):
         assert msg_sender == self.initializer_address
         assert self.state == MarketState.PARTICIPATION
         assert self._init_test_set_revealed, "The initial test set has not been revealed."
-        if len(self._market_data) < self.min_num_contributions \
+        if self.get_num_contributions_in_market() < self.min_num_contributions \
                 and self._time() < self._market_start_time_s + self.min_length_s:
             raise RejectException("Can't end the market yet.")
 
@@ -87,6 +87,9 @@ class PredictionMarket(IncentiveMechanism):
 
         # Signal that no market is running.
         self._market_start_time_s = None
+
+    def get_num_contributions_in_market(self):
+        return len(self._market_data)
 
     def get_test_set_hashes(self, num_pieces, x_test, y_test):
         """
@@ -200,7 +203,7 @@ class PredictionMarket(IncentiveMechanism):
         contribution = self._market_data[self._next_data_index]
         self.model.update(contribution.data, contribution.classification)
         self._next_data_index += 1
-        need_restart = self._next_data_index >= len(self._market_data)
+        need_restart = self._next_data_index >= self.get_num_contributions_in_market()
         if need_restart \
                 or self._market_data[self._next_data_index].contributor_address != contribution.contributor_address:
             # Next contributor is different.
@@ -208,10 +211,13 @@ class PredictionMarket(IncentiveMechanism):
             score_change = acc - self.prev_acc
             new_score = self._scores[contribution.contributor_address] + score_change
             self._scores[contribution.contributor_address] = new_score
-            if (score_change < 0 and self._scores[contribution.contributor_address] < self._min_score) \
-                    or self._worst_contributor == contribution.contributor_address:
+            if score_change <= 0 and new_score < self._min_score:
                 self._min_score = self._scores[contribution.contributor_address]
                 self._worst_contributor = contribution.contributor_address
+            if self._worst_contributor == contribution.contributor_address and score_change > 0:
+                # Their score increased, they might not be the worst anymore.
+                # Optimize: use a heap.
+                self._worst_contributor, self._min_score = min(self._scores.items(), key=lambda x: x[1])
 
             self.prev_acc = acc
             if need_restart:
@@ -223,10 +229,11 @@ class PredictionMarket(IncentiveMechanism):
                         num_rounds = self.remaining_bounty_rounds
                     self.remaining_bounty_rounds -= num_rounds
                     for participant, score in self._scores.items():
+                        self._logger.debug("Score for \"%s\": %s", participant, score)
                         self._market_balances[participant] += score * num_rounds
                     self._market_data = list(
                         filter(lambda c: c.contributor_address != self._worst_contributor, self._market_data))
-                    if len(self._market_data) == 0:
+                    if self.get_num_contributions_in_market() == 0:
                         self.remaining_bounty_rounds = 0
                         self.reward_phase_end_time_s = self._time()
                     else:
@@ -237,6 +244,7 @@ class PredictionMarket(IncentiveMechanism):
                     self.remaining_bounty_rounds = 0
                     self.reward_phase_end_time_s = self._time()
                     for participant, score in self._scores.items():
+                        self._logger.debug("Score for \"%s\": %s", participant, score)
                         self._market_balances[participant] += score * num_rounds
 
     def reveal_init_test_set(self, test_set):
