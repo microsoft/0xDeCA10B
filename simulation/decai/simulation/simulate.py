@@ -87,6 +87,7 @@ class Simulator(object):
                  initializer_address: Address = None,
                  test_sets: list = None,
                  accuracy_plot_wait_s=2E5,
+                 train_size: int = None, test_size: int = None,
                  ):
         """
         Run a simulation.
@@ -187,7 +188,8 @@ class Simulator(object):
         continuous_evaluation = not isinstance(self._decai.im, PredictionMarket)
 
         def task():
-            (x_train, y_train), (x_test, y_test) = self._data_loader.load_data()
+            (x_train, y_train), (x_test, y_test) = \
+                self._data_loader.load_data(train_size=train_size, test_size=test_size)
             init_idx = int(len(x_train) * init_train_data_portion)
             self._logger.info("Initializing model with %d out of %d samples.",
                               init_idx, len(x_train))
@@ -353,14 +355,17 @@ class Simulator(object):
             if isinstance(self._decai.im, PredictionMarket):
                 self._time.set_time(self._time() + 60)
                 self._decai.im.end_market(initializer_address, test_sets)
-                while self._decai.im.remaining_bounty_rounds > 0:
-                    self._decai.im.process_contribution()
-                    if self._decai.im.state == MarketState.REWARD_RE_INITIALIZE_MODEL:
-                        self._time.set_time(self._time() + 60 * 60)
-                        self._logger.debug("Evaluating.")
-                        accuracy = self._decai.im.model.evaluate(x_test, y_test)
-                        doc.add_next_tick_callback(
-                            partial(plot_accuracy_cb, t=self._time(), a=accuracy))
+                with tqdm(desc="Processing contributions",
+                          unit_scale=True, mininterval=2, unit=" contributions",
+                          ) as pbar:
+                    while self._decai.im.remaining_bounty_rounds > 0:
+                        self._decai.im.process_contribution()
+                        pbar.update()
+                        if self._decai.im.state == MarketState.REWARD_RE_INITIALIZE_MODEL:
+                            self._time.set_time(self._time() + 60 * 60)
+                            accuracy = self._decai.im.prev_acc
+                            doc.add_next_tick_callback(
+                                partial(plot_accuracy_cb, t=self._time(), a=accuracy))
 
                 self._time.set_time(self._time() + 60)
                 for agent in agents:

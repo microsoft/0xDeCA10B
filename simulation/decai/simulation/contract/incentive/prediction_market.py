@@ -189,8 +189,8 @@ class PredictionMarket(IncentiveMechanism):
             self._logger.debug("Re-initializing model.", )
             self.model.init_model(self._x_init_data, self._y_init_data)
 
-            self._prev_acc = self.model.evaluate(self._test_data, self._test_labels)
-            self._logger.debug("Accuracy: %0.2f%%", self._prev_acc * 100)
+            self.prev_acc = self.model.evaluate(self._test_data, self._test_labels)
+            self._logger.debug("Accuracy: %0.2f%%", self.prev_acc * 100)
             self._worst_contributor = None
             self._min_score = math.inf
             self.state = MarketState.REWARD
@@ -205,7 +205,7 @@ class PredictionMarket(IncentiveMechanism):
                 or self._market_data[self._next_data_index].contributor_address != contribution.contributor_address:
             # Next contributor is different.
             acc = self.model.evaluate(self._test_data, self._test_labels)
-            score_change = acc - self._prev_acc
+            score_change = acc - self.prev_acc
             new_score = self._scores[contribution.contributor_address] + score_change
             self._scores[contribution.contributor_address] = new_score
             if (score_change < 0 and self._scores[contribution.contributor_address] < self._min_score) \
@@ -213,7 +213,7 @@ class PredictionMarket(IncentiveMechanism):
                 self._min_score = self._scores[contribution.contributor_address]
                 self._worst_contributor = contribution.contributor_address
 
-            self._prev_acc = acc
+            self.prev_acc = acc
             if need_restart:
                 # Find min score and remove that address from the list.
                 self._logger.debug("Minimum score: \"%s\": %s", self._worst_contributor, self._min_score)

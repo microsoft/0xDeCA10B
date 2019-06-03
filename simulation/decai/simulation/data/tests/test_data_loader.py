@@ -15,7 +15,7 @@ class TestDataLoader(DataLoader):
     def __init__(self, logger: Logger):
         self._logger = logger
 
-    def load_data(self) -> (tuple, tuple):
+    def load_data(self, train_size: int = None, test_size: int = None) -> (tuple, tuple):
         def _ground_truth(data):
             if data[0] * data[2] > 0:
                 return 1
@@ -57,6 +57,11 @@ class TestDataLoader(DataLoader):
             [2, -2, 0],
 
         ])
+        if train_size is not None:
+            x_train = x_train[:train_size]
+        if test_size is not None:
+            x_test = x_test[:test_size]
+
         y_train = [_ground_truth(x) for x in x_train]
         y_test = [_ground_truth(x) for x in x_test]
 

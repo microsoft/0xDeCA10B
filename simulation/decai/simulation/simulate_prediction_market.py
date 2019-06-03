@@ -37,6 +37,7 @@ class Runner(object):
         initializer_address = 'initializer'
         total_bounty = 100_000
         init_train_data_portion = 0.08
+        train_size = 19_000
 
         # Set up the agents that will act in the simulation.
         agents = [
@@ -60,7 +61,7 @@ class Runner(object):
 
         self._balances.initialize(initializer_address, total_bounty)
 
-        (x_train, y_train), (x_test, y_test) = self._data.load_data()
+        (x_train, y_train), (x_test, y_test) = self._data.load_data(train_size=train_size)
         init_idx = int(len(x_train) * init_train_data_portion)
         assert init_idx > 0
         x_init_data, y_init_data = x_train[:init_idx], y_train[:init_idx]
@@ -100,6 +101,7 @@ class Runner(object):
                          initializer_address=initializer_address,
                          test_sets=test_sets,
                          accuracy_plot_wait_s=math.inf,
+                         train_size=train_size,
                          )
 
 
