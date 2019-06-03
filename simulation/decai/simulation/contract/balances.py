@@ -20,6 +20,9 @@ class Balances(object):
     def __getitem__(self, address: Address) -> float:
         return self._balances[address]
 
+    def get_all(self):
+        return dict(self._balances)
+
     def initialize(self, address: Address, start_balance: float):
         assert address not in self._balances, f"'{address}' already has a balance."
         self._balances[address] = start_balance

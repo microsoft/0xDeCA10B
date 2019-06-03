@@ -41,6 +41,9 @@ class DataHandler(SmartContract):
         self._time = time_method
         self._added_data: Dict[tuple: StoredData] = dict()
 
+    def __iter__(self):
+        return iter(self._added_data.items())
+
     def _get_key(self, data, classification, added_time: int, original_author: str):
         if isinstance(data, np.ndarray):
             # The `.tolist()` isn't necessary but is faster.

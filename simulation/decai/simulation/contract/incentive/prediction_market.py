@@ -117,9 +117,9 @@ class PredictionMarket(IncentiveMechanism):
         result = self._market_balances[submitter]
         self._logger.debug("Reward for \"%s\": %s", submitter, result)
         if result > 0:
-            self._balances.send(self.address, submitter, result)
             del self._market_balances[submitter]
-
+        else:
+            result = 0
         return result
 
     def handle_report(self, reporter: Address, stored_data: StoredData, claimed_by_reporter: bool, prediction) -> float:
@@ -130,7 +130,6 @@ class PredictionMarket(IncentiveMechanism):
             result = self._market_balances[submitter]
             if result > 0:
                 self._logger.debug("Giving reward for \"%s\" to \"%s\". Reward: %s", submitter, reporter, result)
-                self._balances.send(self.address, reporter, result)
                 del self._market_balances[reporter]
         else:
             result = 0
@@ -161,7 +160,7 @@ class PredictionMarket(IncentiveMechanism):
         self._market_data = []
         self._market_start_time_s = self._time()
 
-        self._balances.send(initializer_address, self.address, total_bounty)
+        self._balances.send(initializer_address, self.owner, total_bounty)
 
         self._init_test_set_revealed = False
 
@@ -172,7 +171,6 @@ class PredictionMarket(IncentiveMechanism):
 
         if self._next_data_index == 0:
             self._logger.debug("Remaining bounty rounds: %s", self.remaining_bounty_rounds)
-            self._logger.debug("Computing scores.", )
             self._scores = defaultdict(float)
             # The paper implies that we should not retrain the model and instead only train once.
             # The problem there is that a contributor is affected by bad contributions
@@ -183,6 +181,7 @@ class PredictionMarket(IncentiveMechanism):
             self.model.init_model(self._x_init_data, self._y_init_data)
 
             self._prev_acc = self.model.evaluate(self._test_data, self._test_labels)
+            self._logger.debug("Accuracy: %0.2f%%", self._prev_acc * 100)
             self._worst_contributor = None
             self._min_score = math.inf
 
@@ -217,6 +216,9 @@ class PredictionMarket(IncentiveMechanism):
                         self._market_balances[participant] += score * num_rounds
                     self._market_data = list(
                         filter(lambda c: c.contributor_address != self._worst_contributor, self._market_data))
+                    if len(self._market_data) == 0:
+                        self.remaining_bounty_rounds = 0
+                        self.reward_phase_end_time_s = self._time()
                 else:
                     self._logger.debug("Dividing remaining bounty amongst all remaining contributors.")
                     num_rounds = self.remaining_bounty_rounds

@@ -100,6 +100,10 @@ class DefaultCollaborativeTrainer(CollaborativeTrainer):
         del kwargs['__class__']
         super().__init__(**kwargs)
 
+        self.data_handler.owner = self.address
+        self.im.owner = self.address
+        self.model.owner = self.address
+
     def predict(self, msg: Msg, data):
         self.im.distribute_payment_for_prediction(msg.sender, msg.value)
         return self.model.predict(data)

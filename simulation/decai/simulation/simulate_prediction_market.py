@@ -97,7 +97,8 @@ class Runner(object):
                          init_train_data_portion=init_train_data_portion,
 
                          initializer_address=initializer_address,
-                         test_sets=test_sets
+                         test_sets=test_sets,
+                         accuracy_plot_wait_s=60 * 60 * 24 * 50,
                          )
 
 

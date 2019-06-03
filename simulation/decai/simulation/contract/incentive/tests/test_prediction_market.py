@@ -88,7 +88,7 @@ class TestPredictionMarket(unittest.TestCase):
                 contributor = bad_contributor_address
                 classification = 1 - classification
             cost = self.im.handle_add_data(contributor, value, data, classification)
-            self.balances.send(contributor, self.im.address, cost)
+            self.balances.send(contributor, self.im.owner, cost)
             total_deposits[contributor] += cost
 
         # Reward Phase
@@ -100,22 +100,23 @@ class TestPredictionMarket(unittest.TestCase):
         for contributor in [good_contributor_address, bad_contributor_address]:
             # Don't need to pass the right StoredData.
             # noinspection PyTypeChecker
-            self.im.handle_refund(contributor, None, 0, False, None)
+            reward = self.im.handle_refund(contributor, None, 0, False, None)
+            self.balances.send(self.im.owner, contributor, reward)
 
         # General checks that should be true for a market with a reasonably sensitive model.
-        self.assertLess(self.balances[self.im.address], total_bounty,
+        self.assertLess(self.balances[self.im.owner], total_bounty,
                         f"Some of the bounty should be distributed.\n"
-                        f"Balances: {self.balances}")
-        self.assertLess(0, self.balances[self.im.address])
+                        f"Balances: {self.balances.get_all()}")
+        self.assertLess(0, self.balances[self.im.owner])
 
         self.assertLess(self.balances[bad_contributor_address], initial_bad_balance)
-        self.assertLess(initial_good_balance, self.balances[good_contributor_address])
+        self.assertGreater(self.balances[good_contributor_address], initial_good_balance)
         self.assertLess(self.balances[bad_contributor_address], self.balances[good_contributor_address])
         self.assertLessEqual(self.balances[good_contributor_address] - self.balances[bad_contributor_address],
                              total_bounty)
         self.assertEqual(initial_good_balance + initial_bad_balance + total_bounty,
                          self.balances[good_contributor_address] + self.balances[bad_contributor_address] +
-                         self.balances[self.im.address],
+                         self.balances[self.im.owner],
                          "Should be a zero-sum.")
 
         self.assertEqual(initial_bad_balance - total_deposits[bad_contributor_address],
@@ -125,4 +126,4 @@ class TestPredictionMarket(unittest.TestCase):
         # Specific checks for the randomness seed set.
         self.assertEqual(9994, self.balances[bad_contributor_address])
         self.assertEqual(49997, self.balances[good_contributor_address])
-        self.assertEqual(60009, self.balances[self.im.address])
+        self.assertEqual(60009, self.balances[self.im.owner])

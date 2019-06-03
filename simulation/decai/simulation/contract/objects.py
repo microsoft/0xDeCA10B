@@ -1,5 +1,6 @@
 # Objects for all smart contracts.
 from dataclasses import dataclass
+from typing import Optional
 from unittest.mock import Mock
 
 from injector import inject, singleton
@@ -26,7 +27,8 @@ class RejectException(Exception):
 
 class SmartContract(object):
     def __init__(self):
-        self.address = f'{type(self).__name__}-{id(self)}'
+        self.address: Address = f'{type(self).__name__}-{id(self)}'
+        self.owner: Optional[Address] = None
 
 
 @singleton

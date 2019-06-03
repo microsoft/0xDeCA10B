@@ -86,6 +86,7 @@ class Simulator(object):
                  init_train_data_portion: float = 0.1,
                  initializer_address: Address = None,
                  test_sets: list = None,
+                 accuracy_plot_wait_s=2E5,
                  ):
         """
         Run a simulation.
@@ -155,8 +156,8 @@ class Simulator(object):
         plot.legend.location = 'top_left'
         plot.legend.label_text_font_size = '12pt'
 
+        # JavaScript code.
         plot.xaxis[0].formatter = FuncTickFormatter(code="""
-        // JavaScript code
         return (tick / 86400).toFixed(0);
         """)
         plot.yaxis[0].formatter = PrintfTickFormatter(format="%0.1f%%")
@@ -182,6 +183,8 @@ class Simulator(object):
         def plot_accuracy_cb(t, a):
             acc_source.stream(dict(t=[t], a=[a * 100]))
             save_data['accuracies'].append(dict(t=t, accuracy=a))
+
+        continuous_evaluation = not isinstance(self._decai.im, PredictionMarket)
 
         def task():
             (x_train, y_train), (x_test, y_test) = self._data_loader.load_data()
@@ -227,8 +230,11 @@ class Simulator(object):
                     # since it should be relatively cheaper than the deposit required to add data.
                     # It may not be cheaper than calling `report`.
 
-                    if next_data_index >= len(x_remaining) and len(unclaimed_data) == 0:
-                        break
+                    if next_data_index >= len(x_remaining):
+                        if continuous_evaluation and len(unclaimed_data) == 0:
+                            break
+                        else:
+                            break
 
                     current_time, agent = q.get()
                     update_balance_plot = False
@@ -236,13 +242,14 @@ class Simulator(object):
                         # Might be need to sleep to allow the plot to update.
                         # time.sleep(0.1)
                         self._logger.debug("Evaluating.")
-                        next_accuracy_plot_time += 2E5
+                        next_accuracy_plot_time += accuracy_plot_wait_s
                         accuracy = self._decai.model.evaluate(x_test, y_test)
                         doc.add_next_tick_callback(
                             partial(plot_accuracy_cb, t=current_time, a=accuracy))
 
-                        self._logger.debug("Unclaimed data: %d", len(unclaimed_data))
-                        pbar.set_description(f"{desc} ({len(unclaimed_data)} unclaimed)")
+                        if continuous_evaluation:
+                            self._logger.debug("Unclaimed data: %d", len(unclaimed_data))
+                            pbar.set_description(f"{desc} ({len(unclaimed_data)} unclaimed)")
 
                         with open(save_path, 'w') as f:
                             json.dump(save_data, f, separators=(',', ':'))
@@ -278,7 +285,8 @@ class Simulator(object):
                                         self._decai.add_data(msg, x, y)
                                         update_balance_plot = True
                                         balance = self._balances[agent.address]
-                                        unclaimed_data.append((current_time, agent, x, y))
+                                        if continuous_evaluation:
+                                            unclaimed_data.append((current_time, agent, x, y))
                                         next_data_index += 1
                                         pbar.update()
                                     except RejectException:
@@ -340,11 +348,35 @@ class Simulator(object):
                             partial(plot_cb, agent=agent, t=current_time, b=balance))
 
             self._logger.info("Done going through data.")
-            pbar.set_description(f"{desc} ({len(unclaimed_data)} unclaimed)")
+            if continuous_evaluation:
+                pbar.set_description(f"{desc} ({len(unclaimed_data)} unclaimed)")
 
             if isinstance(self._decai.im, PredictionMarket):
                 # TODO Plot balance during calculation.
                 self._decai.im.end_market(initializer_address, test_sets)
+                while self._decai.im.remaining_bounty_rounds > 0:
+                    self._decai.im.process_contribution()
+                    # TODO Evaluate before re-initializing.
+
+                for agent in agents:
+                    msg = Msg(agent.address, 0)
+                    # Find data submitted by them.
+                    data = None
+                    for key, stored_data in self._decai.data_handler:
+                        if stored_data.sender == agent.address:
+                            data = key[0]
+                            break
+                    assert data is not None, f"No data submitted by \"{agent.address}\" was found."
+                    self._decai.refund(msg, data, stored_data.classification, stored_data.time)
+                    balance = self._balances[agent.address]
+                    doc.add_next_tick_callback(
+                        partial(plot_cb, agent=agent, t=current_time, b=balance))
+
+                accuracy = self._decai.im.model.evaluate(x_test, y_test)
+                t = self._time()
+                doc.add_next_tick_callback(
+                    partial(plot_accuracy_cb, t=t, a=accuracy))
+                self._logger.info("Done issuing rewards.")
 
             with open(save_path, 'w') as f:
                 json.dump(save_data, f, separators=(',', ':'))
