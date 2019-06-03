@@ -231,9 +231,7 @@ class Simulator(object):
                     # It may not be cheaper than calling `report`.
 
                     if next_data_index >= len(x_remaining):
-                        if continuous_evaluation and len(unclaimed_data) == 0:
-                            break
-                        else:
+                        if not continuous_evaluation or len(unclaimed_data) == 0:
                             break
 
                     current_time, agent = q.get()
@@ -283,7 +281,8 @@ class Simulator(object):
                                     msg = Msg(agent.address, value)
                                     try:
                                         self._decai.add_data(msg, x, y)
-                                        update_balance_plot = True
+                                        # Don't need to plot every time. Plot less as we get more data.
+                                        update_balance_plot = next_data_index / len(x_remaining) + 0.1 > random.random()
                                         balance = self._balances[agent.address]
                                         if continuous_evaluation:
                                             unclaimed_data.append((current_time, agent, x, y))
