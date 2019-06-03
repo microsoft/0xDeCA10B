@@ -20,7 +20,7 @@ from tqdm import tqdm
 
 from decai.simulation.contract.balances import Balances
 from decai.simulation.contract.collab_trainer import CollaborativeTrainer
-from decai.simulation.contract.incentive.prediction_market import PredictionMarket
+from decai.simulation.contract.incentive.prediction_market import MarketState, PredictionMarket
 from decai.simulation.contract.objects import Address, Msg, RejectException, TimeMock
 from decai.simulation.data.data_loader import DataLoader
 
@@ -352,12 +352,18 @@ class Simulator(object):
                 pbar.set_description(f"{desc} ({len(unclaimed_data)} unclaimed)")
 
             if isinstance(self._decai.im, PredictionMarket):
-                # TODO Plot balance during calculation.
+                self._time.set_time(self._time() + 60)
                 self._decai.im.end_market(initializer_address, test_sets)
                 while self._decai.im.remaining_bounty_rounds > 0:
                     self._decai.im.process_contribution()
-                    # TODO Evaluate before re-initializing.
+                    if self._decai.im.state == MarketState.REWARD_RE_INITIALIZE_MODEL:
+                        self._time.set_time(self._time() + 60 * 60)
+                        self._logger.debug("Evaluating.")
+                        accuracy = self._decai.im.model.evaluate(x_test, y_test)
+                        doc.add_next_tick_callback(
+                            partial(plot_accuracy_cb, t=self._time(), a=accuracy))
 
+                self._time.set_time(self._time() + 60)
                 for agent in agents:
                     msg = Msg(agent.address, 0)
                     # Find data submitted by them.

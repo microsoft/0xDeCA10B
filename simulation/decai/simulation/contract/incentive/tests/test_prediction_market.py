@@ -9,7 +9,8 @@ from decai.simulation.contract.balances import Balances
 from decai.simulation.contract.classification.perceptron import PerceptronModule
 from decai.simulation.contract.collab_trainer import CollaborativeTrainer, DefaultCollaborativeTrainerModule
 from decai.simulation.contract.incentive.incentive_mechanism import IncentiveMechanism
-from decai.simulation.contract.incentive.prediction_market import PredictionMarketImModule, PredictionMarket
+from decai.simulation.contract.incentive.prediction_market import MarketState, \
+    PredictionMarket, PredictionMarketImModule
 from decai.simulation.contract.objects import TimeMock
 from decai.simulation.data.data_loader import DataLoader
 from decai.simulation.data.tests.test_data_loader import TestDataModule
@@ -65,17 +66,20 @@ class TestPredictionMarket(unittest.TestCase):
         min_num_contributions = min(len(x_remaining), 100)
 
         # Commitment Phase
+        self.assertIsNone(self.im.state)
         # Seed randomness for consistency.
         random.seed(0xDeCA10B)
         test_reveal_index = self.im.initialize_market(initializer_address, total_bounty,
                                                       x_init_data, y_init_data,
                                                       test_dataset_hashes,
                                                       min_length_s, min_num_contributions)
+        self.assertEqual(MarketState.INITIALIZATION, self.im.state)
         assert 0 <= test_reveal_index < len(test_dataset_hashes)
         # For consistency.
         assert test_reveal_index == 4
         self.im.reveal_init_test_set(test_sets[test_reveal_index])
 
+        self.assertEqual(MarketState.PARTICIPATION, self.im.state)
         # Participation Phase
         value = 100
         total_deposits = defaultdict(float)
@@ -92,11 +96,14 @@ class TestPredictionMarket(unittest.TestCase):
             total_deposits[contributor] += cost
 
         # Reward Phase
+        self.assertEqual(MarketState.PARTICIPATION, self.im.state)
         self.im.end_market(initializer_address, test_sets)
+        self.assertEqual(MarketState.REWARD_RE_INITIALIZE_MODEL, self.im.state)
         while self.im.remaining_bounty_rounds > 0:
             self.im.process_contribution()
 
         # Collect rewards.
+        self.assertEqual(MarketState.REWARD, self.im.state)
         for contributor in [good_contributor_address, bad_contributor_address]:
             # Don't need to pass the right StoredData.
             # noinspection PyTypeChecker

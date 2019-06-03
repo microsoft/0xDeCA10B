@@ -17,20 +17,23 @@ from decai.simulation.contract.incentive.incentive_mechanism import IncentiveMec
 from decai.simulation.contract.objects import Address, RejectException, TimeMock
 
 
+class MarketState(Enum):
+    INITIALIZATION = 0
+    PARTICIPATION = 1
+    REWARD = 2
+    REWARD_RE_INITIALIZE_MODEL = 3
+
+
+@dataclass
+class _Contribution:
+    contributor_address: Address
+    deposit: Union[int, float]
+    data: np.array
+    classification: int
+
+
 @singleton
 class PredictionMarket(IncentiveMechanism):
-    @dataclass
-    class Contribution:
-        contributor_address: Address
-        deposit: Union[int, float]
-        data: np.array
-        classification: int
-
-    class MarketState(Enum):
-        # TODO Add states and use this enum.
-        STARTED = 0
-        PROCESSING = 1
-
     @inject
     def __init__(self,
                  # Injected
@@ -55,6 +58,8 @@ class PredictionMarket(IncentiveMechanism):
         self._init_test_set_revealed = False
         self._next_data_index = None
 
+        self.state = None
+
     def distribute_payment_for_prediction(self, sender, value):
         pass
 
@@ -62,13 +67,14 @@ class PredictionMarket(IncentiveMechanism):
         # TODO Split into separate function calls
         # so that it's more like what would really happen in Ethereum to reduce gas costs.
         assert msg_sender == self.initializer_address
+        assert self.state == MarketState.PARTICIPATION
         assert self._init_test_set_revealed, "The initial test set has not been revealed."
-        assert self._next_data_index is None, "The market end has already been triggered."
         if len(self._market_data) < self.min_num_contributions \
                 and self._time() < self._market_start_time_s + self.min_length_s:
             raise RejectException("Can't end the market yet.")
 
         self._logger.info("Ending market.")
+        self.state = MarketState.REWARD_RE_INITIALIZE_MODEL
         self._next_data_index = 0
 
         all_test_data = []
@@ -102,11 +108,11 @@ class PredictionMarket(IncentiveMechanism):
         return test_dataset_hashes, test_sets
 
     def handle_add_data(self, contributor_address: Address, msg_value: float, data, classification) -> float:
-        assert self._next_data_index is None, "The market end has already been triggered."
+        assert self.state == MarketState.PARTICIPATION
         result = self.min_stake
         if result > msg_value:
             raise RejectException(f"Did not pay enough. Sent {msg_value} < {result}")
-        self._market_data.append(self.Contribution(contributor_address, result, data, classification))
+        self._market_data.append(_Contribution(contributor_address, result, data, classification))
         self._market_balances[contributor_address] += result
         return result
 
@@ -163,13 +169,15 @@ class PredictionMarket(IncentiveMechanism):
         self._balances.send(initializer_address, self.owner, total_bounty)
 
         self._init_test_set_revealed = False
+        self.state = MarketState.INITIALIZATION
 
         return self.test_reveal_index
 
     def process_contribution(self):
         assert self.remaining_bounty_rounds > 0, "The market has ended."
 
-        if self._next_data_index == 0:
+        if self.state == MarketState.REWARD_RE_INITIALIZE_MODEL:
+            self._next_data_index = 0
             self._logger.debug("Remaining bounty rounds: %s", self.remaining_bounty_rounds)
             self._scores = defaultdict(float)
             # The paper implies that we should not retrain the model and instead only train once.
@@ -184,6 +192,9 @@ class PredictionMarket(IncentiveMechanism):
             self._logger.debug("Accuracy: %0.2f%%", self._prev_acc * 100)
             self._worst_contributor = None
             self._min_score = math.inf
+            self.state = MarketState.REWARD
+        else:
+            assert self.state == MarketState.REWARD
 
         contribution = self._market_data[self._next_data_index]
         self.model.update(contribution.data, contribution.classification)
@@ -203,8 +214,6 @@ class PredictionMarket(IncentiveMechanism):
 
             self._prev_acc = acc
             if need_restart:
-                self._next_data_index = 0
-
                 # Find min score and remove that address from the list.
                 self._logger.debug("Minimum score: \"%s\": %s", self._worst_contributor, self._min_score)
                 if self._min_score < 0:
@@ -219,6 +228,8 @@ class PredictionMarket(IncentiveMechanism):
                     if len(self._market_data) == 0:
                         self.remaining_bounty_rounds = 0
                         self.reward_phase_end_time_s = self._time()
+                    else:
+                        self.state = MarketState.REWARD_RE_INITIALIZE_MODEL
                 else:
                     self._logger.debug("Dividing remaining bounty amongst all remaining contributors.")
                     num_rounds = self.remaining_bounty_rounds
@@ -228,9 +239,11 @@ class PredictionMarket(IncentiveMechanism):
                         self._market_balances[participant] += score * num_rounds
 
     def reveal_init_test_set(self, test_set):
+        assert self.state == MarketState.INITIALIZATION
         assert not self._init_test_set_revealed, "The initial test set has already been revealed."
         self.verify_test_set(self.test_reveal_index, test_set)
         self._init_test_set_revealed = True
+        self.state = MarketState.PARTICIPATION
 
     def verify_test_set(self, index, test_set):
         test_set_hash = self.hash_test_set(test_set)
