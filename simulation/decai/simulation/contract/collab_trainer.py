@@ -113,9 +113,10 @@ class DefaultCollaborativeTrainer(CollaborativeTrainer):
     def add_data(self, msg: Msg, data, classification):
         # Consider making sure duplicate data isn't added until it's been claimed.
 
-        cost = self.im.handle_add_data(msg.sender, msg.value, data, classification)
+        cost, update_model = self.im.handle_add_data(msg.sender, msg.value, data, classification)
         self.data_handler.handle_add_data(msg.sender, cost, data, classification)
-        self.model.update(data, classification)
+        if update_model:
+            self.model.update(data, classification)
 
         # In Solidity the message's value gets taken automatically.
         # Here we do this at the end in case something failed while trying to add data.

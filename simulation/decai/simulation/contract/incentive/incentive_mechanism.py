@@ -41,7 +41,8 @@ class IncentiveMechanism(ABC, SmartContract):
         pass
 
     @abstractmethod
-    def handle_add_data(self, contributor_address: Address, msg_value: float, data, classification) -> float:
+    def handle_add_data(self, contributor_address: Address, msg_value: float, data, classification) \
+            -> (float, bool):
         """
         Determine if the request to add data is acceptable.
 
@@ -49,7 +50,9 @@ class IncentiveMechanism(ABC, SmartContract):
         :param msg_value: The value sent with the initial transaction to add data.
         :param data: A single sample of training data for the model.
         :param classification: The label for `data`.
-        :return: The cost required to add new data.
+        :return: tuple
+            The cost required to add new data.
+            `True` if the model should be updated, `False` otherwise.
         """
         pass
 

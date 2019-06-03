@@ -107,14 +107,15 @@ class PredictionMarket(IncentiveMechanism):
             test_dataset_hashes.append(self.hash_test_set(test_set))
         return test_dataset_hashes, test_sets
 
-    def handle_add_data(self, contributor_address: Address, msg_value: float, data, classification) -> float:
+    def handle_add_data(self, contributor_address: Address, msg_value: float, data, classification) -> (float, bool):
         assert self.state == MarketState.PARTICIPATION
-        result = self.min_stake
-        if result > msg_value:
-            raise RejectException(f"Did not pay enough. Sent {msg_value} < {result}")
-        self._market_data.append(_Contribution(contributor_address, result, data, classification))
-        self._market_balances[contributor_address] += result
-        return result
+        cost = self.min_stake
+        update_model = False
+        if cost > msg_value:
+            raise RejectException(f"Did not pay enough. Sent {msg_value} < {cost}")
+        self._market_data.append(_Contribution(contributor_address, cost, data, classification))
+        self._market_balances[contributor_address] += cost
+        return (cost, update_model)
 
     def handle_refund(self, submitter: Address, stored_data: StoredData,
                       claimable_amount: float, claimed_by_submitter: bool,

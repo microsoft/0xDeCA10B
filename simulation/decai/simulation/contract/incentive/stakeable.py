@@ -72,12 +72,13 @@ class Stakeable(IncentiveMechanism):
             result = 1
         return result
 
-    def handle_add_data(self, contributor_address: Address, msg_value: float, data, classification) -> float:
-        result = self.get_next_add_data_cost(data, classification)
-        if result > msg_value:
-            raise RejectException(f"Did not pay enough. Sent {msg_value} < {result}")
+    def handle_add_data(self, contributor_address: Address, msg_value: float, data, classification) -> (float, bool):
+        cost = self.get_next_add_data_cost(data, classification)
+        update_model = True
+        if cost > msg_value:
+            raise RejectException(f"Did not pay enough. Sent {msg_value} < {cost}")
         self._last_update_time_s = self._time()
-        return result
+        return (cost, update_model)
 
     def handle_refund(self, submitter: str, stored_data: StoredData,
                       claimable_amount: float, claimed_by_submitter: bool,
