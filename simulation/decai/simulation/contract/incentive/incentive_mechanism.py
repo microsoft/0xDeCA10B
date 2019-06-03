@@ -11,9 +11,9 @@ class IncentiveMechanism(ABC, SmartContract):
     Defines incentives for others to contribute "good" quality data.
     """
 
-    def __init__(self):
+    def __init__(self, refund_time_s=math.inf, any_address_claim_wait_time_s=math.inf):
         super().__init__()
-        self.refund_time_s = math.inf
+        self.refund_time_s = refund_time_s
         """
         Amount of time to wait to get a refund back.
         Once this amount of time has passed, the entire deposit can be reclaimed.
@@ -21,7 +21,7 @@ class IncentiveMechanism(ABC, SmartContract):
         Default to not allowing refunds.
         """
 
-        self.any_address_claim_wait_time_s = math.inf
+        self.any_address_claim_wait_time_s = any_address_claim_wait_time_s
         """
         Amount of time after which anyone can take someone's entire remaining refund.
         The purpose of this is to help ensure that value does not get "stuck" in a contract.

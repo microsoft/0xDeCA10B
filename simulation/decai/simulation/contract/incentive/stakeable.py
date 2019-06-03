@@ -2,7 +2,7 @@ from collections import Counter
 from logging import Logger
 
 import math
-from injector import inject, Module,singleton
+from injector import inject, Module, singleton
 
 from decai.simulation.contract.balances import Balances
 from decai.simulation.contract.data.data_handler import StoredData
@@ -24,7 +24,7 @@ class Stakeable(IncentiveMechanism):
                  any_address_claim_wait_time_s=60 * 60 * 24 * 9,
                  cost_weight=1,
                  ):
-        super().__init__()
+        super().__init__(refund_time_s=refund_time_s, any_address_claim_wait_time_s=any_address_claim_wait_time_s)
 
         self._balances = balances
         self._logger = logger
@@ -32,11 +32,9 @@ class Stakeable(IncentiveMechanism):
 
         # Make sure there is at least a week for the refund.
         min_refund_window_s = 60 * 60 * 24 * 7
-        assert any_address_claim_wait_time_s > refund_time_s + min_refund_window_s, "Claim time is not enough."
+        assert self.any_address_claim_wait_time_s > self.refund_time_s + min_refund_window_s, "Claim time is not enough."
 
         self.cost_weight = cost_weight
-        self.refund_time_s = refund_time_s
-        self.any_address_claim_wait_time_s = any_address_claim_wait_time_s
 
         self.num_good_data_per_user = Counter()
         self.total_num_good_data = 0

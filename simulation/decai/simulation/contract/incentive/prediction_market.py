@@ -6,6 +6,7 @@ from hashlib import sha256
 from logging import Logger
 from typing import Dict, Union
 
+import math
 import numpy as np
 from injector import inject, Module, singleton
 
@@ -38,8 +39,9 @@ class PredictionMarket(IncentiveMechanism):
                  model: Classifier,
                  time_method: TimeMock,
                  # Parameters
+                 any_address_claim_wait_time_s=60 * 60 * 24 * 7.
                  ):
-        super().__init__()
+        super().__init__(any_address_claim_wait_time_s=any_address_claim_wait_time_s)
 
         self._balances = balances
         self._logger = logger
@@ -121,10 +123,18 @@ class PredictionMarket(IncentiveMechanism):
         return result
 
     def handle_report(self, reporter: Address, stored_data: StoredData, claimed_by_reporter: bool, prediction) -> float:
-        # TODO Let them take another person's reward.
-
-        return self.handle_refund(stored_data.sender, stored_data, stored_data.claimable_amount,
-                                  stored_data.claimed_by[stored_data.sender], prediction)
+        assert self.remaining_bounty_rounds == 0, "The reward phase has not finished processing contributions."
+        assert self.reward_phase_end_time_s > 0, "The reward phase has not finished processing contributions."
+        if self._time() - self.reward_phase_end_time_s >= self.any_address_claim_wait_time_s:
+            submitter = stored_data.sender
+            result = self._market_balances[submitter]
+            if result > 0:
+                self._logger.debug("Giving reward for \"%s\" to \"%s\". Reward: %s", submitter, reporter, result)
+                self._balances.send(self.address, reporter, result)
+                del self._market_balances[reporter]
+        else:
+            result = 0
+        return result
 
     def hash_test_set(self, test_set):
         return sha256(str(test_set).encode()).hexdigest()
@@ -146,7 +156,7 @@ class PredictionMarket(IncentiveMechanism):
         self.min_stake = 1
         self.min_length_s = min_length_s
         self.min_num_contributions = min_num_contributions
-        self.market_end_time = None
+        self.reward_phase_end_time_s = None
 
         self._market_data = []
         self._market_start_time_s = self._time()
@@ -174,7 +184,7 @@ class PredictionMarket(IncentiveMechanism):
 
             self._prev_acc = self.model.evaluate(self._test_data, self._test_labels)
             self._worst_contributor = None
-            self._min_score = float('inf')
+            self._min_score = math.inf
 
         contribution = self._market_data[self._next_data_index]
         self.model.update(contribution.data, contribution.classification)
@@ -211,7 +221,7 @@ class PredictionMarket(IncentiveMechanism):
                     self._logger.debug("Dividing remaining bounty amongst all remaining contributors.")
                     num_rounds = self.remaining_bounty_rounds
                     self.remaining_bounty_rounds = 0
-                    self.market_end_time = self._time()
+                    self.reward_phase_end_time_s = self._time()
                     for participant, score in self._scores.items():
                         self._market_balances[participant] += score * num_rounds
 
