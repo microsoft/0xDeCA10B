@@ -125,7 +125,7 @@ class PredictionMarket(IncentiveMechanism):
                       prediction) -> float:
         assert self.remaining_bounty_rounds == 0, "The reward phase has not finished processing contributions."
         result = self._market_balances[submitter]
-        self._logger.debug("Reward for \"%s\": %s", submitter, result)
+        self._logger.debug("Reward for \"%s\": %.2f", submitter, result)
         if result > 0:
             del self._market_balances[submitter]
         else:
@@ -210,11 +210,13 @@ class PredictionMarket(IncentiveMechanism):
             acc = self.model.evaluate(self._test_data, self._test_labels)
             score_change = acc - self.prev_acc
             new_score = self._scores[contribution.contributor_address] + score_change
+            self._logger.debug("  Score change for \"%s\": %0.2f (new score: %0.2f)",
+                               contribution.contributor_address, score_change, new_score)
             self._scores[contribution.contributor_address] = new_score
-            if score_change <= 0 and new_score < self._min_score:
+            if new_score < self._min_score:
                 self._min_score = self._scores[contribution.contributor_address]
                 self._worst_contributor = contribution.contributor_address
-            if self._worst_contributor == contribution.contributor_address and score_change > 0:
+            elif self._worst_contributor == contribution.contributor_address and score_change > 0:
                 # Their score increased, they might not be the worst anymore.
                 # Optimize: use a heap.
                 self._worst_contributor, self._min_score = min(self._scores.items(), key=lambda x: x[1])
@@ -222,14 +224,14 @@ class PredictionMarket(IncentiveMechanism):
             self.prev_acc = acc
             if need_restart:
                 # Find min score and remove that address from the list.
-                self._logger.debug("Minimum score: \"%s\": %s", self._worst_contributor, self._min_score)
+                self._logger.debug("Minimum score: \"%s\": %.2f", self._worst_contributor, self._min_score)
                 if self._min_score < 0:
                     num_rounds = self._market_balances[self._worst_contributor] / -self._min_score
                     if num_rounds > self.remaining_bounty_rounds:
                         num_rounds = self.remaining_bounty_rounds
                     self.remaining_bounty_rounds -= num_rounds
                     for participant, score in self._scores.items():
-                        self._logger.debug("Score for \"%s\": %s", participant, score)
+                        self._logger.debug("Score for \"%s\": %.2f", participant, score)
                         self._market_balances[participant] += score * num_rounds
                     self._market_data = list(
                         filter(lambda c: c.contributor_address != self._worst_contributor, self._market_data))
@@ -244,7 +246,7 @@ class PredictionMarket(IncentiveMechanism):
                     self.remaining_bounty_rounds = 0
                     self.reward_phase_end_time_s = self._time()
                     for participant, score in self._scores.items():
-                        self._logger.debug("Score for \"%s\": %s", participant, score)
+                        self._logger.debug("Score for \"%s\": %.2f", participant, score)
                         self._market_balances[participant] += score * num_rounds
 
     def reveal_init_test_set(self, test_set):

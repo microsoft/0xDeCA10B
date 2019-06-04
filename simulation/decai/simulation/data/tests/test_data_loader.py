@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from logging import Logger
 
 import numpy as np
@@ -6,14 +7,14 @@ from injector import Binder, inject, Module
 from ..data_loader import DataLoader
 
 
-class TestDataLoader(DataLoader):
+@inject
+@dataclass
+class SimpleDataLoader(DataLoader):
     """
     Load test data.
     """
 
-    @inject
-    def __init__(self, logger: Logger):
-        self._logger = logger
+    _logger: Logger
 
     def load_data(self, train_size: int = None, test_size: int = None) -> (tuple, tuple):
         def _ground_truth(data):
@@ -70,4 +71,4 @@ class TestDataLoader(DataLoader):
 
 class TestDataModule(Module):
     def configure(self, binder: Binder):
-        binder.bind(DataLoader, to=TestDataLoader)
+        binder.bind(DataLoader, to=SimpleDataLoader)

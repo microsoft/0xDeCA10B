@@ -1,4 +1,3 @@
-import random
 import unittest
 from collections import defaultdict
 from typing import cast
@@ -35,7 +34,7 @@ class TestPredictionMarket(unittest.TestCase):
         assert isinstance(cls.im, PredictionMarket)
 
     def test_market(self):
-        init_train_data_portion = 0.25
+        init_train_data_portion = 0.2
 
         initializer_address = 'initializer'
         total_bounty = 100_000
@@ -68,15 +67,12 @@ class TestPredictionMarket(unittest.TestCase):
         # Commitment Phase
         self.assertIsNone(self.im.state)
         # Seed randomness for consistency.
-        random.seed(0xDeCA10B)
         test_reveal_index = self.im.initialize_market(initializer_address, total_bounty,
                                                       x_init_data, y_init_data,
                                                       test_dataset_hashes,
                                                       min_length_s, min_num_contributions)
         self.assertEqual(MarketState.INITIALIZATION, self.im.state)
         assert 0 <= test_reveal_index < len(test_dataset_hashes)
-        # For consistency.
-        assert test_reveal_index == 4
         self.im.reveal_init_test_set(test_sets[test_reveal_index])
 
         self.assertEqual(MarketState.PARTICIPATION, self.im.state)
@@ -126,11 +122,9 @@ class TestPredictionMarket(unittest.TestCase):
                          self.balances[self.im.owner],
                          "Should be a zero-sum.")
 
+        self.assertGreater(total_deposits[bad_contributor_address], 0)
         self.assertEqual(initial_bad_balance - total_deposits[bad_contributor_address],
                          self.balances[bad_contributor_address],
                          "The bad contributor should lose all of their deposits.")
 
-        # Specific checks for the randomness seed set.
-        self.assertEqual(9994, self.balances[bad_contributor_address])
-        self.assertEqual(49997, self.balances[good_contributor_address])
-        self.assertEqual(60009, self.balances[self.im.owner])
+        self.assertGreater(total_deposits[good_contributor_address], 0)
