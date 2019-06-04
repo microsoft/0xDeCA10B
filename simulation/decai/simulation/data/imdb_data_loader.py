@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from logging import Logger
 
 import numpy as np
@@ -7,17 +8,17 @@ from keras.datasets import imdb
 from .data_loader import DataLoader
 
 
+@inject
+@dataclass
 class ImdbDataLoader(DataLoader):
     """
     Load data from IMDB reviews.
     """
 
-    @inject
-    def __init__(self, logger: Logger):
-        self._logger = logger
+    _logger: Logger
 
     def load_data(self, train_size: int = None, test_size: int = None) -> (tuple, tuple):
-        num_words = 1000
+        num_words = 100
         self._logger.info("Loading IMDB review data using %d words.", num_words)
         (x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=num_words)
         if train_size is not None:

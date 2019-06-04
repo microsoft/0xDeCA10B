@@ -86,11 +86,11 @@ class Runner(object):
         self._s.simulate(agents,
                          # Accuracy on hidden test set after training with all training data:
                          # With num_words = 100:
-                         # baseline_accuracy=0.6210,
+                         baseline_accuracy=0.6210,
                          # With num_words = 200:
                          # baseline_accuracy=0.6173,
                          # With num_words = 1000:
-                         baseline_accuracy=0.7945,
+                         # baseline_accuracy=0.7945,
                          # With num_words = 10000:
                          # baseline_accuracy=0.84692,
                          # With num_words = 20000:

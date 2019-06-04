@@ -29,16 +29,18 @@ class StoredData:
     claimed_by: Dict[str, bool] = field(default_factory=lambda: defaultdict(bool))
 
 
+@inject
 @singleton
+@dataclass
 class DataHandler(SmartContract):
     """
     Stores added training data and corresponding meta-data.
     """
 
-    @inject
-    def __init__(self, time_method: TimeMock):
+    _time: TimeMock
+
+    def __post_init__(self):
         super().__init__()
-        self._time = time_method
         self._added_data: Dict[tuple: StoredData] = dict()
 
     def __iter__(self):

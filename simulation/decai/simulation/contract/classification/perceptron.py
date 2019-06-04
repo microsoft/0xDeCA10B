@@ -1,6 +1,6 @@
 import os
 
-from injector import inject, Module
+from injector import Module
 from sklearn.linear_model import SGDClassifier
 
 from decai.simulation.contract.classification.classifier import Classifier
@@ -11,13 +11,6 @@ class PerceptronClassifier(Classifier):
     """
     A mock for the smart contract to train models.
     """
-
-    @inject
-    def __init__(self):
-        """
-        :param msg:
-        """
-        super().__init__()
 
     def evaluate(self, data, labels) -> float:
         return self._model.score(data, labels)

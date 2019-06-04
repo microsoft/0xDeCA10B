@@ -5,7 +5,7 @@ from setuptools import find_packages
 install_requires = [
     'bokeh>=0.13',
     'expiringdict>=1.1.4',
-    'injector>0.13',
+    'injector>=0.16.2',
     'Keras>=2.1',
     'numpy',
     'pandas>=0.20',

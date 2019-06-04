@@ -19,9 +19,7 @@ class CollaborativeTrainer(ABC, SmartContract):
                  balances: Balances,
                  data_handler: DataHandler,
                  incentive_mechanism: IncentiveMechanism,
-                 logger: Logger,
                  model: Classifier,
-                 time_method: TimeMock,
                  ):
         super().__init__()
         self.data_handler = data_handler
@@ -29,8 +27,6 @@ class CollaborativeTrainer(ABC, SmartContract):
         self.model = model
 
         self._balances = balances
-        self._logger = logger
-        self._time = time_method
 
     @abstractmethod
     def add_data(self, msg: Msg, data, label):
@@ -91,9 +87,7 @@ class DefaultCollaborativeTrainer(CollaborativeTrainer):
                  balances: Balances,
                  data_handler: DataHandler,
                  incentive_mechanism: IncentiveMechanism,
-                 logger: Logger,
                  model: Classifier,
-                 time_method: TimeMock,
                  ):
         kwargs = dict(locals())
         del kwargs['self']

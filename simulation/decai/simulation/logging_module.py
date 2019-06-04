@@ -7,8 +7,7 @@ from injector import Module, provider, singleton
 
 @dataclass
 class LoggingModule(Module):
-    # FIXME Just DEBUG for now to find out why PR build is failing.
-    _log_level: int = field(default=logging.DEBUG)
+    _log_level: int = field(default=logging.INFO)
 
     @provider
     @singleton
