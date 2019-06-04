@@ -8,7 +8,6 @@ install_requires = [
     'injector>=0.16.2',
     'Keras>=2.1',
     'numpy',
-    'pandas>=0.20',
 
     # Required for saving plots.
     'selenium>=3.141.0',

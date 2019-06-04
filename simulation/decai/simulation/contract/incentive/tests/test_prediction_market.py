@@ -12,7 +12,7 @@ from decai.simulation.contract.incentive.prediction_market import MarketState, \
     PredictionMarket, PredictionMarketImModule
 from decai.simulation.contract.objects import TimeMock
 from decai.simulation.data.data_loader import DataLoader
-from decai.simulation.data.tests.test_data_loader import TestDataModule
+from decai.simulation.data.simple_data_loader import SimpleDataModule
 from decai.simulation.logging_module import LoggingModule
 
 
@@ -21,7 +21,7 @@ class TestPredictionMarket(unittest.TestCase):
     def setUpClass(cls):
         inj = Injector([
             DefaultCollaborativeTrainerModule,
-            TestDataModule,
+            SimpleDataModule,
             LoggingModule,
             PerceptronModule,
             PredictionMarketImModule,
@@ -93,7 +93,7 @@ class TestPredictionMarket(unittest.TestCase):
 
         # Reward Phase
         self.assertEqual(MarketState.PARTICIPATION, self.im.state)
-        self.im.end_market(initializer_address, test_sets)
+        self.im.end_market(test_sets)
         self.assertEqual(MarketState.REWARD_RE_INITIALIZE_MODEL, self.im.state)
         while self.im.remaining_bounty_rounds > 0:
             self.im.process_contribution()

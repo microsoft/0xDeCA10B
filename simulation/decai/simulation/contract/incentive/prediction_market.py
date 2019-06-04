@@ -63,10 +63,9 @@ class PredictionMarket(IncentiveMechanism):
     def distribute_payment_for_prediction(self, sender, value):
         pass
 
-    def end_market(self, msg_sender: Address, test_sets: list):
+    def end_market(self, test_sets: list):
         # TODO Split into separate function calls
         # so that it's more like what would really happen in Ethereum to reduce gas costs.
-        assert msg_sender == self.initializer_address
         assert self.state == MarketState.PARTICIPATION
         assert self._init_test_set_revealed, "The initial test set has not been revealed."
         if self.get_num_contributions_in_market() < self.min_num_contributions \

@@ -67,7 +67,8 @@ class IncentiveMechanism(ABC, SmartContract):
         :param stored_data: The data for which a refund is being attempted.
         :param claimable_amount: The amount that can be claimed for the refund.
         :param claimed_by_submitter: True if the data has already been claimed by `submitter`, otherwise false.
-        :param prediction: The current prediction of the model for data.
+        :param prediction: The current prediction of the model for data
+            or a callable with no parameters to lazily get the prediction of the model on the data.
         :return: The amount to refund to `submitter`.
         """
         pass
@@ -81,7 +82,8 @@ class IncentiveMechanism(ABC, SmartContract):
         :param reporter: The address of the one reporting about the data.
         :param stored_data: The data being reported.
         :param claimed_by_reporter: True if the data has already been claimed by `reporter`, otherwise false.
-        :param prediction: The current prediction of the model for data.
+        :param prediction: The current prediction of the model for data
+            or a callable with no parameters to lazily get the prediction of the model on the data.
         :return: The amount to reward to `reporter`.
         """
         pass

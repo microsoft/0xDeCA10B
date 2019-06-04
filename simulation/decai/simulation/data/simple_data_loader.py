@@ -4,14 +4,14 @@ from logging import Logger
 import numpy as np
 from injector import Binder, inject, Module
 
-from ..data_loader import DataLoader
+from decai.simulation.data.data_loader import DataLoader
 
 
 @inject
 @dataclass
 class SimpleDataLoader(DataLoader):
     """
-    Load test data.
+    Load simple data for testing.
     """
 
     _logger: Logger
@@ -43,6 +43,12 @@ class SimpleDataLoader(DataLoader):
             [0, 3, 0],
             [0, 3, -3],
             [0, -3, 3],
+
+            [0, 0, 4],
+            [0, 4, 4],
+            [4, 0, 0],
+
+            [-6, 0, 0],
         ])
         x_test = np.array([
             [0, 2, 2],
@@ -69,6 +75,10 @@ class SimpleDataLoader(DataLoader):
         return (x_train, y_train), (x_test, y_test)
 
 
-class TestDataModule(Module):
+class SimpleDataModule(Module):
+    """
+    Set up a `DataLoader` mainly for testing.
+    """
+
     def configure(self, binder: Binder):
         binder.bind(DataLoader, to=SimpleDataLoader)

@@ -84,8 +84,7 @@ class Simulator(object):
                  agents: List[Agent],
                  baseline_accuracy: float = None,
                  init_train_data_portion: float = 0.1,
-                 initializer_address: Address = None,
-                 test_sets: list = None,
+                 pm_test_sets: list = None,
                  accuracy_plot_wait_s=2E5,
                  train_size: int = None, test_size: int = None,
                  ):
@@ -96,6 +95,10 @@ class Simulator(object):
         :param baseline_accuracy: The baseline accuracy of the model.
             Usually the accuracy on a hidden test set when the model is trained with all data.
         :param init_train_data_portion: The portion of the data to initially use for training. Must be [0,1].
+        :param pm_test_sets: The test sets for the prediction market incentive mechanism.
+        :param accuracy_plot_wait_s: The amount of time to wait in seconds between plotting the accuracy.
+        :param train_size: The amount of training data to use.
+        :param test_size: The amount of test data to use.
         """
 
         assert 0 <= init_train_data_portion <= 1
@@ -354,7 +357,7 @@ class Simulator(object):
 
             if isinstance(self._decai.im, PredictionMarket):
                 self._time.set_time(self._time() + 60)
-                self._decai.im.end_market(initializer_address, test_sets)
+                self._decai.im.end_market(pm_test_sets)
                 with tqdm(desc="Processing contributions",
                           unit_scale=True, mininterval=2, unit=" contributions",
                           total=self._decai.im.get_num_contributions_in_market(),
@@ -383,6 +386,7 @@ class Simulator(object):
                         balance = self._balances[agent.address]
                         doc.add_next_tick_callback(
                             partial(plot_cb, agent=agent, t=current_time, b=balance))
+                        self._logger.info("Balance for \"%s\": %0.2f", agent.address, balance)
                     else:
                         self._logger.warning("No data submitted by \"%s\" was found."
                                              "\nWill not update it's balance.", agent.address)
