@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 
+from decai.simulation.contract.objects import SmartContract
 
-class Classifier(ABC):
+
+class Classifier(ABC, SmartContract):
     """
     A classifier that can take a data sample as input and return a predict classification/label for the data.
     """
@@ -28,20 +30,20 @@ class Classifier(ABC):
         pass
 
     @abstractmethod
+    def predict(self, data):
+        """
+
+        :param data: The data or features.
+        :return: The predicted classification or label for `data`.
+        """
+        pass
+
+    @abstractmethod
     def update(self, data, classification):
         """
         Update the classifier with one data sample.
 
         :param data: The training data or features.
         :param classification: The label for `data`.
-        """
-        pass
-
-    @abstractmethod
-    def predict(self, data):
-        """
-
-        :param data: The data or features.
-        :return: The predicted classification or label for `data`.
         """
         pass

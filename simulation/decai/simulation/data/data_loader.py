@@ -7,8 +7,8 @@ class DataLoader(ABC):
     """
 
     @abstractmethod
-    def load_data(self) -> (tuple, tuple):
+    def load_data(self, train_size: int = None, test_size: int = None) -> (tuple, tuple):
         """
-        :return: Training Data, Test Data
+        :return: Training Data, Test Data: (x_train, y_train), (x_test, y_test)
         """
         pass

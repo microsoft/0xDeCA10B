@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from logging import Logger
 
 from injector import Module, inject, singleton
 
@@ -7,10 +6,10 @@ from decai.simulation.contract.balances import Balances
 from decai.simulation.contract.classification.classifier import Classifier
 from decai.simulation.contract.data.data_handler import DataHandler
 from decai.simulation.contract.incentive.incentive_mechanism import IncentiveMechanism
-from decai.simulation.contract.objects import Msg, TimeMock
+from decai.simulation.contract.objects import Msg, SmartContract
 
 
-class CollaborativeTrainer(ABC):
+class CollaborativeTrainer(ABC, SmartContract):
     """
     Base class for the main interface to create simulations of a training model in a smart contract.
     """
@@ -19,18 +18,14 @@ class CollaborativeTrainer(ABC):
                  balances: Balances,
                  data_handler: DataHandler,
                  incentive_mechanism: IncentiveMechanism,
-                 logger: Logger,
                  model: Classifier,
-                 time_method: TimeMock,
                  ):
-        self.address = f'{type(self).__name__}-{id(self)}'
+        super().__init__()
         self.data_handler = data_handler
         self.im = incentive_mechanism
         self.model = model
 
         self._balances = balances
-        self._logger = logger
-        self._time = time_method
 
     @abstractmethod
     def add_data(self, msg: Msg, data, label):
@@ -91,14 +86,16 @@ class DefaultCollaborativeTrainer(CollaborativeTrainer):
                  balances: Balances,
                  data_handler: DataHandler,
                  incentive_mechanism: IncentiveMechanism,
-                 logger: Logger,
                  model: Classifier,
-                 time_method: TimeMock,
                  ):
         kwargs = dict(locals())
         del kwargs['self']
         del kwargs['__class__']
         super().__init__(**kwargs)
+
+        self.data_handler.owner = self.address
+        self.im.owner = self.address
+        self.model.owner = self.address
 
     def predict(self, msg: Msg, data):
         self.im.distribute_payment_for_prediction(msg.sender, msg.value)
@@ -109,9 +106,10 @@ class DefaultCollaborativeTrainer(CollaborativeTrainer):
     def add_data(self, msg: Msg, data, classification):
         # Consider making sure duplicate data isn't added until it's been claimed.
 
-        cost = self.im.handle_add_data(msg.value, data, classification)
+        cost, update_model = self.im.handle_add_data(msg.sender, msg.value, data, classification)
         self.data_handler.handle_add_data(msg.sender, cost, data, classification)
-        self.model.update(data, classification)
+        if update_model:
+            self.model.update(data, classification)
 
         # In Solidity the message's value gets taken automatically.
         # Here we do this at the end in case something failed while trying to add data.
@@ -132,7 +130,7 @@ class DefaultCollaborativeTrainer(CollaborativeTrainer):
     def report(self, msg: Msg, data, classification, added_time: int, original_author: str):
         claimed_by_reporter, stored_data = \
             self.data_handler.handle_report(msg.sender, data, classification, added_time, original_author)
-        prediction = lambda : self.model.predict(data)
+        prediction = lambda: self.model.predict(data)
         reward_amount = self.im.handle_report(msg.sender, stored_data, claimed_by_reporter, prediction)
         self.data_handler.update_claimable_amount(msg.sender, stored_data, reward_amount)
         self._balances.send(self.address, msg.sender, reward_amount)
