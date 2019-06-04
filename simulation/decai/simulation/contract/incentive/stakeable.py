@@ -2,16 +2,21 @@ from collections import Counter
 from logging import Logger
 
 import math
-from injector import Module, inject, singleton
+from injector import inject, Module, singleton
 
 from decai.simulation.contract.balances import Balances
 from decai.simulation.contract.data.data_handler import StoredData
 from decai.simulation.contract.incentive.incentive_mechanism import IncentiveMechanism
-from decai.simulation.contract.objects import RejectException, TimeMock
+from decai.simulation.contract.objects import Address, RejectException, TimeMock
 
 
 @singleton
 class Stakeable(IncentiveMechanism):
+    """
+    The Deposit, Take, Reward IM.
+    A deposit is required to add data.
+    Later that deposit can be reclaimed if the model still agrees with the contribution.
+    """
 
     @inject
     def __init__(self,
@@ -24,7 +29,7 @@ class Stakeable(IncentiveMechanism):
                  any_address_claim_wait_time_s=60 * 60 * 24 * 9,
                  cost_weight=1,
                  ):
-        super().__init__()
+        super().__init__(refund_time_s=refund_time_s, any_address_claim_wait_time_s=any_address_claim_wait_time_s)
 
         self._balances = balances
         self._logger = logger
@@ -32,11 +37,9 @@ class Stakeable(IncentiveMechanism):
 
         # Make sure there is at least a week for the refund.
         min_refund_window_s = 60 * 60 * 24 * 7
-        assert any_address_claim_wait_time_s > refund_time_s + min_refund_window_s, "Claim time is not enough."
+        assert self.any_address_claim_wait_time_s > self.refund_time_s + min_refund_window_s, "Claim time is not enough."
 
         self.cost_weight = cost_weight
-        self.refund_time_s = refund_time_s
-        self.any_address_claim_wait_time_s = any_address_claim_wait_time_s
 
         self.num_good_data_per_user = Counter()
         self.total_num_good_data = 0
@@ -51,6 +54,11 @@ class Stakeable(IncentiveMechanism):
                 self._balances.send(sender, agent_address, int(value * num_good / self.total_num_good_data))
 
     def get_next_add_data_cost(self, data, classification) -> float:
+        """
+        :param data: A single sample of training data for the model.
+        :param classification: The label for `data`.
+        :return: The current cost to update a model with a specific sample of training data.
+        """
         current_time_s = int(self._time())
         # TODO Limit how many times a data point can be added if the model already classifies right for it?
         # TODO Add cost to flip all data?
@@ -69,12 +77,13 @@ class Stakeable(IncentiveMechanism):
             result = 1
         return result
 
-    def handle_add_data(self, msg_value: float, data, classification) -> float:
-        result = self.get_next_add_data_cost(data, classification)
-        if result > msg_value:
-            raise RejectException(f"Did not pay enough. Sent {msg_value} < {result}")
+    def handle_add_data(self, contributor_address: Address, msg_value: float, data, classification) -> (float, bool):
+        cost = self.get_next_add_data_cost(data, classification)
+        update_model = True
+        if cost > msg_value:
+            raise RejectException(f"Did not pay enough. Sent {msg_value} < {cost}")
         self._last_update_time_s = self._time()
-        return result
+        return (cost, update_model)
 
     def handle_refund(self, submitter: str, stored_data: StoredData,
                       claimable_amount: float, claimed_by_submitter: bool,
@@ -90,6 +99,8 @@ class Stakeable(IncentiveMechanism):
         current_time_s = int(self._time())
         if current_time_s - stored_data.time <= self.refund_time_s:
             raise RejectException("Not enough time has passed.")
+        if callable(prediction):
+            prediction = prediction()
         if prediction != stored_data.classification:
             raise RejectException("The model doesn't agree with your contribution.")
 

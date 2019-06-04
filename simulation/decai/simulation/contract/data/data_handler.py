@@ -5,7 +5,7 @@ from typing import Dict
 import numpy as np
 from injector import inject, singleton
 
-from decai.simulation.contract.objects import RejectException, TimeMock
+from decai.simulation.contract.objects import Address, RejectException, SmartContract, TimeMock
 
 
 @dataclass
@@ -13,7 +13,7 @@ class StoredData:
     # Storing the data is not necessary. data: object
     classification: object
     time: int
-    sender: str
+    sender: Address
 
     # Need to use float since the numbers might be large. They should still actually be integers.
     initial_deposit: float
@@ -26,21 +26,25 @@ class StoredData:
     The amount of the deposit that can still be claimed.
     """
 
-    claimed_by: Dict[str, bool] = field(default_factory=lambda: defaultdict(bool))
+    claimed_by: Dict[Address, bool] = field(default_factory=lambda: defaultdict(bool))
 
 
+@inject
 @singleton
-class DataHandler(object):
+@dataclass
+class DataHandler(SmartContract):
     """
     Stores added training data and corresponding meta-data.
     """
 
-    @inject
-    def __init__(self, time_method: TimeMock):
-        self._time = time_method
-        self._added_data: Dict[tuple: StoredData] = dict()
+    _time: TimeMock
 
-    def _get_key(self, data, classification, added_time: int, original_author: str):
+    _added_data: Dict[tuple, StoredData] = field(default_factory=dict, init=False)
+
+    def __iter__(self):
+        return iter(self._added_data.items())
+
+    def _get_key(self, data, classification, added_time: int, original_author: Address):
         if isinstance(data, np.ndarray):
             # The `.tolist()` isn't necessary but is faster.
             data = tuple(data.tolist())
@@ -48,7 +52,7 @@ class DataHandler(object):
             data = tuple(data)
         return (data, classification, added_time, original_author)
 
-    def get_data(self, data, classification, added_time: int, original_author: str) -> StoredData:
+    def get_data(self, data, classification, added_time: int, original_author: Address) -> StoredData:
         """
         :param data: The originally submitted features.
         :param classification: The label originally submitted for `data`.
@@ -57,10 +61,10 @@ class DataHandler(object):
         :return: The stored information for the data.
         """
         key = self._get_key(data, classification, added_time, original_author)
-        stored_data: StoredData = self._added_data.get(key)
-        return stored_data
+        result = self._added_data.get(key)
+        return result
 
-    def handle_add_data(self, sender, cost, data, classification):
+    def handle_add_data(self, contributor_address: Address, cost, data, classification):
         """
         Log an attempt to add data
 
@@ -70,13 +74,13 @@ class DataHandler(object):
         :param classification: The label for `data`.
         """
         current_time_s = self._time()
-        key = self._get_key(data, classification, current_time_s, sender)
+        key = self._get_key(data, classification, current_time_s, contributor_address)
         if key in self._added_data:
             raise RejectException("Data has already been added.")
-        d = StoredData(classification, current_time_s, sender, cost, cost)
+        d = StoredData(classification, current_time_s, contributor_address, cost, cost)
         self._added_data[key] = d
 
-    def handle_refund(self, submitter, data, classification, added_time: int) -> (float, bool, StoredData):
+    def handle_refund(self, submitter: Address, data, classification, added_time: int) -> (float, bool, StoredData):
         """
         Log a refund attempt.
 
@@ -97,7 +101,7 @@ class DataHandler(object):
 
         return (claimable_amount, claimed_by_submitter, stored_data)
 
-    def handle_report(self, reporter, data, classification, added_time: int, original_author: str) \
+    def handle_report(self, reporter: Address, data, classification, added_time: int, original_author: Address) \
             -> (bool, StoredData):
         """
         Retrieve information about the data to report.
@@ -122,7 +126,7 @@ class DataHandler(object):
 
         return (claimed_by_reporter, stored_data)
 
-    def update_claimable_amount(self, receiver: str, stored_data: StoredData, reward_amount: float):
+    def update_claimable_amount(self, receiver: Address, stored_data: StoredData, reward_amount: float):
         # The Solidity implementation does the update in another place which is fine for it.
         # Here we only update it once we're sure the refund can be completed successfully.
         stored_data.claimed_by[receiver] = True

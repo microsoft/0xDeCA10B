@@ -1,13 +1,13 @@
 import logging
+from dataclasses import dataclass, field
 from logging import Logger
 
 from injector import Module, provider, singleton
 
 
+@dataclass
 class LoggingModule(Module):
-    def __init__(self, log_level=logging.INFO):
-        super().__init__()
-        self._log_level = log_level
+    _log_level: int = field(default=logging.INFO)
 
     @provider
     @singleton

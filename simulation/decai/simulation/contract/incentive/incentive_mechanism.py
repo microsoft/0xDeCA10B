@@ -3,15 +3,17 @@ from abc import ABC, abstractmethod
 import math
 
 from decai.simulation.contract.data.data_handler import StoredData
+from decai.simulation.contract.objects import Address, SmartContract
 
 
-class IncentiveMechanism(ABC):
+class IncentiveMechanism(ABC, SmartContract):
     """
     Defines incentives for others to contribute "good" quality data.
     """
 
-    def __init__(self):
-        self.refund_time_s = math.inf
+    def __init__(self, refund_time_s=math.inf, any_address_claim_wait_time_s=math.inf):
+        super().__init__()
+        self.refund_time_s = refund_time_s
         """
         Amount of time to wait to get a refund back.
         Once this amount of time has passed, the entire deposit can be reclaimed.
@@ -19,7 +21,7 @@ class IncentiveMechanism(ABC):
         Default to not allowing refunds.
         """
 
-        self.any_address_claim_wait_time_s = math.inf
+        self.any_address_claim_wait_time_s = any_address_claim_wait_time_s
         """
         Amount of time after which anyone can take someone's entire remaining refund.
         The purpose of this is to help ensure that value does not get "stuck" in a contract.
@@ -39,23 +41,18 @@ class IncentiveMechanism(ABC):
         pass
 
     @abstractmethod
-    def get_next_add_data_cost(self, data, classification):
-        """
-        :param data: A single sample of training data for the model.
-        :param classification: The label for `data`.
-        :return: The current cost to update a model with a specific sample of training data.
-        """
-        pass
-
-    @abstractmethod
-    def handle_add_data(self, msg_value: float, data, classification) -> float:
+    def handle_add_data(self, contributor_address: Address, msg_value: float, data, classification) \
+            -> (float, bool):
         """
         Determine if the request to add data is acceptable.
 
+        :param contributor_address: The address of the one attempting to add data
         :param msg_value: The value sent with the initial transaction to add data.
         :param data: A single sample of training data for the model.
         :param classification: The label for `data`.
-        :return: The cost required to add new data.
+        :return: tuple
+            The cost required to add new data.
+            `True` if the model should be updated, `False` otherwise.
         """
         pass
 
@@ -70,7 +67,8 @@ class IncentiveMechanism(ABC):
         :param stored_data: The data for which a refund is being attempted.
         :param claimable_amount: The amount that can be claimed for the refund.
         :param claimed_by_submitter: True if the data has already been claimed by `submitter`, otherwise false.
-        :param prediction: The current prediction of the model for data.
+        :param prediction: The current prediction of the model for data
+            or a callable with no parameters to lazily get the prediction of the model on the data.
         :return: The amount to refund to `submitter`.
         """
         pass
@@ -84,7 +82,8 @@ class IncentiveMechanism(ABC):
         :param reporter: The address of the one reporting about the data.
         :param stored_data: The data being reported.
         :param claimed_by_reporter: True if the data has already been claimed by `reporter`, otherwise false.
-        :param prediction: The current prediction of the model for data.
+        :param prediction: The current prediction of the model for data
+            or a callable with no parameters to lazily get the prediction of the model on the data.
         :return: The amount to reward to `reporter`.
         """
         pass
