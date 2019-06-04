@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from logging import Logger
 from typing import Dict
 
@@ -6,17 +7,17 @@ from injector import inject, singleton
 from decai.simulation.contract.objects import Address
 
 
+@inject
 @singleton
+@dataclass
 class Balances(object):
     """
     Tracks balances in the simulation.
     """
 
-    @inject
-    def __init__(self,
-                 logger: Logger):
-        self._balances: Dict[Address: float] = dict()
-        self._logger = logger
+    _logger: Logger
+
+    _balances: Dict[Address, float] = field(default_factory=dict, init=False)
 
     def __contains__(self, address: Address):
         """
@@ -32,7 +33,7 @@ class Balances(object):
         """
         return self._balances[address]
 
-    def get_all(self) -> Dict[Address:float]:
+    def get_all(self) -> Dict[Address, float]:
         """
         :return: A copy of the balances.
         """

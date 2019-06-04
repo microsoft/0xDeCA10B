@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from logging import Logger
 
 from injector import Module, inject, singleton
 
@@ -7,7 +6,7 @@ from decai.simulation.contract.balances import Balances
 from decai.simulation.contract.classification.classifier import Classifier
 from decai.simulation.contract.data.data_handler import DataHandler
 from decai.simulation.contract.incentive.incentive_mechanism import IncentiveMechanism
-from decai.simulation.contract.objects import Msg, SmartContract, TimeMock
+from decai.simulation.contract.objects import Msg, SmartContract
 
 
 class CollaborativeTrainer(ABC, SmartContract):
