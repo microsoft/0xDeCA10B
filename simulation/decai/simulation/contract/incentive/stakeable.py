@@ -12,6 +12,11 @@ from decai.simulation.contract.objects import Address, RejectException, TimeMock
 
 @singleton
 class Stakeable(IncentiveMechanism):
+    """
+    The Deposit, Take, Reward IM.
+    A deposit is required to add data.
+    Later that deposit can be reclaimed if the model still agrees with the contribution.
+    """
 
     @inject
     def __init__(self,

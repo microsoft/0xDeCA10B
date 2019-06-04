@@ -30,20 +30,20 @@ class Classifier(ABC, SmartContract):
         pass
 
     @abstractmethod
+    def predict(self, data):
+        """
+
+        :param data: The data or features.
+        :return: The predicted classification or label for `data`.
+        """
+        pass
+
+    @abstractmethod
     def update(self, data, classification):
         """
         Update the classifier with one data sample.
 
         :param data: The training data or features.
         :param classification: The label for `data`.
-        """
-        pass
-
-    @abstractmethod
-    def predict(self, data):
-        """
-
-        :param data: The data or features.
-        :return: The predicted classification or label for `data`.
         """
         pass

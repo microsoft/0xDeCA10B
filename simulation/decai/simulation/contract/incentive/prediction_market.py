@@ -34,6 +34,10 @@ class _Contribution:
 
 @singleton
 class PredictionMarket(IncentiveMechanism):
+    """
+    An IM where rewards are computed based on how the model's performance changes with respect to a test set.
+    """
+
     @inject
     def __init__(self,
                  # Injected
@@ -64,6 +68,10 @@ class PredictionMarket(IncentiveMechanism):
         pass
 
     def end_market(self, test_sets: list):
+        """
+        Signal the end of the prediction market.
+        :param test_sets: The divided test set.
+        """
         # TODO Split into separate function calls
         # so that it's more like what would really happen in Ethereum to reduce gas costs.
         assert self.state == MarketState.PARTICIPATION

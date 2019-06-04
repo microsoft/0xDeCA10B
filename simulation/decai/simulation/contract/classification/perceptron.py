@@ -9,7 +9,7 @@ from decai.simulation.contract.classification.classifier import Classifier
 # Purposely not a singleton so that it is easy to get a model that has not been initialized.
 class PerceptronClassifier(Classifier):
     """
-    A mock for the smart contract to train models.
+    A Perceptron model to train models.
     """
 
     def evaluate(self, data, labels) -> float:
