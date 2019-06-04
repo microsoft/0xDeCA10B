@@ -97,8 +97,6 @@ class Runner(object):
                          # baseline_accuracy=0.8484,
 
                          init_train_data_portion=init_train_data_portion,
-
-                         initializer_address=initializer_address,
                          pm_test_sets=test_sets,
                          accuracy_plot_wait_s=math.inf,
                          train_size=train_size,
