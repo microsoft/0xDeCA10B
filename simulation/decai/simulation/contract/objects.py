@@ -6,6 +6,7 @@ from unittest.mock import Mock
 from injector import inject, singleton
 
 Address = str
+""" An address that can receive funds and participate in training models. """
 
 
 @dataclass
