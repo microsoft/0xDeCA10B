@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 from hashlib import sha256
 from logging import Logger
-from typing import Dict, Union
+from typing import Dict
 
 import math
 import numpy as np
@@ -17,17 +17,35 @@ from decai.simulation.contract.incentive.incentive_mechanism import IncentiveMec
 from decai.simulation.contract.objects import Address, RejectException, TimeMock
 
 
-class MarketState(Enum):
+class MarketPhase(Enum):
+    """ Phases for the current market. """
+    # Phases are in chronological order.
+
     INITIALIZATION = 0
+    """ The market is being initialized and awaiting for the requested test set index to be revealed. """
+
     PARTICIPATION = 1
+    """ The market is open to data contributions. """
+
     REWARD = 2
+    """ No more data contributions are being accepted but rewards still need to be calculated. """
+
     REWARD_RE_INITIALIZE_MODEL = 3
+    """ Same as `REWARD` but the model needs to be re-initialized. """
+
+    REWARD_COLLECT = 4
+    """ The reward values have been computed and are ready to be collected. """
 
 
 @dataclass
 class _Contribution:
+    """
+    A contribution to train data.
+    This is stored for convenience but for some applications, storing the data could be very expensive,
+    instead, hashes could be stored and during the reward phase,
+    the hash can be used to verify data as data is re-submitted.
+    """
     contributor_address: Address
-    deposit: Union[int, float]
     data: np.array
     classification: int
 
@@ -36,6 +54,10 @@ class _Contribution:
 class PredictionMarket(IncentiveMechanism):
     """
     An IM where rewards are computed based on how the model's performance changes with respect to a test set.
+
+    For now, for the purposes of the simulation, the market is only intended to be run once.
+    Eventually this class and the actual smart contract implementation of it
+    should support restarting the market with a new bounty once a market has ended.
     """
 
     @inject
@@ -55,11 +77,10 @@ class PredictionMarket(IncentiveMechanism):
         self.model = model
         self._time = time_method
 
-        self._market_start_time_s = None
+        self._market_earliest_end_time_s = None
         self._market_balances: Dict[Address, float] = defaultdict(float)
         """ Keeps track of balances in the market. """
 
-        self._init_test_set_revealed = False
         self._next_data_index = None
 
         self.state = None
@@ -74,14 +95,13 @@ class PredictionMarket(IncentiveMechanism):
         """
         # TODO Split into separate function calls
         # so that it's more like what would really happen in Ethereum to reduce gas costs.
-        assert self.state == MarketState.PARTICIPATION
-        assert self._init_test_set_revealed, "The initial test set has not been revealed."
+        assert self.state == MarketPhase.PARTICIPATION
         if self.get_num_contributions_in_market() < self.min_num_contributions \
-                and self._time() < self._market_start_time_s + self.min_length_s:
+                and self._time() < self._market_earliest_end_time_s:
             raise RejectException("Can't end the market yet.")
 
         self._logger.info("Ending market.")
-        self.state = MarketState.REWARD_RE_INITIALIZE_MODEL
+        self.state = MarketPhase.REWARD_RE_INITIALIZE_MODEL
         self._next_data_index = 0
 
         all_test_data = []
@@ -92,10 +112,11 @@ class PredictionMarket(IncentiveMechanism):
 
         self._test_data, self._test_labels = list(zip(*all_test_data))
 
-        # Signal that no market is running.
-        self._market_start_time_s = None
-
     def get_num_contributions_in_market(self):
+        """
+        :return: The total number of contributions currently in the market.
+        This can decrease as "bad" contributors are removed during the reward phase.
+        """
         return len(self._market_data)
 
     def get_test_set_hashes(self, num_pieces, x_test, y_test):
@@ -118,12 +139,12 @@ class PredictionMarket(IncentiveMechanism):
         return test_dataset_hashes, test_sets
 
     def handle_add_data(self, contributor_address: Address, msg_value: float, data, classification) -> (float, bool):
-        assert self.state == MarketState.PARTICIPATION
+        assert self.state == MarketPhase.PARTICIPATION
         cost = self.min_stake
         update_model = False
         if cost > msg_value:
             raise RejectException(f"Did not pay enough. Sent {msg_value} < {cost}")
-        self._market_data.append(_Contribution(contributor_address, cost, data, classification))
+        self._market_data.append(_Contribution(contributor_address, data, classification))
         self._market_balances[contributor_address] += cost
         return (cost, update_model)
 
@@ -131,6 +152,7 @@ class PredictionMarket(IncentiveMechanism):
                       claimable_amount: float, claimed_by_submitter: bool,
                       prediction) -> float:
         assert self.remaining_bounty_rounds == 0, "The reward phase has not finished processing contributions."
+        assert self.state == MarketPhase.REWARD_COLLECT
         result = self._market_balances[submitter]
         self._logger.debug("Reward for \"%s\": %.2f", submitter, result)
         if result > 0:
@@ -141,6 +163,7 @@ class PredictionMarket(IncentiveMechanism):
 
     def handle_report(self, reporter: Address, stored_data: StoredData, claimed_by_reporter: bool, prediction) -> float:
         assert self.remaining_bounty_rounds == 0, "The reward phase has not finished processing contributions."
+        assert self.state == MarketPhase.REWARD_COLLECT
         assert self.reward_phase_end_time_s > 0, "The reward phase has not finished processing contributions."
         if self._time() - self.reward_phase_end_time_s >= self.any_address_claim_wait_time_s:
             submitter = stored_data.sender
@@ -153,41 +176,62 @@ class PredictionMarket(IncentiveMechanism):
         return result
 
     def hash_test_set(self, test_set):
+        """
+        :param test_set: A test set.
+        :return: The hash of `test_set`.
+        """
         return sha256(str(test_set).encode()).hexdigest()
 
     def initialize_market(self, initializer_address: Address, total_bounty: int,
                           x_init_data, y_init_data,
                           test_dataset_hashes: list,
                           # Ending criteria:
-                          min_length_s: int, min_num_contributions: int):
-        assert self._market_start_time_s is None
+                          min_length_s: int, min_num_contributions: int) -> int:
+        """
+        Initialize the prediction market.
+
+        :param initializer_address: The one posting the bounty.
+        :param total_bounty: The amount being committed for the bounty.
+            This should be an integer since it also represents the number of "rounds" in the PM.
+        :param x_init_data: The data to use to re-initialize the model.
+        :param y_init_data: The labels to use to re-initialize the model.
+        :param test_dataset_hashes: The committed hashes for the portions of the test set.
+        :param min_length_s: The minimum length in seconds of the market.
+        :param min_num_contributions: The minimum number of contributions before ending the market.
+
+        :return: The index of the test set that must be revealed.
+        """
+        assert self._market_earliest_end_time_s is None
         assert self._next_data_index is None, "The market end has already been triggered."
-        self.initializer_address = initializer_address
+        assert self.state is None
         self.total_bounty = total_bounty
         self.remaining_bounty_rounds = self.total_bounty
         self._x_init_data = x_init_data
         self._y_init_data = y_init_data
         self.test_dataset_hashes = test_dataset_hashes
+        assert len(self.test_dataset_hashes) > 1
         self.test_reveal_index = random.randrange(len(self.test_dataset_hashes))
         self.min_stake = 1
-        self.min_length_s = min_length_s
         self.min_num_contributions = min_num_contributions
         self.reward_phase_end_time_s = None
 
         self._market_data = []
-        self._market_start_time_s = self._time()
+        self._market_earliest_end_time_s = self._time() + min_length_s
 
         self._balances.send(initializer_address, self.owner, total_bounty)
 
-        self._init_test_set_revealed = False
-        self.state = MarketState.INITIALIZATION
+        self.state = MarketPhase.INITIALIZATION
 
         return self.test_reveal_index
 
     def process_contribution(self):
+        """
+        Reward Phase:
+        Process the next data contribution.
+        """
         assert self.remaining_bounty_rounds > 0, "The market has ended."
 
-        if self.state == MarketState.REWARD_RE_INITIALIZE_MODEL:
+        if self.state == MarketPhase.REWARD_RE_INITIALIZE_MODEL:
             self._next_data_index = 0
             self._logger.debug("Remaining bounty rounds: %s", self.remaining_bounty_rounds)
             self._scores = defaultdict(float)
@@ -203,9 +247,9 @@ class PredictionMarket(IncentiveMechanism):
             self._logger.debug("Accuracy: %0.2f%%", self.prev_acc * 100)
             self._worst_contributor = None
             self._min_score = math.inf
-            self.state = MarketState.REWARD
+            self.state = MarketPhase.REWARD
         else:
-            assert self.state == MarketState.REWARD
+            assert self.state == MarketPhase.REWARD
 
         contribution = self._market_data[self._next_data_index]
         self.model.update(contribution.data, contribution.classification)
@@ -243,31 +287,42 @@ class PredictionMarket(IncentiveMechanism):
                     self._market_data = list(
                         filter(lambda c: c.contributor_address != self._worst_contributor, self._market_data))
                     if self.get_num_contributions_in_market() == 0:
+                        self.state = MarketPhase.REWARD_COLLECT
                         self.remaining_bounty_rounds = 0
                         self.reward_phase_end_time_s = self._time()
                     else:
-                        self.state = MarketState.REWARD_RE_INITIALIZE_MODEL
+                        self.state = MarketPhase.REWARD_RE_INITIALIZE_MODEL
                 else:
                     self._logger.debug("Dividing remaining bounty amongst all remaining contributors.")
                     num_rounds = self.remaining_bounty_rounds
                     self.remaining_bounty_rounds = 0
                     self.reward_phase_end_time_s = self._time()
+                    self.state = MarketPhase.REWARD_COLLECT
                     for participant, score in self._scores.items():
                         self._logger.debug("Score for \"%s\": %.2f", participant, score)
                         self._market_balances[participant] += score * num_rounds
 
-    def reveal_init_test_set(self, test_set):
-        assert self.state == MarketState.INITIALIZATION
-        assert not self._init_test_set_revealed, "The initial test set has already been revealed."
-        self.verify_test_set(self.test_reveal_index, test_set)
-        self._init_test_set_revealed = True
-        self.state = MarketState.PARTICIPATION
+    def reveal_init_test_set(self, test_set_portion):
+        """
+        Reveal the required test set.
+        :param test_set_portion: The portion of the test set that must be revealed before started the Participation Phase.
+        """
+        assert self.state == MarketPhase.INITIALIZATION
+        self.verify_test_set(self.test_reveal_index, test_set_portion)
+        self.state = MarketPhase.PARTICIPATION
 
-    def verify_test_set(self, index, test_set):
-        test_set_hash = self.hash_test_set(test_set)
+    def verify_test_set(self, index: int, test_set_portion):
+        """
+        Verify that a portion of the test set matches the committed to hash.
+
+        :param index: The index of the test set in the originally committed list of hashes.
+        :param test_set_portion: The portion of the test set to reveal.
+        """
+        assert 0 <= index < len(self.test_dataset_hashes)
+        test_set_hash = self.hash_test_set(test_set_portion)
         assert test_set_hash == self.test_dataset_hashes[index]
 
 
 class PredictionMarketImModule(Module):
     def configure(self, binder):
-        self.bind = binder.bind(IncentiveMechanism, to=PredictionMarket)
+        binder.bind(IncentiveMechanism, to=PredictionMarket)

@@ -20,7 +20,7 @@ from tqdm import tqdm
 
 from decai.simulation.contract.balances import Balances
 from decai.simulation.contract.collab_trainer import CollaborativeTrainer
-from decai.simulation.contract.incentive.prediction_market import MarketState, PredictionMarket
+from decai.simulation.contract.incentive.prediction_market import MarketPhase, PredictionMarket
 from decai.simulation.contract.objects import Address, Msg, RejectException, TimeMock
 from decai.simulation.data.data_loader import DataLoader
 
@@ -365,7 +365,7 @@ class Simulator(object):
                     while self._decai.im.remaining_bounty_rounds > 0:
                         self._decai.im.process_contribution()
                         pbar.update()
-                        if self._decai.im.state == MarketState.REWARD_RE_INITIALIZE_MODEL:
+                        if self._decai.im.state == MarketPhase.REWARD_RE_INITIALIZE_MODEL:
                             self._time.set_time(self._time() + 60 * 60)
                             accuracy = self._decai.im.prev_acc
                             doc.add_next_tick_callback(
