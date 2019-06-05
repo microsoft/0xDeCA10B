@@ -356,7 +356,7 @@ class Simulator(object):
                 pbar.set_description(f"{desc} ({len(unclaimed_data)} unclaimed)")
 
             if isinstance(self._decai.im, PredictionMarket):
-                self._time.set_time(self._time() + 60)
+                self._time.add_time(60)
                 self._decai.im.end_market(pm_test_sets)
                 with tqdm(desc="Processing contributions",
                           unit_scale=True, mininterval=2, unit=" contributions",
@@ -366,13 +366,13 @@ class Simulator(object):
                         self._decai.im.process_contribution()
                         pbar.update()
                         if self._decai.im.state == MarketPhase.REWARD_RE_INITIALIZE_MODEL:
-                            self._time.set_time(self._time() + 60 * 60)
+                            self._time.add_time(60 * 60)
                             accuracy = self._decai.im.prev_acc
                             doc.add_next_tick_callback(
                                 partial(plot_accuracy_cb, t=self._time(), a=accuracy))
                             pbar.total += self._decai.im.get_num_contributions_in_market()
 
-                self._time.set_time(self._time() + 60)
+                self._time.add_time(60)
                 for agent in agents:
                     msg = Msg(agent.address, 0)
                     # Find data submitted by them.

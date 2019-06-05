@@ -6,7 +6,7 @@ from injector import Injector
 
 from decai.simulation.contract.balances import Balances
 from decai.simulation.contract.classification.perceptron import PerceptronModule
-from decai.simulation.contract.collab_trainer import CollaborativeTrainer, DefaultCollaborativeTrainerModule
+from decai.simulation.contract.data.data_handler import StoredData
 from decai.simulation.contract.incentive.incentive_mechanism import IncentiveMechanism
 from decai.simulation.contract.incentive.prediction_market import MarketPhase, \
     PredictionMarket, PredictionMarketImModule
@@ -17,38 +17,34 @@ from decai.simulation.logging_module import LoggingModule
 
 
 class TestPredictionMarket(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
+    def test_market(self):
         inj = Injector([
-            DefaultCollaborativeTrainerModule,
             SimpleDataModule,
             LoggingModule,
             PerceptronModule,
             PredictionMarketImModule,
         ])
-        cls.balances = inj.get(Balances)
-        cls.data = inj.get(DataLoader)
-        cls.decai = inj.get(CollaborativeTrainer)
-        cls.time_method = inj.get(TimeMock)
-        cls.im = cast(PredictionMarket, inj.get(IncentiveMechanism))
-        assert isinstance(cls.im, PredictionMarket)
+        balances = inj.get(Balances)
+        data = inj.get(DataLoader)
+        im = cast(PredictionMarket, inj.get(IncentiveMechanism))
 
-    def test_market(self):
+        assert isinstance(im, PredictionMarket)
+
         init_train_data_portion = 0.2
 
         initializer_address = 'initializer'
         total_bounty = 100_000
-        self.balances.initialize(initializer_address, total_bounty)
+        balances.initialize(initializer_address, total_bounty)
 
         good_contributor_address = 'good_contributor'
         initial_good_balance = 10_000
-        self.balances.initialize(good_contributor_address, initial_good_balance)
+        balances.initialize(good_contributor_address, initial_good_balance)
 
         bad_contributor_address = 'bad_contributor'
         initial_bad_balance = 10_000
-        self.balances.initialize(bad_contributor_address, initial_bad_balance)
+        balances.initialize(bad_contributor_address, initial_bad_balance)
 
-        (x_train, y_train), (x_test, y_test) = self.data.load_data()
+        (x_train, y_train), (x_test, y_test) = data.load_data()
 
         init_idx = int(len(x_train) * init_train_data_portion)
         assert init_idx > 0
@@ -58,24 +54,24 @@ class TestPredictionMarket(unittest.TestCase):
 
         # Split test set into pieces.
         num_pieces = 10
-        test_dataset_hashes, test_sets = self.im.get_test_set_hashes(num_pieces, x_test, y_test)
+        test_dataset_hashes, test_sets = im.get_test_set_hashes(num_pieces, x_test, y_test)
 
         # Ending criteria:
         min_length_s = 100
         min_num_contributions = min(len(x_remaining), 100)
 
         # Commitment Phase
-        self.assertIsNone(self.im.state)
+        self.assertIsNone(im.state)
         # Seed randomness for consistency.
-        test_reveal_index = self.im.initialize_market(initializer_address, total_bounty,
-                                                      x_init_data, y_init_data,
-                                                      test_dataset_hashes,
-                                                      min_length_s, min_num_contributions)
-        self.assertEqual(MarketPhase.INITIALIZATION, self.im.state)
+        test_reveal_index = im.initialize_market(initializer_address, total_bounty,
+                                                 x_init_data, y_init_data,
+                                                 test_dataset_hashes,
+                                                 min_length_s, min_num_contributions)
+        self.assertEqual(MarketPhase.INITIALIZATION, im.state)
         assert 0 <= test_reveal_index < len(test_dataset_hashes)
-        self.im.reveal_init_test_set(test_sets[test_reveal_index])
+        im.reveal_init_test_set(test_sets[test_reveal_index])
 
-        self.assertEqual(MarketPhase.PARTICIPATION, self.im.state)
+        self.assertEqual(MarketPhase.PARTICIPATION, im.state)
         # Participation Phase
         value = 100
         total_deposits = defaultdict(float)
@@ -87,44 +83,174 @@ class TestPredictionMarket(unittest.TestCase):
             else:
                 contributor = bad_contributor_address
                 classification = 1 - classification
-            cost, _ = self.im.handle_add_data(contributor, value, data, classification)
-            self.balances.send(contributor, self.im.owner, cost)
+            cost, _ = im.handle_add_data(contributor, value, data, classification)
+            balances.send(contributor, im.owner, cost)
             total_deposits[contributor] += cost
 
         # Reward Phase
-        self.assertEqual(MarketPhase.PARTICIPATION, self.im.state)
-        self.im.end_market(test_sets)
-        self.assertEqual(MarketPhase.REWARD_RE_INITIALIZE_MODEL, self.im.state)
-        while self.im.remaining_bounty_rounds > 0:
-            self.im.process_contribution()
+        self.assertEqual(MarketPhase.PARTICIPATION, im.state)
+        im.end_market(test_sets)
+        self.assertEqual(MarketPhase.REWARD_RE_INITIALIZE_MODEL, im.state)
+        while im.remaining_bounty_rounds > 0:
+            im.process_contribution()
 
         # Collect rewards.
-        self.assertEqual(MarketPhase.REWARD_COLLECT, self.im.state)
+        self.assertEqual(MarketPhase.REWARD_COLLECT, im.state)
         for contributor in [good_contributor_address, bad_contributor_address]:
             # Don't need to pass the right StoredData.
             # noinspection PyTypeChecker
-            reward = self.im.handle_refund(contributor, None, 0, False, None)
-            self.balances.send(self.im.owner, contributor, reward)
+            reward = im.handle_refund(contributor, None, 0, False, None)
+            balances.send(im.owner, contributor, reward)
+
+        self.assertGreater(total_deposits[good_contributor_address], 0)
+        self.assertGreater(total_deposits[bad_contributor_address], 0)
 
         # General checks that should be true for a market with a reasonably sensitive model.
-        self.assertLess(self.balances[self.im.owner], total_bounty,
+        self.assertLess(balances[im.owner], total_bounty,
                         f"Some of the bounty should be distributed.\n"
-                        f"Balances: {self.balances.get_all()}")
-        self.assertLess(0, self.balances[self.im.owner])
+                        f"Balances: {balances.get_all()}")
+        self.assertLess(0, balances[im.owner])
 
-        self.assertLess(self.balances[bad_contributor_address], initial_bad_balance)
-        self.assertGreater(self.balances[good_contributor_address], initial_good_balance)
-        self.assertLess(self.balances[bad_contributor_address], self.balances[good_contributor_address])
-        self.assertLessEqual(self.balances[good_contributor_address] - self.balances[bad_contributor_address],
+        self.assertLess(balances[bad_contributor_address], initial_bad_balance)
+        self.assertGreater(balances[good_contributor_address], initial_good_balance)
+        self.assertLess(balances[bad_contributor_address], balances[good_contributor_address])
+        self.assertLessEqual(balances[good_contributor_address] - balances[bad_contributor_address],
                              total_bounty)
         self.assertEqual(initial_good_balance + initial_bad_balance + total_bounty,
-                         self.balances[good_contributor_address] + self.balances[bad_contributor_address] +
-                         self.balances[self.im.owner],
+                         balances[good_contributor_address] + balances[bad_contributor_address] +
+                         balances[im.owner],
                          "Should be a zero-sum.")
 
         self.assertGreater(total_deposits[bad_contributor_address], 0)
         self.assertEqual(initial_bad_balance - total_deposits[bad_contributor_address],
-                         self.balances[bad_contributor_address],
+                         balances[bad_contributor_address],
                          "The bad contributor should lose all of their deposits.")
 
+    def test_report(self):
+        inj = Injector([
+            SimpleDataModule,
+            LoggingModule,
+            PerceptronModule,
+            PredictionMarketImModule,
+        ])
+        balances = inj.get(Balances)
+        data = inj.get(DataLoader)
+        im = cast(PredictionMarket, inj.get(IncentiveMechanism))
+        time_method = inj.get(TimeMock)
+
+        assert isinstance(im, PredictionMarket)
+
+        init_train_data_portion = 0.2
+
+        initializer_address = 'initializer'
+        total_bounty = 100_000
+        balances.initialize(initializer_address, total_bounty)
+
+        good_contributor_address = 'good_contributor'
+        initial_good_balance = 10_000
+        balances.initialize(good_contributor_address, initial_good_balance)
+
+        bad_contributor_address = 'bad_contributor'
+        initial_bad_balance = 10_000
+        balances.initialize(bad_contributor_address, initial_bad_balance)
+
+        (x_train, y_train), (x_test, y_test) = data.load_data()
+
+        init_idx = int(len(x_train) * init_train_data_portion)
+        assert init_idx > 0
+
+        x_init_data, y_init_data = x_train[:init_idx], y_train[:init_idx]
+        x_remaining, y_remaining = x_train[init_idx:], y_train[init_idx:]
+
+        # Split test set into pieces.
+        num_pieces = 10
+        test_dataset_hashes, test_sets = im.get_test_set_hashes(num_pieces, x_test, y_test)
+
+        # Ending criteria:
+        min_length_s = 100
+        min_num_contributions = min(len(x_remaining), 100)
+
+        # Commitment Phase
+        self.assertIsNone(im.state)
+        # Seed randomness for consistency.
+        test_reveal_index = im.initialize_market(initializer_address, total_bounty,
+                                                 x_init_data, y_init_data,
+                                                 test_dataset_hashes,
+                                                 min_length_s, min_num_contributions)
+        self.assertEqual(MarketPhase.INITIALIZATION, im.state)
+        assert 0 <= test_reveal_index < len(test_dataset_hashes)
+        im.reveal_init_test_set(test_sets[test_reveal_index])
+
+        self.assertEqual(MarketPhase.PARTICIPATION, im.state)
+        # Participation Phase
+        value = 100
+        total_deposits = defaultdict(float)
+        stored_data = None
+        for i in range(min_num_contributions):
+            time_method.add_time(60)
+            data = x_remaining[i]
+            classification = y_remaining[i]
+            if i % 2 == 0:
+                contributor = good_contributor_address
+            else:
+                contributor = bad_contributor_address
+                classification = 1 - classification
+            cost, _ = im.handle_add_data(contributor, value, data, classification)
+            if stored_data is None:
+                stored_data = StoredData(classification, time_method(), contributor, cost, cost)
+            balances.send(contributor, im.owner, cost)
+            total_deposits[contributor] += cost
+
+        # Reward Phase
+        self.assertEqual(MarketPhase.PARTICIPATION, im.state)
+
+        im.end_market(test_sets)
+        time_method.add_time(60)
+        self.assertEqual(MarketPhase.REWARD_RE_INITIALIZE_MODEL, im.state)
+        while im.remaining_bounty_rounds > 0:
+            time_method.add_time(60)
+            im.process_contribution()
+
+        # Collect rewards.
+        self.assertEqual(MarketPhase.REWARD_COLLECT, im.state)
+
+        # Get some stored data.
+
+        # Make sure reporting doesn't work yet.
+        reward = im.handle_report(bad_contributor_address, stored_data, False, None)
+        self.assertEqual(0, reward, "There should be no reward yet.")
+
+        time_method.add_time(im.any_address_claim_wait_time_s)
+        reward = im.handle_report(bad_contributor_address, stored_data, False, None)
+        balances.send(im.owner, bad_contributor_address, reward)
+
+        # Don't need to pass the right StoredData.
+        # noinspection PyTypeChecker
+        reward = im.handle_refund(bad_contributor_address, None, 0, False, None)
+        balances.send(im.owner, bad_contributor_address, reward)
+
+        # General checks that should be true for a market with a reasonably sensitive model.
+        self.assertLess(balances[im.owner], total_bounty,
+                        f"Some of the bounty should be distributed.\n"
+                        f"Balances: {balances.get_all()}")
+        self.assertLess(0, balances[im.owner])
+
         self.assertGreater(total_deposits[good_contributor_address], 0)
+        self.assertGreater(total_deposits[bad_contributor_address], 0)
+
+        # The bad contributor profited because they reported the good contributor.
+        self.assertGreater(balances[bad_contributor_address], initial_bad_balance)
+        self.assertLess(balances[good_contributor_address], initial_good_balance)
+
+        self.assertLess(balances[good_contributor_address], balances[bad_contributor_address])
+        self.assertLessEqual(balances[bad_contributor_address] - balances[good_contributor_address],
+                             total_bounty)
+        self.assertEqual(initial_good_balance + initial_bad_balance + total_bounty,
+                         balances[good_contributor_address] + balances[bad_contributor_address] +
+                         balances[im.owner],
+                         "Should be a zero-sum.")
+
+        self.assertGreater(total_deposits[bad_contributor_address], 0)
+        self.assertEqual(initial_good_balance - total_deposits[good_contributor_address],
+                         balances[good_contributor_address],
+                         "The good contributor should lose all of their deposits.")

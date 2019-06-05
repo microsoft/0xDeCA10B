@@ -1,9 +1,8 @@
 # Objects for all smart contracts.
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
-from unittest.mock import Mock
 
-from injector import inject, singleton
+from injector import singleton
 
 Address = str
 """ An address that can receive funds and participate in training models. """
@@ -43,25 +42,29 @@ class SmartContract(object):
 
 
 @singleton
+@dataclass
 class TimeMock(object):
     """
-    Helps fake the current time.
+    Helps fake the current time (in seconds).
+    Ideally the value returned is an integer (like `now` in Solidity) but this is not guaranteed.
     Normally in an Ethereum smart contract `now` can be called.
     To speed up simulations, use this class to get the current time.
     """
 
-    @inject
-    def __init__(self):
-        self._time_method: Mock = Mock(name='time', return_value=0)
+    _time: float = field(default=0, init=False)
+
+    def __call__(self, *args, **kwargs):
+        """ Get the currently set time (in seconds). """
+        return self._time
+
+    def add_time(self, amount):
+        """ Add `amount` (in seconds) to the current time. """
+        self._time += amount
 
     def set_time(self, time_value):
         """ Set the time to return when `time()` is called. """
-        self._time_method.return_value = time_value
+        self._time = time_value
 
     def time(self):
-        """ Get the currently set time. """
-        return self._time_method()
-
-    def __call__(self, *args, **kwargs):
-        """ Get the currently set time. """
-        return self.time()
+        """ Get the currently set time (in seconds). """
+        return self._time

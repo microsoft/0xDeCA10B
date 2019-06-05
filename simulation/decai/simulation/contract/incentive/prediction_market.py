@@ -162,9 +162,9 @@ class PredictionMarket(IncentiveMechanism):
         return result
 
     def handle_report(self, reporter: Address, stored_data: StoredData, claimed_by_reporter: bool, prediction) -> float:
-        assert self.remaining_bounty_rounds == 0, "The reward phase has not finished processing contributions."
-        assert self.state == MarketPhase.REWARD_COLLECT
-        assert self.reward_phase_end_time_s > 0, "The reward phase has not finished processing contributions."
+        assert self.state == MarketPhase.REWARD_COLLECT, "The reward phase has not finished processing contributions."
+        assert self.remaining_bounty_rounds == 0
+        assert self.reward_phase_end_time_s > 0
         if self._time() - self.reward_phase_end_time_s >= self.any_address_claim_wait_time_s:
             submitter = stored_data.sender
             result = self._market_balances[submitter]
