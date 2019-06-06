@@ -1,5 +1,5 @@
 import random
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from enum import Enum
 from hashlib import sha256
@@ -44,9 +44,13 @@ class MarketPhase(Enum):
 class _Contribution:
     """
     A contribution to train data.
+
     This is stored for convenience but for some applications, storing the data could be very expensive,
     instead, hashes could be stored and during the reward phase,
     the hash can be used to verify data as data is re-submitted.
+    Note: this is not in the spirit of the prediction market (the current state should be public)
+    since the model would not actually be updated and the submitted data would be private
+    so new data contributors have very limited information.
     """
     contributor_address: Address
     data: np.array
@@ -107,7 +111,8 @@ class PredictionMarket(IncentiveMechanism):
         """
         return sha256(str(test_set).encode()).hexdigest()
 
-    def get_test_set_hashes(self, num_pieces, x_test, y_test) -> Tuple[list, list]:
+    @staticmethod
+    def get_test_set_hashes(num_pieces, x_test, y_test) -> Tuple[list, list]:
         """
         Helper to break the test set into `num_pieces` to initialize the market.
 
@@ -126,7 +131,7 @@ class PredictionMarket(IncentiveMechanism):
             end = int((i + 1) / num_pieces * len(x_test))
             test_set = list(zip(x_test[start:end], y_test[start:end]))
             test_sets.append(test_set)
-            test_dataset_hashes.append(self.hash_test_set(test_set))
+            test_dataset_hashes.append(PredictionMarket.hash_test_set(test_set))
         assert sum(len(t) for t in test_sets) == len(x_test)
         return test_dataset_hashes, test_sets
 
@@ -167,12 +172,13 @@ class PredictionMarket(IncentiveMechanism):
 
         self.min_stake = 1
 
-        self._market_data = []
+        self._market_data: List[_Contribution] = []
         self.min_num_contributions = min_num_contributions
         self._market_earliest_end_time_s = self._time() + min_length_s
 
         self.reward_phase_end_time_s = None
 
+        # Pay the owner since it will be the owner distributing funds using `handle_refund` and `handle_reward` later.
         self._balances.send(self.bounty_provider, self.owner, self.total_bounty)
 
         self.state = MarketPhase.INITIALIZATION
@@ -279,8 +285,11 @@ class PredictionMarket(IncentiveMechanism):
             self._logger.debug("Re-initializing model.", )
             self.model.init_model(self._x_init_data, self._y_init_data)
 
+            # XXX This evaluation can be expensive and likely won't work in Ethereum.
+            # We need to find a more efficient way to do this or let a contributor proved they did it.
             self.prev_acc = self.model.evaluate(self.test_data, self.test_labels)
             self._logger.debug("Accuracy: %0.2f%%", self.prev_acc * 100)
+            self._num_market_contributions: Dict[Address, int] = Counter()
             self._worst_contributor = None
             self._min_score = math.inf
             self.state = MarketPhase.REWARD
@@ -288,12 +297,15 @@ class PredictionMarket(IncentiveMechanism):
             assert self.state == MarketPhase.REWARD
 
         contribution = self._market_data[self._next_data_index]
+        self._num_market_contributions[contribution.contributor_address] += 1
         self.model.update(contribution.data, contribution.classification)
         self._next_data_index += 1
         need_restart = self._next_data_index >= self.get_num_contributions_in_market()
         if need_restart \
                 or self._market_data[self._next_data_index].contributor_address != contribution.contributor_address:
             # Next contributor is different.
+
+            # XXX Potentially expensive gas cost.
             acc = self.model.evaluate(self.test_data, self.test_labels)
             score_change = acc - self.prev_acc
             new_score = self._scores[contribution.contributor_address] + score_change
@@ -317,11 +329,16 @@ class PredictionMarket(IncentiveMechanism):
                     if num_rounds > self.remaining_bounty_rounds:
                         num_rounds = self.remaining_bounty_rounds
                     self.remaining_bounty_rounds -= num_rounds
+                    participants_to_remove = set()
                     for participant, score in self._scores.items():
                         self._logger.debug("Score for \"%s\": %.2f", participant, score)
                         self._market_balances[participant] += score * num_rounds
-                    self._market_data = list(
-                        filter(lambda c: c.contributor_address != self._worst_contributor, self._market_data))
+                        if self._market_balances[participant] < self._num_market_contributions[participant]:
+                            # They don't have enough left to stake next time.
+                            participants_to_remove.add(participant)
+
+                    self._market_data: List[_Contribution] = list(
+                        filter(lambda c: c.contributor_address not in participants_to_remove, self._market_data))
                     if self.get_num_contributions_in_market() == 0:
                         self.state = MarketPhase.REWARD_COLLECT
                         self.remaining_bounty_rounds = 0
