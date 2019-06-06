@@ -20,7 +20,8 @@ from tqdm import tqdm
 
 from decai.simulation.contract.balances import Balances
 from decai.simulation.contract.collab_trainer import CollaborativeTrainer
-from decai.simulation.contract.objects import Msg, RejectException, TimeMock
+from decai.simulation.contract.incentive.prediction_market import MarketPhase, PredictionMarket
+from decai.simulation.contract.objects import Address, Msg, RejectException, TimeMock
 from decai.simulation.data.data_loader import DataLoader
 
 
@@ -29,7 +30,7 @@ class Agent:
     """
     A user to run in the simulator.
     """
-    address: str
+    address: Address
     start_balance: float
     mean_deposit: float
     stdev_deposit: float
@@ -83,6 +84,9 @@ class Simulator(object):
                  agents: List[Agent],
                  baseline_accuracy: float = None,
                  init_train_data_portion: float = 0.1,
+                 pm_test_sets: list = None,
+                 accuracy_plot_wait_s=2E5,
+                 train_size: int = None, test_size: int = None,
                  ):
         """
         Run a simulation.
@@ -91,6 +95,10 @@ class Simulator(object):
         :param baseline_accuracy: The baseline accuracy of the model.
             Usually the accuracy on a hidden test set when the model is trained with all data.
         :param init_train_data_portion: The portion of the data to initially use for training. Must be [0,1].
+        :param pm_test_sets: The test sets for the prediction market incentive mechanism.
+        :param accuracy_plot_wait_s: The amount of time to wait in seconds between plotting the accuracy.
+        :param train_size: The amount of training data to use.
+        :param test_size: The amount of test data to use.
         """
 
         assert 0 <= init_train_data_portion <= 1
@@ -152,8 +160,8 @@ class Simulator(object):
         plot.legend.location = 'top_left'
         plot.legend.label_text_font_size = '12pt'
 
+        # JavaScript code.
         plot.xaxis[0].formatter = FuncTickFormatter(code="""
-        // JavaScript code
         return (tick / 86400).toFixed(0);
         """)
         plot.yaxis[0].formatter = PrintfTickFormatter(format="%0.1f%%")
@@ -180,8 +188,11 @@ class Simulator(object):
             acc_source.stream(dict(t=[t], a=[a * 100]))
             save_data['accuracies'].append(dict(t=t, accuracy=a))
 
+        continuous_evaluation = not isinstance(self._decai.im, PredictionMarket)
+
         def task():
-            (x_train, y_train), (x_test, y_test) = self._data_loader.load_data()
+            (x_train, y_train), (x_test, y_test) = \
+                self._data_loader.load_data(train_size=train_size, test_size=test_size)
             init_idx = int(len(x_train) * init_train_data_portion)
             self._logger.info("Initializing model with %d out of %d samples.",
                               init_idx, len(x_train))
@@ -189,6 +200,7 @@ class Simulator(object):
             x_remaining, y_remaining = x_train[init_idx:], y_train[init_idx:]
 
             self._decai.model.init_model(x_init_data, y_init_data)
+
             if self._logger.isEnabledFor(logging.DEBUG):
                 s = self._decai.model.evaluate(x_init_data, y_init_data)
                 self._logger.debug("Initial training data evaluation: %s", s)
@@ -223,8 +235,9 @@ class Simulator(object):
                     # since it should be relatively cheaper than the deposit required to add data.
                     # It may not be cheaper than calling `report`.
 
-                    if next_data_index >= len(x_remaining) and len(unclaimed_data) == 0:
-                        break
+                    if next_data_index >= len(x_remaining):
+                        if not continuous_evaluation or len(unclaimed_data) == 0:
+                            break
 
                     current_time, agent = q.get()
                     update_balance_plot = False
@@ -232,13 +245,14 @@ class Simulator(object):
                         # Might be need to sleep to allow the plot to update.
                         # time.sleep(0.1)
                         self._logger.debug("Evaluating.")
-                        next_accuracy_plot_time += 2E5
+                        next_accuracy_plot_time += accuracy_plot_wait_s
                         accuracy = self._decai.model.evaluate(x_test, y_test)
                         doc.add_next_tick_callback(
                             partial(plot_accuracy_cb, t=current_time, a=accuracy))
 
-                        self._logger.debug("Unclaimed data: %d", len(unclaimed_data))
-                        pbar.set_description(f"{desc} ({len(unclaimed_data)} unclaimed)")
+                        if continuous_evaluation:
+                            self._logger.debug("Unclaimed data: %d", len(unclaimed_data))
+                            pbar.set_description(f"{desc} ({len(unclaimed_data)} unclaimed)")
 
                         with open(save_path, 'w') as f:
                             json.dump(save_data, f, separators=(',', ':'))
@@ -272,9 +286,11 @@ class Simulator(object):
                                     msg = Msg(agent.address, value)
                                     try:
                                         self._decai.add_data(msg, x, y)
-                                        update_balance_plot = True
+                                        # Don't need to plot every time. Plot less as we get more data.
+                                        update_balance_plot = next_data_index / len(x_remaining) + 0.1 < random.random()
                                         balance = self._balances[agent.address]
-                                        unclaimed_data.append((current_time, agent, x, y))
+                                        if continuous_evaluation:
+                                            unclaimed_data.append((current_time, agent, x, y))
                                         next_data_index += 1
                                         pbar.update()
                                     except RejectException:
@@ -336,7 +352,53 @@ class Simulator(object):
                             partial(plot_cb, agent=agent, t=current_time, b=balance))
 
             self._logger.info("Done going through data.")
-            pbar.set_description(f"{desc} ({len(unclaimed_data)} unclaimed)")
+            if continuous_evaluation:
+                pbar.set_description(f"{desc} ({len(unclaimed_data)} unclaimed)")
+
+            if isinstance(self._decai.im, PredictionMarket):
+                self._time.add_time(60)
+                self._decai.im.end_market()
+                for i, test_set_portion in enumerate(pm_test_sets):
+                    if i != self._decai.im.test_reveal_index:
+                        self._decai.im.verify_next_test_set(test_set_portion)
+                with tqdm(desc="Processing contributions",
+                          unit_scale=True, mininterval=2, unit=" contributions",
+                          total=self._decai.im.get_num_contributions_in_market(),
+                          ) as pbar:
+                    while self._decai.im.remaining_bounty_rounds > 0:
+                        self._decai.im.process_contribution()
+                        pbar.update()
+                        if self._decai.im.state == MarketPhase.REWARD_RE_INITIALIZE_MODEL:
+                            self._time.add_time(60 * 60)
+                            accuracy = self._decai.im.prev_acc
+                            doc.add_next_tick_callback(
+                                partial(plot_accuracy_cb, t=self._time(), a=accuracy))
+                            pbar.total += self._decai.im.get_num_contributions_in_market()
+
+                self._time.add_time(60)
+                for agent in agents:
+                    msg = Msg(agent.address, 0)
+                    # Find data submitted by them.
+                    data = None
+                    for key, stored_data in self._decai.data_handler:
+                        if stored_data.sender == agent.address:
+                            data = key[0]
+                            break
+                    if data is not None:
+                        self._decai.refund(msg, data, stored_data.classification, stored_data.time)
+                        balance = self._balances[agent.address]
+                        doc.add_next_tick_callback(
+                            partial(plot_cb, agent=agent, t=current_time, b=balance))
+                        self._logger.info("Balance for \"%s\": %0.2f", agent.address, balance)
+                    else:
+                        self._logger.warning("No data submitted by \"%s\" was found."
+                                             "\nWill not update it's balance.", agent.address)
+
+                accuracy = self._decai.im.model.evaluate(x_test, y_test)
+                t = self._time()
+                doc.add_next_tick_callback(
+                    partial(plot_accuracy_cb, t=t, a=accuracy))
+                self._logger.info("Done issuing rewards.")
 
             with open(save_path, 'w') as f:
                 json.dump(save_data, f, separators=(',', ':'))

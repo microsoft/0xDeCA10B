@@ -129,6 +129,6 @@ class DataHandler(SmartContract):
     def update_claimable_amount(self, receiver: Address, stored_data: StoredData, reward_amount: float):
         # The Solidity implementation does the update in another place which is fine for it.
         # Here we only update it once we're sure the refund can be completed successfully.
-        stored_data.claimed_by[receiver] = True
-
-        stored_data.claimable_amount -= reward_amount
+        if reward_amount > 0:
+            stored_data.claimed_by[receiver] = True
+            stored_data.claimable_amount -= reward_amount
