@@ -287,7 +287,7 @@ class Simulator(object):
                                     try:
                                         self._decai.add_data(msg, x, y)
                                         # Don't need to plot every time. Plot less as we get more data.
-                                        update_balance_plot = next_data_index / len(x_remaining) + 0.1 > random.random()
+                                        update_balance_plot = next_data_index / len(x_remaining) + 0.1 < random.random()
                                         balance = self._balances[agent.address]
                                         if continuous_evaluation:
                                             unclaimed_data.append((current_time, agent, x, y))
