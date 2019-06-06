@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 from hashlib import sha256
 from logging import Logger
-from typing import Dict
+from typing import Dict, List, Tuple
 
 import math
 import numpy as np
@@ -14,7 +14,7 @@ from decai.simulation.contract.balances import Balances
 from decai.simulation.contract.classification.classifier import Classifier
 from decai.simulation.contract.data.data_handler import StoredData
 from decai.simulation.contract.incentive.incentive_mechanism import IncentiveMechanism
-from decai.simulation.contract.objects import Address, RejectException, TimeMock
+from decai.simulation.contract.objects import Address, Msg, RejectException, TimeMock
 
 
 class MarketPhase(Enum):
@@ -27,13 +27,16 @@ class MarketPhase(Enum):
     PARTICIPATION = 1
     """ The market is open to data contributions. """
 
-    REWARD = 2
+    REVEAL_TEST_SET = 2
+    """ The market will no longer accept data and the test set must be revealed before rewards can be calculated. """
+
+    REWARD = 3
     """ No more data contributions are being accepted but rewards still need to be calculated. """
 
-    REWARD_RE_INITIALIZE_MODEL = 3
+    REWARD_RE_INITIALIZE_MODEL = 4
     """ Same as `REWARD` but the model needs to be re-initialized. """
 
-    REWARD_COLLECT = 4
+    REWARD_COLLECT = 5
     """ The reward values have been computed and are ready to be collected. """
 
 
@@ -91,6 +94,7 @@ class PredictionMarket(IncentiveMechanism):
     def end_market(self, test_sets: list):
         """
         Signal the end of the prediction market.
+
         :param test_sets: The divided test set.
         """
         # TODO Split into separate function calls
@@ -101,7 +105,7 @@ class PredictionMarket(IncentiveMechanism):
             raise RejectException("Can't end the market yet.")
 
         self._logger.info("Ending market.")
-        self.state = MarketPhase.REWARD_RE_INITIALIZE_MODEL
+        self.state = MarketPhase.REVEAL_TEST_SET
         self._next_data_index = 0
 
         all_test_data = []
@@ -111,21 +115,25 @@ class PredictionMarket(IncentiveMechanism):
                 all_test_data += test_set
 
         self._test_data, self._test_labels = list(zip(*all_test_data))
+        self.state = MarketPhase.REWARD_RE_INITIALIZE_MODEL
 
     def get_num_contributions_in_market(self):
         """
         :return: The total number of contributions currently in the market.
-        This can decrease as "bad" contributors are removed during the reward phase.
+            This can decrease as "bad" contributors are removed during the reward phase.
         """
         return len(self._market_data)
 
-    def get_test_set_hashes(self, num_pieces, x_test, y_test):
+    def get_test_set_hashes(self, num_pieces, x_test, y_test) -> Tuple[list, list]:
         """
         Break the test set into `num_pieces` and returns their hashes.
+
         :param num_pieces: The number of pieces to break the test set into.
-        :param x_test:
-        :param y_test:
-        :return:
+        :param x_test: The features for the test set.
+        :param y_test: The labels for `x_test`.
+        :return: tuple
+            A list of `num_pieces` hashes for each portion of the test set.
+            The test set divided into `num_pieces`.
         """
         test_sets = []
         test_dataset_hashes = []
@@ -175,24 +183,24 @@ class PredictionMarket(IncentiveMechanism):
             result = 0
         return result
 
-    def hash_test_set(self, test_set):
+    @staticmethod
+    def hash_test_set(test_set):
         """
         :param test_set: A test set.
         :return: The hash of `test_set`.
         """
         return sha256(str(test_set).encode()).hexdigest()
 
-    def initialize_market(self, initializer_address: Address, total_bounty: int,
+    def initialize_market(self, msg: Msg,
                           x_init_data, y_init_data,
-                          test_dataset_hashes: list,
+                          test_dataset_hashes: List[str],
                           # Ending criteria:
                           min_length_s: int, min_num_contributions: int) -> int:
         """
         Initialize the prediction market.
 
-        :param initializer_address: The one posting the bounty.
-        :param total_bounty: The amount being committed for the bounty.
-            This should be an integer since it also represents the number of "rounds" in the PM.
+        :param msg: Indicates the one posting the bounty and the amount being committed for the bounty.
+            The total bounty should be an integer since it also represents the number of "rounds" in the PM.
         :param x_init_data: The data to use to re-initialize the model.
         :param y_init_data: The labels to use to re-initialize the model.
         :param test_dataset_hashes: The committed hashes for the portions of the test set.
@@ -204,7 +212,9 @@ class PredictionMarket(IncentiveMechanism):
         assert self._market_earliest_end_time_s is None
         assert self._next_data_index is None, "The market end has already been triggered."
         assert self.state is None
-        self.total_bounty = total_bounty
+
+        self.bounty_provider = msg.sender
+        self.total_bounty = msg.value
         self.remaining_bounty_rounds = self.total_bounty
         self._x_init_data = x_init_data
         self._y_init_data = y_init_data
@@ -218,10 +228,29 @@ class PredictionMarket(IncentiveMechanism):
         self._market_data = []
         self._market_earliest_end_time_s = self._time() + min_length_s
 
-        self._balances.send(initializer_address, self.owner, total_bounty)
+        self._balances.send(self.bounty_provider, self.owner, self.total_bounty)
 
         self.state = MarketPhase.INITIALIZATION
 
+        return self.test_reveal_index
+
+    def add_test_set_hashes(self, msg: Msg, more_test_set_hashes: List[str]) -> int:
+        """
+        Add more hashes for portions of the test set to reveal.
+        This helps in case not all hashes can be sent in one transaction.
+
+        :param msg: The message for this transaction.
+            The sender must be the bounty provider.
+        :param more_test_set_hashes: More committed hashes for the portions of the test set.
+
+        :return: The index of the test set that must be revealed.
+        """
+        assert self.state == MarketPhase.INITIALIZATION
+        assert msg.sender == self.bounty_provider
+        # Ensure that a new test set is given and the sender isn't just trying to get a new random index.
+        assert len(more_test_set_hashes) > 0, "You must give at least one hash."
+        self.test_dataset_hashes += more_test_set_hashes
+        self.test_reveal_index = random.randrange(len(self.test_dataset_hashes))
         return self.test_reveal_index
 
     def process_contribution(self):
@@ -304,7 +333,8 @@ class PredictionMarket(IncentiveMechanism):
 
     def reveal_init_test_set(self, test_set_portion):
         """
-        Reveal the required test set.
+        Reveal the required portion of the full test set.
+
         :param test_set_portion: The portion of the test set that must be revealed before started the Participation Phase.
         """
         assert self.state == MarketPhase.INITIALIZATION
@@ -319,6 +349,7 @@ class PredictionMarket(IncentiveMechanism):
         :param test_set_portion: The portion of the test set to reveal.
         """
         assert 0 <= index < len(self.test_dataset_hashes)
+        assert len(test_set_portion) > 0
         test_set_hash = self.hash_test_set(test_set_portion)
         assert test_set_hash == self.test_dataset_hashes[index]
 

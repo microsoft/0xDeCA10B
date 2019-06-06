@@ -10,7 +10,7 @@ from decai.simulation.contract.data.data_handler import StoredData
 from decai.simulation.contract.incentive.incentive_mechanism import IncentiveMechanism
 from decai.simulation.contract.incentive.prediction_market import MarketPhase, \
     PredictionMarket, PredictionMarketImModule
-from decai.simulation.contract.objects import TimeMock
+from decai.simulation.contract.objects import Msg, TimeMock
 from decai.simulation.data.data_loader import DataLoader
 from decai.simulation.data.simple_data_loader import SimpleDataModule
 from decai.simulation.logging_module import LoggingModule
@@ -62,13 +62,19 @@ class TestPredictionMarket(unittest.TestCase):
 
         # Commitment Phase
         self.assertIsNone(im.state)
-        # Seed randomness for consistency.
-        test_reveal_index = im.initialize_market(initializer_address, total_bounty,
+
+        hashes_split = 3
+        test_reveal_index = im.initialize_market(Msg(initializer_address, total_bounty),
                                                  x_init_data, y_init_data,
-                                                 test_dataset_hashes,
+                                                 test_dataset_hashes[:hashes_split],
                                                  min_length_s, min_num_contributions)
-        self.assertEqual(MarketPhase.INITIALIZATION, im.state)
         assert 0 <= test_reveal_index < len(test_dataset_hashes)
+        self.assertEqual(MarketPhase.INITIALIZATION, im.state)
+
+        test_reveal_index = im.add_test_set_hashes(Msg(initializer_address, 0), test_dataset_hashes[hashes_split:])
+        assert 0 <= test_reveal_index < len(test_dataset_hashes)
+        self.assertEqual(MarketPhase.INITIALIZATION, im.state)
+
         im.reveal_init_test_set(test_sets[test_reveal_index])
 
         self.assertEqual(MarketPhase.PARTICIPATION, im.state)
@@ -172,8 +178,7 @@ class TestPredictionMarket(unittest.TestCase):
 
         # Commitment Phase
         self.assertIsNone(im.state)
-        # Seed randomness for consistency.
-        test_reveal_index = im.initialize_market(initializer_address, total_bounty,
+        test_reveal_index = im.initialize_market(Msg(initializer_address, total_bounty),
                                                  x_init_data, y_init_data,
                                                  test_dataset_hashes,
                                                  min_length_s, min_num_contributions)

@@ -9,6 +9,7 @@ from decai.simulation.contract.classification.perceptron import PerceptronModule
 from decai.simulation.contract.collab_trainer import DefaultCollaborativeTrainerModule
 from decai.simulation.contract.incentive.incentive_mechanism import IncentiveMechanism
 from decai.simulation.contract.incentive.prediction_market import PredictionMarket, PredictionMarketImModule
+from decai.simulation.contract.objects import Msg
 from decai.simulation.data.data_loader import DataLoader
 from decai.simulation.data.imdb_data_loader import ImdbDataModule
 from decai.simulation.logging_module import LoggingModule
@@ -75,7 +76,7 @@ class Runner(object):
         min_length_s = 1_000_000
         min_num_contributions = len(x_remaining)
 
-        test_reveal_index = self._im.initialize_market(initializer_address, total_bounty,
+        test_reveal_index = self._im.initialize_market(Msg(initializer_address, total_bounty),
                                                        x_init_data, y_init_data,
                                                        test_dataset_hashes,
                                                        min_length_s, min_num_contributions)
