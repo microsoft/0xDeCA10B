@@ -357,7 +357,10 @@ class Simulator(object):
 
             if isinstance(self._decai.im, PredictionMarket):
                 self._time.add_time(60)
-                self._decai.im.end_market(pm_test_sets)
+                self._decai.im.end_market()
+                for i, test_set_portion in enumerate(pm_test_sets):
+                    if i != self._decai.im.test_reveal_index:
+                        self._decai.im.verify_next_test_set(test_set_portion)
                 with tqdm(desc="Processing contributions",
                           unit_scale=True, mininterval=2, unit=" contributions",
                           total=self._decai.im.get_num_contributions_in_market(),

@@ -95,7 +95,11 @@ class TestPredictionMarket(unittest.TestCase):
 
         # Reward Phase
         self.assertEqual(MarketPhase.PARTICIPATION, im.state)
-        im.end_market(test_sets)
+        im.end_market()
+        self.assertEqual(MarketPhase.REVEAL_TEST_SET, im.state)
+        for i, test_set_portion in enumerate(test_sets):
+            if i != test_reveal_index:
+                im.verify_next_test_set(test_set_portion)
         self.assertEqual(MarketPhase.REWARD_RE_INITIALIZE_MODEL, im.state)
         while im.remaining_bounty_rounds > 0:
             im.process_contribution()
@@ -208,9 +212,12 @@ class TestPredictionMarket(unittest.TestCase):
 
         # Reward Phase
         self.assertEqual(MarketPhase.PARTICIPATION, im.state)
-
-        im.end_market(test_sets)
+        im.end_market()
         time_method.add_time(60)
+        self.assertEqual(MarketPhase.REVEAL_TEST_SET, im.state)
+        for i, test_set_portion in enumerate(test_sets):
+            if i != test_reveal_index:
+                im.verify_next_test_set(test_set_portion)
         self.assertEqual(MarketPhase.REWARD_RE_INITIALIZE_MODEL, im.state)
         while im.remaining_bounty_rounds > 0:
             time_method.add_time(60)
