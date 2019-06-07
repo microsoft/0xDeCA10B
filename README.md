@@ -22,6 +22,8 @@ This repository contains:
 * [Demos][demo-folder] showcasing some proof of concept systems using the Ethereum blockchain. There is a locally deployable test blockchain and demo dashboard to interact with smart contracts written in Solidity.
 * [Simulation tools][simulation-folder] written in Python to quickly see how models and incentive mechanisms would work when deployed.
 
+<img src="./assets/aka.ms 0xDeCA10B QR.png?raw=true" width=250 alt="Picture of a QR code with aka.ms/0xDeCA10B written in the middle.">
+
 [demo-folder]: demo/
 [simulation-folder]: simulation/
 [overview-paper]: https://aka.ms/0xDeCA10B-paper
