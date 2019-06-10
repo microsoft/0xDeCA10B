@@ -231,11 +231,12 @@ class PredictionMarket(IncentiveMechanism):
         self.state = MarketPhase.PARTICIPATION
 
     def handle_add_data(self, contributor_address: Address, msg_value: float, data, classification) -> (float, bool):
+        # Allow them to stake as much as they want to ensure they get included in future rounds.
         assert self.state == MarketPhase.PARTICIPATION
-        cost = self.min_stake
+        if msg_value < self.min_stake:
+            raise RejectException(f"Did not pay enough. Sent {msg_value} < {self.min_stake}")
+        cost = msg_value
         update_model = False
-        if cost > msg_value:
-            raise RejectException(f"Did not pay enough. Sent {msg_value} < {cost}")
         self._market_data.append(_Contribution(contributor_address, data, classification))
         self._market_balances[contributor_address] += cost
         return (cost, update_model)
@@ -309,8 +310,6 @@ class PredictionMarket(IncentiveMechanism):
             acc = self.model.evaluate(self.test_data, self.test_labels)
             score_change = acc - self.prev_acc
             new_score = self._scores[contribution.contributor_address] + score_change
-            self._logger.debug("  Score change for \"%s\": %0.2f (new score: %0.2f)",
-                               contribution.contributor_address, score_change, new_score)
             self._scores[contribution.contributor_address] = new_score
             if new_score < self._min_score:
                 self._min_score = self._scores[contribution.contributor_address]
@@ -329,22 +328,26 @@ class PredictionMarket(IncentiveMechanism):
                     if num_rounds > self.remaining_bounty_rounds:
                         num_rounds = self.remaining_bounty_rounds
                     self.remaining_bounty_rounds -= num_rounds
-                    participants_to_remove = set()
-                    for participant, score in self._scores.items():
-                        self._logger.debug("Score for \"%s\": %.2f", participant, score)
-                        self._market_balances[participant] += score * num_rounds
-                        if self._market_balances[participant] < self._num_market_contributions[participant]:
-                            # They don't have enough left to stake next time.
-                            participants_to_remove.add(participant)
-
-                    self._market_data: List[_Contribution] = list(
-                        filter(lambda c: c.contributor_address not in participants_to_remove, self._market_data))
-                    if self.get_num_contributions_in_market() == 0:
+                    if self.remaining_bounty_rounds == 0:
+                        self._market_data = []
                         self.state = MarketPhase.REWARD_COLLECT
-                        self.remaining_bounty_rounds = 0
                         self.reward_phase_end_time_s = self._time()
                     else:
-                        self.state = MarketPhase.REWARD_RE_INITIALIZE_MODEL
+                        participants_to_remove = set()
+                        for participant, score in self._scores.items():
+                            self._logger.debug("Score for \"%s\": %.2f", participant, score)
+                            self._market_balances[participant] += score * num_rounds
+                            if self._market_balances[participant] < self._num_market_contributions[participant]:
+                                # They don't have enough left to stake next time.
+                                participants_to_remove.add(participant)
+                        self._market_data: List[_Contribution] = list(
+                            filter(lambda c: c.contributor_address not in participants_to_remove, self._market_data))
+                        if self.get_num_contributions_in_market() == 0:
+                            self.state = MarketPhase.REWARD_COLLECT
+                            self.remaining_bounty_rounds = 0
+                            self.reward_phase_end_time_s = self._time()
+                        else:
+                            self.state = MarketPhase.REWARD_RE_INITIALIZE_MODEL
                 else:
                     self._logger.debug("Dividing remaining bounty amongst all remaining contributors.")
                     num_rounds = self.remaining_bounty_rounds
