@@ -10,6 +10,7 @@ from queue import PriorityQueue
 from threading import Thread
 from typing import List
 
+from bokeh import colors
 from bokeh.document import Document
 from bokeh.io import export_png
 from bokeh.models import AdaptiveTicker, ColumnDataSource, FuncTickFormatter, PrintfTickFormatter
@@ -137,6 +138,16 @@ class Simulator(object):
         plot.xgrid[0].ticker = AdaptiveTicker(base=24 * 60 * 60)
 
         balance_plot_sources_per_agent = dict()
+        good_colors = [
+            colors.named.green,
+            colors.named.lawngreen,
+            colors.named.darkgreen,
+            colors.named.limegreen,
+        ]
+        bad_colors = [
+            colors.named.red,
+            colors.named.darkred,
+        ]
         for agent in agents:
             source = ColumnDataSource(dict(t=[], b=[]))
             assert agent.address not in balance_plot_sources_per_agent
@@ -145,17 +156,17 @@ class Simulator(object):
                 color = 'blue'
                 line_dash = 'dashdot'
             elif agent.good:
-                color = 'green'
+                color = good_colors.pop()
                 line_dash = 'dotted'
             else:
-                color = 'red'
+                color = bad_colors.pop()
                 line_dash = 'dashed'
             plot.line(x='t', y='b',
                       line_dash=line_dash,
                       line_width=2,
                       source=source,
                       color=color,
-                      legend=f"{agent.address} Agent Balance")
+                      legend=f"{agent.address} Balance")
 
         plot.legend.location = 'top_left'
         plot.legend.label_text_font_size = '12pt'
