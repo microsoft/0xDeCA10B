@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Optional
 
 from injector import Injector
 
@@ -14,7 +15,7 @@ from decai.simulation.simulate import Agent, Simulator
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 num_words = 1000
-train_size = None
+train_size: Optional[int] = None
 if train_size is None:
     init_train_data_portion = 0.08
 else:
@@ -75,7 +76,7 @@ def main():
     # Start the simulation.
     s.simulate(agents,
                baseline_accuracy=baseline_accuracies[num_words],
-               init_train_data_portion=0.08,
+               init_train_data_portion=init_train_data_portion,
                train_size=train_size,
                )
 

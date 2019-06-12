@@ -156,10 +156,10 @@ class Simulator(object):
                 color = 'blue'
                 line_dash = 'dashdot'
             elif agent.good:
-                color = good_colors.pop()
+                color = good_colors.pop(0)
                 line_dash = 'dotted'
             else:
-                color = bad_colors.pop()
+                color = bad_colors.pop(0)
                 line_dash = 'dashed'
             plot.line(x='t', y='b',
                       line_dash=line_dash,
