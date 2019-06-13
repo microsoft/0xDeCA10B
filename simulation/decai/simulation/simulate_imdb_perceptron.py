@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Optional
 
 from injector import Injector
 
@@ -12,6 +13,13 @@ from decai.simulation.simulate import Agent, Simulator
 
 # For `bokeh serve`.
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+
+num_words = 1000
+train_size: Optional[int] = None
+if train_size is None:
+    init_train_data_portion = 0.08
+else:
+    init_train_data_portion = 100 / train_size
 
 
 def main():
@@ -49,28 +57,27 @@ def main():
     # Set up the data, model, and incentive mechanism.
     inj = Injector([
         DefaultCollaborativeTrainerModule,
-        ImdbDataModule,
+        ImdbDataModule(num_words=num_words),
         LoggingModule,
         PerceptronModule,
         StakeableImModule,
     ])
     s = inj.get(Simulator)
 
+    # Accuracy on hidden test set after training with all training data:
+    baseline_accuracies = {
+        100: 0.6210,
+        200: 0.6173,
+        1000: 0.7945,
+        10000: 0.84692,
+        20000: 0.8484,
+    }
+
     # Start the simulation.
     s.simulate(agents,
-               # Accuracy on hidden test set after training with all training data:
-               # With num_words = 100:
-               baseline_accuracy=0.6210,
-               # With num_words = 200:
-               # baseline_accuracy=0.6173,
-               # With num_words = 1000:
-               # baseline_accuracy=0.7945,
-               # With num_words = 10000:
-               # baseline_accuracy=0.84692,
-               # With num_words = 20000:
-               # baseline_accuracy=0.8484,
-
-               init_train_data_portion=0.08,
+               baseline_accuracy=baseline_accuracies[num_words],
+               init_train_data_portion=init_train_data_portion,
+               train_size=train_size,
                )
 
 

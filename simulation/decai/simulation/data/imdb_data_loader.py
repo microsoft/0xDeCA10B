@@ -1,8 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from logging import Logger
 
 import numpy as np
-from injector import Binder, inject, Module
+from injector import ClassAssistedBuilder, inject, Module, provider
 from keras.datasets import imdb
 
 from .data_loader import DataLoader
@@ -16,11 +16,11 @@ class ImdbDataLoader(DataLoader):
     """
 
     _logger: Logger
+    num_words: int = field(default=1000)
 
     def load_data(self, train_size: int = None, test_size: int = None) -> (tuple, tuple):
-        num_words = 100
-        self._logger.info("Loading IMDB review data using %d words.", num_words)
-        (x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=num_words)
+        self._logger.info("Loading IMDB review data using %d words.", self.num_words)
+        (x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=self.num_words)
         if train_size is not None:
             x_train, y_train = x_train[:train_size], y_train[:train_size]
         if test_size is not None:
@@ -29,7 +29,7 @@ class ImdbDataLoader(DataLoader):
         def get_features(data):
             result = []
             for x in data:
-                xx = np.zeros(num_words, dtype='int')
+                xx = np.zeros(self.num_words, dtype='int')
                 for v in x:
                     xx[v] = 1
                 result.append(xx)
@@ -42,6 +42,10 @@ class ImdbDataLoader(DataLoader):
         return (x_train_result, y_train), (x_test_result, y_test)
 
 
+@dataclass
 class ImdbDataModule(Module):
-    def configure(self, binder: Binder):
-        binder.bind(DataLoader, to=ImdbDataLoader)
+    num_words: int = field(default=1000)
+
+    @provider
+    def provide_data_loader(self, builder: ClassAssistedBuilder[ImdbDataLoader]) -> DataLoader:
+        return builder.build(num_words=self.num_words)

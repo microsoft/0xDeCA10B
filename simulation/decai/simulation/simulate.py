@@ -10,6 +10,7 @@ from queue import PriorityQueue
 from threading import Thread
 from typing import List
 
+from bokeh import colors
 from bokeh.document import Document
 from bokeh.io import export_png
 from bokeh.models import AdaptiveTicker, ColumnDataSource, FuncTickFormatter, PrintfTickFormatter
@@ -137,6 +138,16 @@ class Simulator(object):
         plot.xgrid[0].ticker = AdaptiveTicker(base=24 * 60 * 60)
 
         balance_plot_sources_per_agent = dict()
+        good_colors = [
+            colors.named.green,
+            colors.named.lawngreen,
+            colors.named.darkgreen,
+            colors.named.limegreen,
+        ]
+        bad_colors = [
+            colors.named.red,
+            colors.named.darkred,
+        ]
         for agent in agents:
             source = ColumnDataSource(dict(t=[], b=[]))
             assert agent.address not in balance_plot_sources_per_agent
@@ -145,17 +156,17 @@ class Simulator(object):
                 color = 'blue'
                 line_dash = 'dashdot'
             elif agent.good:
-                color = 'green'
+                color = good_colors.pop(0)
                 line_dash = 'dotted'
             else:
-                color = 'red'
+                color = bad_colors.pop(0)
                 line_dash = 'dashed'
             plot.line(x='t', y='b',
                       line_dash=line_dash,
                       line_width=2,
                       source=source,
                       color=color,
-                      legend=f"{agent.address} Agent Balance")
+                      legend=f"{agent.address} Balance")
 
         plot.legend.location = 'top_left'
         plot.legend.label_text_font_size = '12pt'
@@ -282,24 +293,25 @@ class Simulator(object):
                             # Add a bit of chance they will contribute since 0.85 accuracy is okay.
                             if not agent.good or random.random() < accuracy + 0.15:
                                 value = agent.get_next_deposit()
-                                if value <= balance:
-                                    msg = Msg(agent.address, value)
-                                    try:
-                                        self._decai.add_data(msg, x, y)
-                                        # Don't need to plot every time. Plot less as we get more data.
-                                        update_balance_plot = next_data_index / len(x_remaining) + 0.1 < random.random()
-                                        balance = self._balances[agent.address]
-                                        if continuous_evaluation:
-                                            unclaimed_data.append((current_time, agent, x, y))
-                                        next_data_index += 1
-                                        pbar.update()
-                                    except RejectException:
-                                        # Probably failed because they didn't pay enough which is okay.
-                                        # Or if not enough time has passed since data was attempted to be added
-                                        # which is okay too because a real contract would reject this
-                                        # because the smallest unit of time we can use is 1s.
-                                        if self._logger.isEnabledFor(logging.DEBUG):
-                                            self._logger.exception("Error adding data.")
+                                if value > balance:
+                                    value = balance
+                                msg = Msg(agent.address, value)
+                                try:
+                                    self._decai.add_data(msg, x, y)
+                                    # Don't need to plot every time. Plot less as we get more data.
+                                    update_balance_plot = next_data_index / len(x_remaining) + 0.1 < random.random()
+                                    balance = self._balances[agent.address]
+                                    if continuous_evaluation:
+                                        unclaimed_data.append((current_time, agent, x, y))
+                                    next_data_index += 1
+                                    pbar.update()
+                                except RejectException:
+                                    # Probably failed because they didn't pay enough which is okay.
+                                    # Or if not enough time has passed since data was attempted to be added
+                                    # which is okay too because a real contract would reject this
+                                    # because the smallest unit of time we can use is 1s.
+                                    if self._logger.isEnabledFor(logging.DEBUG):
+                                        self._logger.exception("Error adding data.")
 
                     if balance > 0:
                         q.put((current_time + agent.get_next_wait_s(), agent))
@@ -366,16 +378,25 @@ class Simulator(object):
                           total=self._decai.im.get_num_contributions_in_market(),
                           ) as pbar:
                     while self._decai.im.remaining_bounty_rounds > 0:
+                        self._time.add_time(60)
                         self._decai.im.process_contribution()
                         pbar.update()
                         if self._decai.im.state == MarketPhase.REWARD_RE_INITIALIZE_MODEL:
-                            self._time.add_time(60 * 60)
                             accuracy = self._decai.im.prev_acc
                             doc.add_next_tick_callback(
                                 partial(plot_accuracy_cb, t=self._time(), a=accuracy))
                             pbar.total += self._decai.im.get_num_contributions_in_market()
+                            self._time.add_time(self._time() * 0.01)
 
-                self._time.add_time(60)
+                            for agent in agents:
+                                balance = self._balances[agent.address]
+                                market_bal = self._decai.im._market_balances[agent.address]
+                                self._logger.debug("\"%s\" market balance: %0.2f   Balance: %0.2f",
+                                                   agent.address, market_bal, balance)
+                                doc.add_next_tick_callback(
+                                    partial(plot_cb, agent=agent, t=self._time(), b=max(balance + market_bal, 0)))
+
+                self._time.add_time(self._time() * 0.02)
                 for agent in agents:
                     msg = Msg(agent.address, 0)
                     # Find data submitted by them.
@@ -388,16 +409,16 @@ class Simulator(object):
                         self._decai.refund(msg, data, stored_data.classification, stored_data.time)
                         balance = self._balances[agent.address]
                         doc.add_next_tick_callback(
-                            partial(plot_cb, agent=agent, t=current_time, b=balance))
-                        self._logger.info("Balance for \"%s\": %0.2f", agent.address, balance)
+                            partial(plot_cb, agent=agent, t=self._time(), b=balance))
+                        self._logger.info("Balance for \"%s\": %0.2f (%0.2f%%)",
+                                          agent.address, balance, balance / agent.start_balance * 100)
                     else:
                         self._logger.warning("No data submitted by \"%s\" was found."
                                              "\nWill not update it's balance.", agent.address)
 
                 accuracy = self._decai.im.model.evaluate(x_test, y_test)
-                t = self._time()
                 doc.add_next_tick_callback(
-                    partial(plot_accuracy_cb, t=t, a=accuracy))
+                    partial(plot_accuracy_cb, t=self._time(), a=accuracy))
                 self._logger.info("Done issuing rewards.")
 
             with open(save_path, 'w') as f:
