@@ -2,7 +2,6 @@ import { CssBaseline } from '@material-ui/core';
 import blue from '@material-ui/core/colors/blue';
 import { createMuiTheme } from '@material-ui/core/styles';
 import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
-import axios from 'axios';
 import React, { Component } from 'react';
 import { BrowserRouter as Router, Route } from "react-router-dom";
 import AppBar from './components/appBar';
@@ -20,22 +19,6 @@ const theme = createMuiTheme({
 });
 
 class App extends Component {
-  constructor(props) {
-    super(props)
-
-    this.state = {
-      storageValue: 0,
-      web3: null,
-      models: []
-    }
-  }
-
-  componentDidMount() {
-    axios.get('/api/models').then(r => {
-      this.setState({ models: r.data.models });
-    }).catch(console.error);
-  }
-
   render() {
     const mainDiv = {
       'width': '50%',
@@ -55,8 +38,8 @@ class App extends Component {
             </div>
             <div>
               <div style={mainDiv}>
-                <Route exact path="/" render={_ => (<ModelList models={this.state.models} />)} />
-                <Route path={"/model"} component={Model} />
+                <Route exact path="/" component={ModelList} />
+                <Route path="/model" component={Model} />
                 {/* Disable adding new models through the UI for now until we standardize the process.
                 <Route path="/new" component={CreateModel} />
                 */}
