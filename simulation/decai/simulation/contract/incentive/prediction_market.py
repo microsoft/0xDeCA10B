@@ -136,7 +136,6 @@ class PredictionMarket(IncentiveMechanism):
         return test_dataset_hashes, test_sets
 
     def initialize_market(self, msg: Msg,
-                          x_init_data, y_init_data,
                           test_dataset_hashes: List[str],
                           # Ending criteria:
                           min_length_s: int, min_num_contributions: int) -> int:
@@ -145,8 +144,6 @@ class PredictionMarket(IncentiveMechanism):
 
         :param msg: Indicates the one posting the bounty and the amount being committed for the bounty.
             The total bounty should be an integer since it also represents the number of "rounds" in the PM.
-        :param x_init_data: The data to use to re-initialize the model.
-        :param y_init_data: The labels to use to re-initialize the model.
         :param test_dataset_hashes: The committed hashes for the portions of the test set.
         :param min_length_s: The minimum length in seconds of the market.
         :param min_num_contributions: The minimum number of contributions before ending the market.
@@ -160,9 +157,6 @@ class PredictionMarket(IncentiveMechanism):
         self.bounty_provider = msg.sender
         self.total_bounty = msg.value
         self.remaining_bounty_rounds = self.total_bounty
-        # TODO Instead of storing data, make sure that models can be restarted for free by storing their initial params.
-        self._x_init_data = x_init_data
-        self._y_init_data = y_init_data
         self.test_set_hashes = test_dataset_hashes
         assert len(self.test_set_hashes) > 1
         self.test_reveal_index = random.randrange(len(self.test_set_hashes))
@@ -281,10 +275,7 @@ class PredictionMarket(IncentiveMechanism):
             # The paper implies that we should not retrain the model and instead only train once.
             # The problem there is that a contributor is affected by bad contributions
             # between them and the last counted contribution.
-            # So this will be implemented with retraining for now,
-            # though this might not be feasible with gas limits in Ethereum.
-            self._logger.debug("Re-initializing model.", )
-            self.model.init_model(self._x_init_data, self._y_init_data)
+            self.model.reset_model()
 
             # XXX This evaluation can be expensive and likely won't work in Ethereum.
             # We need to find a more efficient way to do this or let a contributor proved they did it.
@@ -357,6 +348,7 @@ class PredictionMarket(IncentiveMechanism):
                     for participant, score in self._scores.items():
                         self._logger.debug("Score for \"%s\": %.2f", participant, score)
                         self._market_balances[participant] += score * num_rounds
+
 
     def handle_refund(self, submitter: Address, stored_data: StoredData,
                       claimable_amount: float, claimed_by_submitter: bool,

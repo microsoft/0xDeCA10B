@@ -63,9 +63,10 @@ class TestPredictionMarket(unittest.TestCase):
         # Commitment Phase
         self.assertIsNone(im.state)
 
+        im.model.init_model(x_init_data, y_init_data)
+
         hashes_split = 3
         test_reveal_index = im.initialize_market(Msg(initializer_address, total_bounty),
-                                                 x_init_data, y_init_data,
                                                  test_dataset_hashes[:hashes_split],
                                                  min_length_s, min_num_contributions)
         assert 0 <= test_reveal_index < len(test_dataset_hashes)
@@ -182,8 +183,8 @@ class TestPredictionMarket(unittest.TestCase):
 
         # Commitment Phase
         self.assertIsNone(im.state)
+        im.model.init_model(x_init_data, y_init_data)
         test_reveal_index = im.initialize_market(Msg(initializer_address, total_bounty),
-                                                 x_init_data, y_init_data,
                                                  test_dataset_hashes,
                                                  min_length_s, min_num_contributions)
         self.assertEqual(MarketPhase.INITIALIZATION, im.state)

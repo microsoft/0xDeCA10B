@@ -13,7 +13,7 @@ class Classifier(ABC, SmartContract):
         """
         Evaluate the model.
 
-        :param data: The data.
+        :param data: Many data samples.
         :param labels: The ground truth labels for `data`.
         :return: The accuracy for the given test set.
         """
@@ -33,7 +33,7 @@ class Classifier(ABC, SmartContract):
     def predict(self, data):
         """
 
-        :param data: The data or features.
+        :param data: The data or features for one sample.
         :return: The predicted classification or label for `data`.
         """
         pass
@@ -43,7 +43,14 @@ class Classifier(ABC, SmartContract):
         """
         Update the classifier with one data sample.
 
-        :param data: The training data or features.
+        :param data: The training data or features for one sample.
         :param classification: The label for `data`.
+        """
+        pass
+
+    @abstractmethod
+    def reset_model(self):
+        """
+        Re-initialize the model to the same state it was in after `init_model` was called.
         """
         pass
