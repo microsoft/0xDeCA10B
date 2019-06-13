@@ -5,7 +5,8 @@ import numpy as np
 from injector import Injector
 
 from decai.simulation.contract.balances import Balances
-from decai.simulation.contract.classification.perceptron import PerceptronModule
+from decai.simulation.contract.classification.classifier import Classifier
+from decai.simulation.contract.classification.perceptron import PerceptronClassifier, PerceptronModule
 from decai.simulation.contract.collab_trainer import CollaborativeTrainer, DefaultCollaborativeTrainerModule
 from decai.simulation.contract.incentive.stakeable import StakeableImModule
 from decai.simulation.contract.objects import Msg, RejectException, TimeMock
@@ -173,3 +174,37 @@ class TestCollaborativeTrainer(unittest.TestCase):
         msg = Msg(malicious_address, bal)
         self.decai.report(msg, data, submitted_classification, added_time, malicious_address)
         self.assertGreater(self.balances[malicious_address], bal)
+
+    def test_reset(self):
+        inj = Injector([
+            LoggingModule,
+            PerceptronModule,
+        ])
+        m = inj.get(Classifier)
+        self.assertIsInstance(m, PerceptronClassifier)
+        X = np.array([
+            # Initialization Data
+            [0, 0, 0],
+            [1, 1, 1],
+        ])
+        y = [_ground_truth(x) for x in X]
+        m.init_model(X, y)
+        data = [
+            [0, 0, 0],
+            [0, 0, 1],
+            [0, 1, 0],
+            [0, 1, 1],
+            [1, 0, 0],
+            [1, 0, 1],
+            [1, 1, 0],
+            [1, 1, 1],
+        ]
+        original_predictions = [m.predict(x) for x in data]
+        labels = [_ground_truth(x) for x in data]
+        for x, y in zip(data, labels):
+            m.update(x, y)
+        predictions_after_training = [m.predict(x) for x in data]
+        self.assertNotEqual(original_predictions, predictions_after_training)
+        m.reset_model()
+        new_predictions = [m.predict(x) for x in data]
+        self.assertEqual(original_predictions, new_predictions)

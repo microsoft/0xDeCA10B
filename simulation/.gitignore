@@ -1,5 +1,7 @@
 saved_runs/
 
+saved_models/
+
 *.egg-info/
 __pycache__/
 *.py[ucod]
