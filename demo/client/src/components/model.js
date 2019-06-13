@@ -21,8 +21,8 @@ import update from 'immutability-helper';
 import PropTypes from 'prop-types';
 import React from 'react';
 import Web3 from "web3"; // Only required for custom/fallback provider option.
-import CollaborativeTrainer from '../contracts/CollaborativeTrainer64.json';
 import Classifier from "../contracts/Classifier64.json";
+import CollaborativeTrainer from '../contracts/CollaborativeTrainer64.json';
 import DataHandler from '../contracts/DataHandler64.json';
 import IncentiveMechanism from '../contracts/Stakeable64.json';
 import ImdbVocab from '../data/imdb.json';
@@ -412,7 +412,7 @@ class Model extends React.Component {
 
   handleTabChange(_, value) {
     const tab = this.TABS[value];
-    
+
     // Change URL.
     const currentUrlParams = new URLSearchParams(window.location.search);
     currentUrlParams.set('tab', tab);
