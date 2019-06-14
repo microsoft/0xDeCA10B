@@ -268,6 +268,8 @@ class Simulator(object):
                         with open(save_path, 'w') as f:
                             json.dump(save_data, f, separators=(',', ':'))
 
+                        if os.path.exists(plot_save_path):
+                            os.remove(plot_save_path)
                         export_png(plot, plot_save_path)
 
                     self._time.set_time(current_time)
@@ -424,6 +426,8 @@ class Simulator(object):
             with open(save_path, 'w') as f:
                 json.dump(save_data, f, separators=(',', ':'))
 
+            if os.path.exists(plot_save_path):
+                os.remove(plot_save_path)
             export_png(plot, plot_save_path)
 
         doc.add_root(plot)
