@@ -1,10 +1,10 @@
 import random
 from collections import Counter, defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from hashlib import sha256
 from logging import Logger
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import math
 import numpy as np
@@ -33,14 +33,16 @@ class MarketPhase(Enum):
     REWARD = 3
     """ No more data contributions are being accepted but rewards still need to be calculated. """
 
-    REWARD_RE_INITIALIZE_MODEL = 4
-    """ Same as `REWARD` but the model needs to be re-initialized. """
+    REWARD_RESTART = 4
+    """
+    Same as `REWARD` but contributions have just been filtered out 
+    and the iteration needs to restart with the remaining contributions.
+    """
 
     REWARD_COLLECT = 5
     """ The reward values have been computed and are ready to be collected. """
 
 
-@dataclass
 class _Contribution:
     """
     A contribution to train data.
@@ -55,6 +57,22 @@ class _Contribution:
     contributor_address: Address
     data: np.array
     classification: int
+
+    balance: int
+    """
+    Initially this is the amount deposited with this contribution.
+    If contributions are not grouped by contributor, then while calculating rewards this gets updated to be the balance
+    for this particular contribution, to know if it should get kicked out of the reward phase.  
+    """
+
+    score: Optional[int]
+    """
+    The score for this contribution.
+    Mainly used for when contributions are not grouped.
+    """
+
+    accuracy: Optional[float] = field(default=None, init=False)
+    """ The accuracy of the model on the test set after adding this contribution. """
 
 
 @singleton
@@ -75,7 +93,12 @@ class PredictionMarket(IncentiveMechanism):
                  model: Classifier,
                  time_method: TimeMock,
                  # Parameters
-                 any_address_claim_wait_time_s=60 * 60 * 24 * 7.
+                 any_address_claim_wait_time_s=60 * 60 * 24 * 7,
+
+                 # Configuration Options
+                 allow_greater_deposit=False,
+                 group_contributions=False,
+                 reset_model_during_reward_phase=False,
                  ):
         super().__init__(any_address_claim_wait_time_s=any_address_claim_wait_time_s)
 
@@ -83,6 +106,11 @@ class PredictionMarket(IncentiveMechanism):
         self._logger = logger
         self.model = model
         self._time = time_method
+
+        # Configuration Options
+        self._allow_greater_deposit = allow_greater_deposit
+        self._group_contributions = group_contributions
+        self._reset_model_during_reward_phase = reset_model_during_reward_phase
 
         self._market_earliest_end_time_s = None
         self._market_balances: Dict[Address, float] = defaultdict(float)
@@ -172,6 +200,8 @@ class PredictionMarket(IncentiveMechanism):
 
         self.reward_phase_end_time_s = None
 
+        self.prev_acc = None
+
         # Pay the owner since it will be the owner distributing funds using `handle_refund` and `handle_reward` later.
         self._balances.send(self.bounty_provider, self.owner, self.total_bounty)
 
@@ -229,9 +259,12 @@ class PredictionMarket(IncentiveMechanism):
         assert self.state == MarketPhase.PARTICIPATION
         if msg_value < self.min_stake:
             raise RejectException(f"Did not pay enough. Sent {msg_value} < {self.min_stake}")
-        cost = msg_value
+        if self._allow_greater_deposit:
+            cost = msg_value
+        else:
+            cost = self.min_stake
         update_model = False
-        self._market_data.append(_Contribution(contributor_address, data, classification))
+        self._market_data.append(_Contribution(contributor_address, data, classification, cost))
         self._market_balances[contributor_address] += cost
         return (cost, update_model)
 
@@ -259,7 +292,7 @@ class PredictionMarket(IncentiveMechanism):
         if self.next_test_set_index_to_verify == self.test_reveal_index:
             self.next_test_set_index_to_verify += 1
         if self.next_test_set_index_to_verify == len(self.test_set_hashes):
-            self.state = MarketPhase.REWARD_RE_INITIALIZE_MODEL
+            self.state = MarketPhase.REWARD_RESTART
 
     def process_contribution(self):
         """
@@ -268,21 +301,26 @@ class PredictionMarket(IncentiveMechanism):
         """
         assert self.remaining_bounty_rounds > 0, "The market has ended."
 
-        if self.state == MarketPhase.REWARD_RE_INITIALIZE_MODEL:
+        if self.state == MarketPhase.REWARD_RESTART:
             self._next_data_index = 0
             self._logger.debug("Remaining bounty rounds: %s", self.remaining_bounty_rounds)
             self._scores = defaultdict(float)
-            # The paper implies that we should not retrain the model and instead only train once.
-            # The problem there is that a contributor is affected by bad contributions
-            # between them and the last counted contribution.
-            self.model.reset_model()
 
-            # XXX This evaluation can be expensive and likely won't work in Ethereum.
-            # We need to find a more efficient way to do this or let a contributor proved they did it.
-            self.prev_acc = self.model.evaluate(self.test_data, self.test_labels)
-            self._logger.debug("Accuracy: %0.2f%%", self.prev_acc * 100)
+            if self._reset_model_during_reward_phase:
+                # The paper implies that we should not retrain the model and instead only train once.
+                # The problem there is that a contributor is affected by bad contributions
+                # between them and the last counted contribution after bad contributions are filtered out.
+                self.model.reset_model()
+
+            if self.prev_acc is None:
+                # XXX This evaluation can be expensive and likely won't work in Ethereum.
+                # We need to find a more efficient way to do this or let a contributor proved they did it.
+                self.prev_acc = self.model.evaluate(self.test_data, self.test_labels)
+                self._logger.debug("Accuracy: %0.2f%%", self.prev_acc * 100)
+
             self._num_market_contributions: Dict[Address, int] = Counter()
-            self._worst_contributor = None
+            self._worst_contribution: Optional[_Contribution] = None
+            self._worst_contributor: Optional[Address] = None
             self._min_score = math.inf
             self.state = MarketPhase.REWARD
         else:
@@ -291,39 +329,63 @@ class PredictionMarket(IncentiveMechanism):
         contribution = self._market_data[self._next_data_index]
         self._num_market_contributions[contribution.contributor_address] += 1
         self.model.update(contribution.data, contribution.classification)
-        self._next_data_index += 1
-        need_restart = self._next_data_index >= self.get_num_contributions_in_market()
-        if need_restart \
-                or self._market_data[self._next_data_index].contributor_address != contribution.contributor_address:
-            # Next contributor is different.
-
+        if not self._reset_model_during_reward_phase and contribution.accuracy is None:
             # XXX Potentially expensive gas cost.
-            acc = self.model.evaluate(self.test_data, self.test_labels)
+            contribution.accuracy = self.model.evaluate(self.test_data, self.test_labels)
+
+        self._next_data_index += 1
+        iterated_through_all_contributions = self._next_data_index >= self.get_num_contributions_in_market()
+
+        if iterated_through_all_contributions \
+                or not self._group_contributions \
+                or self._market_data[self._next_data_index].contributor_address != contribution.contributor_address:
+            # Need to compute score.
+
+            if self._reset_model_during_reward_phase:
+                # XXX Potentially expensive gas cost.
+                acc = self.model.evaluate(self.test_data, self.test_labels)
+            else:
+                acc = contribution.accuracy
+
             score_change = acc - self.prev_acc
-            new_score = self._scores[contribution.contributor_address] + score_change
-            self._scores[contribution.contributor_address] = new_score
+            if self._group_contributions:
+                new_score = self._scores[contribution.contributor_address] = \
+                    self._scores[contribution.contributor_address] + score_change
+            else:
+                new_score = contribution.score = contribution.balance + score_change
+
             if new_score < self._min_score:
-                self._min_score = self._scores[contribution.contributor_address]
-                self._worst_contributor = contribution.contributor_address
-            elif self._worst_contributor == contribution.contributor_address and score_change > 0:
+                self._min_score = new_score
+                if self._group_contributions:
+                    self._worst_contributor = contribution.contributor_address
+                else:
+                    self._worst_contribution = contribution
+            elif self._group_contributions and self._worst_contributor == contribution.contributor_address:
                 # Their score increased, they might not be the worst anymore.
                 # Optimize: use a heap.
                 self._worst_contributor, self._min_score = min(self._scores.items(), key=lambda x: x[1])
 
             self.prev_acc = acc
-            if need_restart:
+            if iterated_through_all_contributions:
                 # Find min score and remove that address from the list.
-                self._logger.debug("Minimum score: \"%s\": %.2f", self._worst_contributor, self._min_score)
+                self._logger.debug("Minimum score: %.2f", self._min_score)
                 if self._min_score < 0:
-                    num_rounds = self._market_balances[self._worst_contributor] / -self._min_score
+                    if self._group_contributions:
+                        num_rounds = self._market_balances[self._worst_contributor] / -self._min_score
+                    else:
+                        num_rounds = self._worst_contribution.balance / -self._min_score
+
+                    # Round like Solidity would.
+                    num_rounds = int(num_rounds)
+
                     if num_rounds > self.remaining_bounty_rounds:
                         num_rounds = self.remaining_bounty_rounds
+
                     self.remaining_bounty_rounds -= num_rounds
                     if self.remaining_bounty_rounds == 0:
-                        self._market_data = []
-                        self.state = MarketPhase.REWARD_COLLECT
-                        self.reward_phase_end_time_s = self._time()
+                        self._end_reward_phase(num_rounds)
                     else:
+                        # FIXME Handle dividing rewards when not grouping contributions.
                         participants_to_remove = set()
                         for participant, score in self._scores.items():
                             self._logger.debug("Score for \"%s\": %.2f", participant, score)
@@ -338,17 +400,25 @@ class PredictionMarket(IncentiveMechanism):
                             self.remaining_bounty_rounds = 0
                             self.reward_phase_end_time_s = self._time()
                         else:
-                            self.state = MarketPhase.REWARD_RE_INITIALIZE_MODEL
+                            self.state = MarketPhase.REWARD_RESTART
                 else:
-                    self._logger.debug("Dividing remaining bounty amongst all remaining contributors.")
                     num_rounds = self.remaining_bounty_rounds
                     self.remaining_bounty_rounds = 0
-                    self.reward_phase_end_time_s = self._time()
-                    self.state = MarketPhase.REWARD_COLLECT
-                    for participant, score in self._scores.items():
-                        self._logger.debug("Score for \"%s\": %.2f", participant, score)
-                        self._market_balances[participant] += score * num_rounds
+                    self._end_reward_phase(num_rounds)
 
+    def _end_reward_phase(self, num_rounds):
+        self._logger.debug("Dividing remaining bounty amongst all remaining contributors.")
+        self._market_data = []
+        self.reward_phase_end_time_s = self._time()
+        self.state = MarketPhase.REWARD_COLLECT
+        if self._group_contributions:
+            for participant, score in self._scores.items():
+                self._logger.debug("Score for \"%s\": %.2f", participant, score)
+                self._market_balances[participant] += score * num_rounds
+        else:
+            for contribution in self._market_data:
+                self._market_balances[contribution.contributor_address] = \
+                    contribution.score * num_rounds
 
     def handle_refund(self, submitter: Address, stored_data: StoredData,
                       claimable_amount: float, claimed_by_submitter: bool,

@@ -384,7 +384,7 @@ class Simulator(object):
                         self._time.add_time(60)
                         self._decai.im.process_contribution()
                         pbar.update()
-                        if self._decai.im.state == MarketPhase.REWARD_RE_INITIALIZE_MODEL:
+                        if self._decai.im.state == MarketPhase.REWARD_RESTART:
                             accuracy = self._decai.im.prev_acc
                             doc.add_next_tick_callback(
                                 partial(plot_accuracy_cb, t=self._time(), a=accuracy))

@@ -101,7 +101,7 @@ class TestPredictionMarket(unittest.TestCase):
         for i, test_set_portion in enumerate(test_sets):
             if i != test_reveal_index:
                 im.verify_next_test_set(test_set_portion)
-        self.assertEqual(MarketPhase.REWARD_RE_INITIALIZE_MODEL, im.state)
+        self.assertEqual(MarketPhase.REWARD_RESTART, im.state)
         while im.remaining_bounty_rounds > 0:
             im.process_contribution()
 
@@ -219,7 +219,7 @@ class TestPredictionMarket(unittest.TestCase):
         for i, test_set_portion in enumerate(test_sets):
             if i != test_reveal_index:
                 im.verify_next_test_set(test_set_portion)
-        self.assertEqual(MarketPhase.REWARD_RE_INITIALIZE_MODEL, im.state)
+        self.assertEqual(MarketPhase.REWARD_RESTART, im.state)
         while im.remaining_bounty_rounds > 0:
             time_method.add_time(60)
             im.process_contribution()
