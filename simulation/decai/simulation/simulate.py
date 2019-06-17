@@ -5,6 +5,7 @@ import random
 import time
 from dataclasses import asdict, dataclass
 from functools import partial
+from itertools import cycle
 from logging import Logger
 from queue import PriorityQueue
 from threading import Thread
@@ -138,16 +139,16 @@ class Simulator(object):
         plot.xgrid[0].ticker = AdaptiveTicker(base=24 * 60 * 60)
 
         balance_plot_sources_per_agent = dict()
-        good_colors = [
+        good_colors = cycle([
             colors.named.green,
             colors.named.lawngreen,
             colors.named.darkgreen,
             colors.named.limegreen,
-        ]
-        bad_colors = [
+        ])
+        bad_colors = cycle([
             colors.named.red,
             colors.named.darkred,
-        ]
+        ])
         for agent in agents:
             source = ColumnDataSource(dict(t=[], b=[]))
             assert agent.address not in balance_plot_sources_per_agent
@@ -156,10 +157,10 @@ class Simulator(object):
                 color = 'blue'
                 line_dash = 'dashdot'
             elif agent.good:
-                color = good_colors.pop(0)
+                color = next(good_colors)
                 line_dash = 'dotted'
             else:
-                color = bad_colors.pop(0)
+                color = next(bad_colors)
                 line_dash = 'dashed'
             plot.line(x='t', y='b',
                       line_dash=line_dash,
@@ -268,6 +269,8 @@ class Simulator(object):
                         with open(save_path, 'w') as f:
                             json.dump(save_data, f, separators=(',', ':'))
 
+                        if os.path.exists(plot_save_path):
+                            os.remove(plot_save_path)
                         export_png(plot, plot_save_path)
 
                     self._time.set_time(current_time)
@@ -424,6 +427,8 @@ class Simulator(object):
             with open(save_path, 'w') as f:
                 json.dump(save_data, f, separators=(',', ':'))
 
+            if os.path.exists(plot_save_path):
+                os.remove(plot_save_path)
             export_png(plot, plot_save_path)
 
         doc.add_root(plot)
