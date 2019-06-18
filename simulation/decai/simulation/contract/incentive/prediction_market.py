@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Tuple
 
 import math
 import numpy as np
-from injector import inject, Module, singleton
+from injector import ClassAssistedBuilder, inject, Module, provider, singleton
 
 from decai.simulation.contract.balances import Balances
 from decai.simulation.contract.classification.classifier import Classifier
@@ -43,6 +43,7 @@ class MarketPhase(Enum):
     """ The reward values have been computed and are ready to be collected. """
 
 
+@dataclass
 class _Contribution:
     """
     A contribution to train data.
@@ -65,7 +66,7 @@ class _Contribution:
     for this particular contribution, to know if it should get kicked out of the reward phase.  
     """
 
-    score: Optional[int]
+    score: Optional[int] = field(default=None, init=False)
     """
     The score for this contribution.
     Mainly used for when contributions are not grouped.
@@ -375,9 +376,6 @@ class PredictionMarket(IncentiveMechanism):
                     else:
                         num_rounds = self._worst_contribution.balance / -self._min_score
 
-                    # Round like Solidity would.
-                    num_rounds = int(num_rounds)
-
                     if num_rounds > self.remaining_bounty_rounds:
                         num_rounds = self.remaining_bounty_rounds
 
@@ -385,16 +383,23 @@ class PredictionMarket(IncentiveMechanism):
                     if self.remaining_bounty_rounds == 0:
                         self._end_reward_phase(num_rounds)
                     else:
-                        # FIXME Handle dividing rewards when not grouping contributions.
-                        participants_to_remove = set()
-                        for participant, score in self._scores.items():
-                            self._logger.debug("Score for \"%s\": %.2f", participant, score)
-                            self._market_balances[participant] += score * num_rounds
-                            if self._market_balances[participant] < self._num_market_contributions[participant]:
-                                # They don't have enough left to stake next time.
-                                participants_to_remove.add(participant)
-                        self._market_data: List[_Contribution] = list(
-                            filter(lambda c: c.contributor_address not in participants_to_remove, self._market_data))
+                        if self._group_contributions:
+                            participants_to_remove = set()
+                            for participant, score in self._scores.items():
+                                self._logger.debug("Score for \"%s\": %.2f", participant, score)
+                                self._market_balances[participant] += score * num_rounds
+                                if self._market_balances[participant] < self._num_market_contributions[participant]:
+                                    # They don't have enough left to stake next time.
+                                    participants_to_remove.add(participant)
+                            self._market_data: List[_Contribution] = list(
+                                filter(lambda c: c.contributor_address not in participants_to_remove,
+                                       self._market_data))
+                        else:
+                            for contribution in self._market_data:
+                                self._market_balances[contribution.contributor_address] \
+                                    += contribution.score * num_rounds
+                            self._market_data: List[_Contribution] = \
+                                list(filter(lambda c: c.score >= 1, self._market_data))
                         if self.get_num_contributions_in_market() == 0:
                             self.state = MarketPhase.REWARD_COLLECT
                             self.remaining_bounty_rounds = 0
@@ -407,6 +412,11 @@ class PredictionMarket(IncentiveMechanism):
                     self._end_reward_phase(num_rounds)
 
     def _end_reward_phase(self, num_rounds):
+        """
+        Distribute rewards.
+
+        :param num_rounds: The number of rounds remaining.
+        """
         self._logger.debug("Dividing remaining bounty amongst all remaining contributors.")
         self._market_data = []
         self.reward_phase_end_time_s = self._time()
@@ -448,6 +458,16 @@ class PredictionMarket(IncentiveMechanism):
         return result
 
 
+@dataclass
 class PredictionMarketImModule(Module):
-    def configure(self, binder):
-        binder.bind(IncentiveMechanism, to=PredictionMarket)
+    allow_greater_deposit: bool = field(default=False)
+    group_contributions: bool = field(default=False)
+    reset_model_during_reward_phase: bool = field(default=False)
+
+    @provider
+    def provide_data_loader(self, builder: ClassAssistedBuilder[PredictionMarket]) -> IncentiveMechanism:
+        return builder.build(
+            allow_greater_deposit=self.allow_greater_deposit,
+            group_contributions=self.group_contributions,
+            reset_model_during_reward_phase=self.reset_model_during_reward_phase,
+        )

@@ -22,11 +22,16 @@ class TestPredictionMarket(unittest.TestCase):
             SimpleDataModule,
             LoggingModule,
             PerceptronModule,
-            PredictionMarketImModule,
+            PredictionMarketImModule(
+                allow_greater_deposit=True,
+                group_contributions=True,
+                reset_model_during_reward_phase=True,
+            ),
         ])
         balances = inj.get(Balances)
         data = inj.get(DataLoader)
         im = cast(PredictionMarket, inj.get(IncentiveMechanism))
+        im.owner = 'owner'
 
         assert isinstance(im, PredictionMarket)
 
@@ -142,11 +147,16 @@ class TestPredictionMarket(unittest.TestCase):
             SimpleDataModule,
             LoggingModule,
             PerceptronModule,
-            PredictionMarketImModule,
+            PredictionMarketImModule(
+                allow_greater_deposit=True,
+                group_contributions=True,
+                reset_model_during_reward_phase=True,
+            ),
         ])
         balances = inj.get(Balances)
         data = inj.get(DataLoader)
         im = cast(PredictionMarket, inj.get(IncentiveMechanism))
+        im.owner = 'owner'
         time_method = inj.get(TimeMock)
 
         assert isinstance(im, PredictionMarket)
