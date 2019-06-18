@@ -119,6 +119,12 @@ class PredictionMarket(IncentiveMechanism):
 
         self._next_data_index = None
 
+        self.min_stake = 1
+        """
+        The minimum required amount to deposit.
+        Should be at least 1 to handle the worst case where the contribution takes the accuracy from 1 to 0. 
+        """
+
         self.state = None
 
     def distribute_payment_for_prediction(self, sender, value):
@@ -193,8 +199,6 @@ class PredictionMarket(IncentiveMechanism):
         if self.next_test_set_index_to_verify == self.test_reveal_index:
             self.next_test_set_index_to_verify += 1
 
-        self.min_stake = 1
-
         self._market_data: List[_Contribution] = []
         self.min_num_contributions = min_num_contributions
         self._market_earliest_end_time_s = self._time() + min_length_s
@@ -202,6 +206,7 @@ class PredictionMarket(IncentiveMechanism):
         self.reward_phase_end_time_s = None
 
         self.prev_acc = None
+        self.original_acc = None
 
         # Pay the owner since it will be the owner distributing funds using `handle_refund` and `handle_reward` later.
         self._balances.send(self.bounty_provider, self.owner, self.total_bounty)
@@ -317,7 +322,11 @@ class PredictionMarket(IncentiveMechanism):
                 # XXX This evaluation can be expensive and likely won't work in Ethereum.
                 # We need to find a more efficient way to do this or let a contributor proved they did it.
                 self.prev_acc = self.model.evaluate(self.test_data, self.test_labels)
+                self.original_acc = self.prev_acc
                 self._logger.debug("Accuracy: %0.2f%%", self.prev_acc * 100)
+            elif not self._reset_model_during_reward_phase:
+                # When calculating rewards, the score, the same accuracy for the initial model should be used.
+                self.prev_acc = self.original_acc
 
             self._num_market_contributions: Dict[Address, int] = Counter()
             self._worst_contribution: Optional[_Contribution] = None
@@ -353,7 +362,7 @@ class PredictionMarket(IncentiveMechanism):
                 new_score = self._scores[contribution.contributor_address] = \
                     self._scores[contribution.contributor_address] + score_change
             else:
-                new_score = contribution.score = contribution.balance + score_change
+                new_score = contribution.score = score_change
 
             if new_score < self._min_score:
                 self._min_score = new_score
@@ -379,6 +388,8 @@ class PredictionMarket(IncentiveMechanism):
                     if num_rounds > self.remaining_bounty_rounds:
                         num_rounds = self.remaining_bounty_rounds
 
+                    self._logger.debug("Will simulate %.2f rounds.", num_rounds)
+
                     self.remaining_bounty_rounds -= num_rounds
                     if self.remaining_bounty_rounds == 0:
                         self._end_reward_phase(num_rounds)
@@ -396,10 +407,12 @@ class PredictionMarket(IncentiveMechanism):
                                        self._market_data))
                         else:
                             for contribution in self._market_data:
-                                self._market_balances[contribution.contributor_address] \
-                                    += contribution.score * num_rounds
+                                contribution.balance += contribution.score * num_rounds
+                                if contribution.balance < 1:
+                                    # Contribution is going to get kicked out.
+                                    self._market_balances[contribution.contributor_address] += contribution.balance
                             self._market_data: List[_Contribution] = \
-                                list(filter(lambda c: c.score >= 1, self._market_data))
+                                list(filter(lambda c: c.balance >= 1, self._market_data))
                         if self.get_num_contributions_in_market() == 0:
                             self.state = MarketPhase.REWARD_COLLECT
                             self.remaining_bounty_rounds = 0
@@ -417,8 +430,8 @@ class PredictionMarket(IncentiveMechanism):
 
         :param num_rounds: The number of rounds remaining.
         """
-        self._logger.debug("Dividing remaining bounty amongst all remaining contributors.")
-        self._market_data = []
+        self._logger.debug("Dividing remaining bounty amongst all remaining contributors to simulate %.2f rounds.",
+                           num_rounds)
         self.reward_phase_end_time_s = self._time()
         self.state = MarketPhase.REWARD_COLLECT
         if self._group_contributions:
@@ -429,6 +442,8 @@ class PredictionMarket(IncentiveMechanism):
             for contribution in self._market_data:
                 self._market_balances[contribution.contributor_address] = \
                     contribution.score * num_rounds
+
+        self._market_data = []
 
     def handle_refund(self, submitter: Address, stored_data: StoredData,
                       claimable_amount: float, claimed_by_submitter: bool,
