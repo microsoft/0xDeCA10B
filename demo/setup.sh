@@ -4,9 +4,9 @@ set -ex
 
 if [ "${CI}" == "true" ]; then
     # Don't do globally in Azure pipeline because of permissions issues.
-    npm install ethlint ganache-cli truffle yarn
+    npm install yarn
 else
-    npm install -g ethlint ganache-cli truffle yarn
+    npm install -g yarn
 fi
 
 yarn install

@@ -23,7 +23,7 @@ You can use Docker by running:
 ```bash
 docker build -t decai .
 docker run --rm -it -p 7545:7545 -v ${PWD}:/root/workspace/demo --name decai decai bash
-# You may have to run `./setup.sh` in the container to ensure that everything is set up properly.
+# You may have to run `rm -rf node_modules client/node_modules && ./setup.sh` in the container to ensure that everything is set up properly.
 ```
 
 ## Troubleshooting Setup
