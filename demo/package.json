@@ -1,7 +1,8 @@
 {
-  "name": "example-create-react-app-express",
+  "name": "decai-demo",
   "version": "1.0.0",
   "license": "MIT",
+  "private": true,
   "scripts": {
     "blockchain": "mkdir --parents blockchain_db && ganache-cli --db blockchain_db --networkId 5782 --gasLimit 8000000 --gasPrice 1 --host 0.0.0.0 --port 7545 --mnemonic \"net pistol fun vibrant sausage vintage general silk weekend street brave rubber\"",
     "clean": "rm -rf blockchain_db db.sqlite client/src/contracts/*.json",
@@ -12,7 +13,9 @@
   },
   "dependencies": {
     "body-parser": "^1.18.3",
+    "ethlint": "^1.2.4",
     "express": "^4.16.4",
+    "ganache-cli": "^6.4.4",
     "nodemon": "^1.18.11",
     "sql.js": "0.5.0"
   },

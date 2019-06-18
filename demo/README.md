@@ -22,8 +22,12 @@ Run
 You can use Docker by running:
 ```bash
 docker build -t decai .
-docker run --rm -it -p 7545:7545 -v ${PWD}:/root/workspace/demo --name decai decai bash
-# You may have to run `./setup.sh` in the container to ensure that everything is set up properly.
+docker run --rm -it -p 3000:3000 -p 5387:5387 -p 7545:7545 -v ${PWD}:/root/workspace/demo -v /root/workspace/demo/node_modules -v /root/workspace/demo/client/node_modules --name decai decai bash
+# If you run into issues inside the Docker container, then
+# try to redo the setup by running: `rm -rf node_modules client/node_modules && ./setup.sh` in the container to ensure that everything is set up properly.
+
+# So that you can start a few processes in the Docker container, run:
+byobu
 ```
 
 ## Troubleshooting Setup
@@ -32,7 +36,7 @@ If you have problems running the setup steps related to node-gyp, then you might
 ## Update
 To update dependencies after already setting up:
 ```bash
-yarn global upgrade ethlint ganache-cli truffle yarn && yarn upgrade && (cd client && yarn upgrade)
+yarn global upgrade yarn && yarn upgrade && (cd client && yarn upgrade)
 ```
 
 ## Linting
@@ -47,7 +51,7 @@ Proper linting will be enforced when making a pull request.
 
 # Deploy
 ## Blockchain
-Start the blockchain (Ganache) in one termanial.
+Start the blockchain (Ganache) in one terminal.
 Run:
 ```bash
 yarn blockchain
@@ -93,7 +97,7 @@ If MetaMask gives issues about the nonce not being right for a transaction then 
 
 You can first try to reset your account in the MetaMask settings. This will clear your transaction history.
 
-You shouldn't need to if you've been consistenly using a blockchain for just this project but you can also try changing the network ID for Ganache. This can be done in the Ganache UI or CLI (--networkId).
+You shouldn't need to if you've been consistently using a blockchain for just this project but you can also try changing the network ID for Ganache. This can be done in the Ganache UI or CLI (--networkId).
 
 #### MetaMask Loading Issues
 If MetaMask is spinning and non-responsive:
