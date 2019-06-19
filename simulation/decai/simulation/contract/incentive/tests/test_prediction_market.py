@@ -129,7 +129,7 @@ class TestPredictionMarket(unittest.TestCase):
         self.assertLess(0, balances[im.owner])
 
         # Sometimes the bad contributor happens to get some value but not much.
-        self.assertAlmostEqual(balances[bad_contributor_address], initial_bad_balance, delta=1,
+        self.assertAlmostEqual(balances[bad_contributor_address], initial_bad_balance, delta=2,
                                 msg=f"The bad contributor should lose funds.\n"
                                 f"Balances: {balances.get_all()}")
         self.assertGreater(balances[good_contributor_address], initial_good_balance)
