@@ -76,7 +76,6 @@ class _Contribution:
     """ The accuracy of the model on the test set after adding this contribution. """
 
 
-@singleton
 class PredictionMarket(IncentiveMechanism):
     """
     An IM where rewards are computed based on how the model's performance changes with respect to a test set.
@@ -262,7 +261,7 @@ class PredictionMarket(IncentiveMechanism):
 
     def handle_add_data(self, contributor_address: Address, msg_value: float, data, classification) -> (float, bool):
         # Allow them to stake as much as they want to ensure they get included in future rounds.
-        assert self.state == MarketPhase.PARTICIPATION
+        assert self.state == MarketPhase.PARTICIPATION, f'Current state is: {self.state}.'
         if msg_value < self.min_stake:
             raise RejectException(f"Did not pay enough. Sent {msg_value} < {self.min_stake}")
         if self._allow_greater_deposit:
@@ -278,7 +277,7 @@ class PredictionMarket(IncentiveMechanism):
         """
         Signal the end of the prediction market.
         """
-        assert self.state == MarketPhase.PARTICIPATION
+        assert self.state == MarketPhase.PARTICIPATION, f'Current state is: {self.state}.'
         if self.get_num_contributions_in_market() < self.min_num_contributions \
                 and self._time() < self._market_earliest_end_time_s:
             raise RejectException("Can't end the market yet.")
@@ -440,7 +439,7 @@ class PredictionMarket(IncentiveMechanism):
                 self._market_balances[participant] += score * num_rounds
         else:
             for contribution in self._market_data:
-                self._market_balances[contribution.contributor_address] = \
+                self._market_balances[contribution.contributor_address] += \
                     contribution.score * num_rounds
 
         self._market_data = []
@@ -480,6 +479,7 @@ class PredictionMarketImModule(Module):
     reset_model_during_reward_phase: bool = field(default=False)
 
     @provider
+    @singleton
     def provide_data_loader(self, builder: ClassAssistedBuilder[PredictionMarket]) -> IncentiveMechanism:
         return builder.build(
             allow_greater_deposit=self.allow_greater_deposit,

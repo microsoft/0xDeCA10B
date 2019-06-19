@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from logging import Logger
 
 import numpy as np
-from injector import ClassAssistedBuilder, inject, Module, provider
+from injector import ClassAssistedBuilder, inject, Module, provider, singleton
 from keras.datasets import imdb
 
 from .data_loader import DataLoader
@@ -47,5 +47,6 @@ class ImdbDataModule(Module):
     num_words: int = field(default=1000)
 
     @provider
+    @singleton
     def provide_data_loader(self, builder: ClassAssistedBuilder[ImdbDataLoader]) -> DataLoader:
         return builder.build(num_words=self.num_words)
