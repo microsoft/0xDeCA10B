@@ -384,12 +384,12 @@ class Simulator(object):
                         self._time.add_time(60)
                         self._decai.im.process_contribution()
                         pbar.update()
-                        if self._decai.im.state == MarketPhase.REWARD_RE_INITIALIZE_MODEL:
+                        if self._decai.im.state == MarketPhase.REWARD_RESTART:
                             accuracy = self._decai.im.prev_acc
                             doc.add_next_tick_callback(
                                 partial(plot_accuracy_cb, t=self._time(), a=accuracy))
                             pbar.total += self._decai.im.get_num_contributions_in_market()
-                            self._time.add_time(self._time() * 0.01)
+                            self._time.add_time(self._time() * 0.001)
 
                             for agent in agents:
                                 balance = self._balances[agent.address]
@@ -413,8 +413,9 @@ class Simulator(object):
                         balance = self._balances[agent.address]
                         doc.add_next_tick_callback(
                             partial(plot_cb, agent=agent, t=self._time(), b=balance))
-                        self._logger.info("Balance for \"%s\": %0.2f (%0.2f%%)",
-                                          agent.address, balance, balance / agent.start_balance * 100)
+                        self._logger.info("Balance for \"%s\": %.2f (%+.2f%%)",
+                                          agent.address, balance,
+                                          (balance - agent.start_balance) / agent.start_balance * 100)
                     else:
                         self._logger.warning("No data submitted by \"%s\" was found."
                                              "\nWill not update it's balance.", agent.address)
