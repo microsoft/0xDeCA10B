@@ -126,6 +126,10 @@ class PredictionMarket(IncentiveMechanism):
 
         self.state = None
 
+    @property
+    def reset_model_during_reward_phase(self):
+        return self._reset_model_during_reward_phase
+
     def distribute_payment_for_prediction(self, sender, value):
         pass
 
