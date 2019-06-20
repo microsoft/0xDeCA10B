@@ -23,7 +23,7 @@ Despite the malicious efforts, the accuracy can still be maintained and the hone
 # Setup
 Run:
 ```bash
-conda create --name decai-simulation python=3.7 bokeh ipython mkl mkl-service numpy phantomjs scikit-learn scipy six tensorflow
+conda create --channel conda-forge --name decai-simulation python=3.7 bokeh ipython mkl mkl-service numpy phantomjs scikit-learn scipy six tensorflow
 conda activate decai-simulation
 pip install -e .
 ```
