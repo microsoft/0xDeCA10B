@@ -21,8 +21,8 @@ Run
 ## Docker Setup
 You can use Docker by running:
 ```bash
-docker build -t decai .
-docker run --rm -it -p 3000:3000 -p 5387:5387 -p 7545:7545 -v ${PWD}:/root/workspace/demo -v /root/workspace/demo/node_modules -v /root/workspace/demo/client/node_modules --name decai decai bash
+docker build -t decai-demo .
+docker run --rm -it -p 3000:3000 -p 5387:5387 -p 7545:7545 -v ${PWD}:/root/workspace/demo -v /root/workspace/demo/node_modules -v /root/workspace/demo/client/node_modules --name decai-demo decai-demo bash
 # If you run into issues inside the Docker container, then
 # try to redo the setup by running: `rm -rf node_modules client/node_modules && ./setup.sh` in the container to ensure that everything is set up properly.
 
