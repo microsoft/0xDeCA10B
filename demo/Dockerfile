@@ -1,6 +1,9 @@
 FROM node:10.15
 
-MAINTAINER Justin Harris (justin.harris@microsoft.com)
+LABEL maintainer="Justin Harris (justin.harris@microsoft.com)"
+LABEL org.label-schema.vendor="Microsoft"
+LABEL org.label-schema.url="https://github.com/microsoft/0xDeCA10B/tree/master/demo"
+LABEL org.label-schema.vcs-url="https://github.com/microsoft/0xDeCA10B/tree/master/demo"
 
 WORKDIR /root/workspace/demo
 
