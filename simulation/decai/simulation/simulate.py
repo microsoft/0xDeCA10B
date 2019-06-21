@@ -371,7 +371,7 @@ class Simulator(object):
                 pbar.set_description(f"{desc} ({len(unclaimed_data)} unclaimed)")
 
             if isinstance(self._decai.im, PredictionMarket):
-                self._time.add_time(60)
+                self._time.add_time(agents[0].get_next_wait_s())
                 self._decai.im.end_market()
                 for i, test_set_portion in enumerate(pm_test_sets):
                     if i != self._decai.im.test_reveal_index:
@@ -380,12 +380,27 @@ class Simulator(object):
                           unit_scale=True, mininterval=2, unit=" contributions",
                           total=self._decai.im.get_num_contributions_in_market(),
                           ) as pbar:
+                    finished_first_round_of_rewards = False
                     while self._decai.im.remaining_bounty_rounds > 0:
-                        self._time.add_time(60)
+                        self._time.add_time(agents[0].get_next_wait_s())
                         self._decai.im.process_contribution()
                         pbar.update()
-                        if self._decai.im.state == MarketPhase.REWARD_RESTART:
+
+                        if not finished_first_round_of_rewards:
                             accuracy = self._decai.im.prev_acc
+                            # If we plot too often then we end up with a blob instead of a line.
+                            if random.random() < 0.1:
+                                doc.add_next_tick_callback(
+                                    partial(plot_accuracy_cb, t=self._time(), a=accuracy))
+
+                        if self._decai.im.state == MarketPhase.REWARD_RESTART:
+                            finished_first_round_of_rewards = True
+                            if self._decai.im.reset_model_during_reward_phase:
+                                # Update the accuracy after resetting all data.
+                                accuracy = self._decai.im.prev_acc
+                            else:
+                                # Use the accuracy after training with all data.
+                                pass
                             doc.add_next_tick_callback(
                                 partial(plot_accuracy_cb, t=self._time(), a=accuracy))
                             pbar.total += self._decai.im.get_num_contributions_in_market()
@@ -420,9 +435,6 @@ class Simulator(object):
                         self._logger.warning("No data submitted by \"%s\" was found."
                                              "\nWill not update it's balance.", agent.address)
 
-                accuracy = self._decai.im.model.evaluate(x_test, y_test)
-                doc.add_next_tick_callback(
-                    partial(plot_accuracy_cb, t=self._time(), a=accuracy))
                 self._logger.info("Done issuing rewards.")
 
             with open(save_path, 'w') as f:
