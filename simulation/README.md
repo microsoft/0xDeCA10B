@@ -28,6 +28,13 @@ conda activate decai-simulation
 pip install -e .
 ```
 
+## Docker Setup
+You can use Docker by running:
+```bash
+docker build -t decai-simulation .
+docker run --rm -it -p 5006:5006 -v ${PWD}:/root/workspace/0xDeCA10B/simulation --name decai-simulation decai-simulation bash 
+```
+
 # Running Simulations
 Run:
 ```bash

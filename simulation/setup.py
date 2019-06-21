@@ -7,7 +7,14 @@ install_requires = [
     'expiringdict>=1.1.4',
     'injector>=0.16.2',
     'joblib>=0.13.2',
-    'Keras>=2.1',
+
+
+    # Use a specific commit because the latest released version has a bug:
+    # https://github.com/keras-team/keras/issues/12729
+    # Fix: https://github.com/keras-team/keras/pull/12714
+    'keras @ git+https://github.com/keras-team/keras.git@47e1b18c0b7e3ddeef4e9fcded409a55d0479a4f',
+    # Used to be: 'Keras>=2.1',
+
     'numpy',
 
     # Required for saving plots.
