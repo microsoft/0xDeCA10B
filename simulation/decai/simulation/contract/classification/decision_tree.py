@@ -31,6 +31,7 @@ class DecisionTreeClassifier(Classifier):
     def init_model(self, training_data, labels):
         assert self._model is None, "The model has already been initialized."
         self._logger.debug("Initializing model.")
+        # FIXME Not updatable.
         self._model = SKDecisionTreeClassifier(random_state=0xDeCA10B,
                                                )
         self._model.fit(training_data, labels)
@@ -44,6 +45,7 @@ class DecisionTreeClassifier(Classifier):
 
     def update(self, data, classification):
         assert self._model is not None, "The model has not been initialized yet."
+        # FIXME Doesn't work with scikit-learn DT.
         self._model.partial_fit([data], [classification])
 
     def reset_model(self):
