@@ -2,8 +2,9 @@ from dataclasses import dataclass, field
 from logging import Logger
 
 import numpy as np
-from injector import ClassAssistedBuilder, inject, Module, provider, singleton
+from injector import inject, Module
 from sklearn.utils import shuffle
+from tqdm import trange
 
 from .data_loader import DataLoader
 
@@ -16,14 +17,13 @@ class TicTacToeDataLoader(DataLoader):
     """
 
     _logger: Logger
-    _seed: int = field(default=2)
-    _train_split: float = field(default=0.7)
+    _seed: int = field(default=2, init=False)
+    _train_split: float = field(default=0.7, init=False)
 
-    def load_data(self, train_size: int = None, test_size: int = None) -> (tuple, tuple):
-        X, y = [], []
-        width = length = 3
-        assert width == length, "The following code assumes that the board is square."
+    width: int = field(default=3, init=False)
+    length: int = field(default=3, init=False)
 
+    def get_winner(self, board):
         def get_single_winner(line: set):
             if len(line) == 1:
                 val = next(iter(line))
@@ -31,69 +31,74 @@ class TicTacToeDataLoader(DataLoader):
                     return val
             return None
 
-        def get_winner(board):
-            for row in range(width):
-                result = get_single_winner(set(board[row]))
-                if result is not None:
-                    return result
-            for col in range(length):
-                result = get_single_winner(set(board[:, col]))
-                if result is not None:
-                    return result
-            result = get_single_winner(set(board.diagonal()))
+        for row in range(self.width):
+            result = get_single_winner(set(board[row]))
             if result is not None:
                 return result
-            diag_vals = set()
-            for i in range(width):
-                diag_vals.add(board[i, length - 1 - i])
-            result = get_single_winner(diag_vals)
+        for col in range(self.length):
+            result = get_single_winner(set(board[:, col]))
             if result is not None:
                 return result
+        result = get_single_winner(set(board.diagonal()))
+        if result is not None:
+            return result
+        diag_vals = set(board[i, self.length - 1 - i] for i in range(self.width))
+        result = get_single_winner(diag_vals)
+        if result is not None:
+            return result
+        return None
+
+    def load_data(self, train_size: int = None, test_size: int = None) -> (tuple, tuple):
+        X, y = [], []
+
+        players = (1, -1)
+        assert self.width == self.length, "The following code assumes that the board is square."
 
         def fill(board, start_pos, next_player, path):
-            for pos in range(start_pos, width * length):
-                i, j = pos // width, pos % width
+            for pos in range(start_pos, self.width * self.length):
+                i, j = pos // self.width, pos % self.width
+                if board[i, j] != 0:
+                    continue
                 path.append((board.copy(), pos, next_player))
                 board[i, j] = next_player
-                winner = get_winner(board)
+                winner = self.get_winner(board)
                 if winner is not None:
                     assert winner == next_player
-                    for history_board, history_position, history_player in path:
-                        if history_player == winner:
-                            X.append(history_board)
-                            y.append(history_position)
+                    # Only count wins for one of the players to make setting up games simpler.
+                    if winner == players[0]:
+                        for history_board, history_position, history_player in path:
+                            if history_player == winner:
+                                X.append(history_board)
+                                y.append(history_position)
                 else:
                     path = list(path)
-                    fill(board, start_pos + 1, 2 if next_player == 1 else 1, path)
+                    fill(board, start_pos + 1, next_player=-1 if next_player == 1 else 1, path=path)
                 board[i, j] = 0
 
         self._logger.info("Loading Tic Tac Toe data.")
 
-        for init_pos in range(width * length):
-            i, j = init_pos // width, init_pos % width
+        for init_pos in trange(self.width * self.length,
+                               desc="Making boards",
+                               unit_scale=True, mininterval=2, unit=" start positions"
+                               ):
+            i, j = init_pos // self.width, init_pos % self.width
 
-            for player in (1, 2):
-                board = np.zeros((width, length), dtype=np.int8)
+            for player in players:
+                board = np.zeros((self.width, self.length), dtype=np.int8)
                 path = [(board.copy(), init_pos, player)]
                 board[i, j] = player
-                fill(board, init_pos + 1, next_player=2 if player == 1 else 1, path=path)
-
-            # Reset
-            board[i, j] = 0
+                fill(board, init_pos + 1, next_player=-1 if player == 1 else 1, path=path)
 
         X, y = shuffle(X, y, random_state=self._seed)
+        X = [x.flatten() for x in X]
         split = int(self._train_split * len(X))
-        x_train, y_train = X[split:], y[split:]
-        x_test, y_test = X[:split], y[:split]
+        x_train, y_train = X[:split], y[:split]
+        x_test, y_test = X[split:], y[split:]
 
         self._logger.info("Done loading data.\nCreated %d boards.", len(X))
         return (x_train, y_train), (x_test, y_test)
 
 
-@dataclass
 class TicTacToeDataModule(Module):
-
-    @provider
-    @singleton
-    def provide_data_loader(self, builder: ClassAssistedBuilder[TicTacToeDataLoader]) -> DataLoader:
-        return builder.build()
+    def configure(self, binder):
+        binder.bind(DataLoader, TicTacToeDataLoader)
