@@ -55,25 +55,37 @@ class TicTacToeDataLoader(DataLoader):
         assert self.width == self.length, "The following code assumes that the board is square."
 
         def fill(board, start_pos, next_player, path):
+            # See if there is a winning move.
+            winner = None
             for pos in range(start_pos, self.width * self.length):
                 i, j = pos // self.width, pos % self.width
                 if board[i, j] != 0:
                     continue
-                path.append((board.copy(), pos, next_player))
-                board[i, j] = next_player
-                winner = self.get_winner(board)
+                _board = board.copy()
+                _board[i, j] = next_player
+                winner = self.get_winner(_board)
                 if winner is not None:
-                    assert winner == next_player
-                    # Only count wins for one of the players to make setting up games simpler.
-                    if winner == players[0]:
-                        for history_board, history_position, history_player in path:
-                            if history_player == winner:
-                                X.append(history_board)
-                                y.append(history_position)
-                else:
-                    path = list(path)
-                    fill(board, start_pos + 1, next_player=-1 if next_player == 1 else 1, path=path)
-                board[i, j] = 0
+                    path.append((board, pos, next_player))
+                    break
+
+            if winner is not None:
+                # Only count wins for one of the players to make setting up games simpler.
+                if winner == players[0]:
+                    for history_board, history_position, history_player in path:
+                        if history_player == winner:
+                            X.append(history_board)
+                            y.append(history_position)
+            else:
+                # Recurse.
+                for pos in range(start_pos, self.width * self.length):
+                    i, j = pos // self.width, pos % self.width
+                    if board[i, j] != 0:
+                        continue
+                    _path = list(path)
+                    _path.append((board, pos, next_player))
+                    _board = board.copy()
+                    _board[i, j] = next_player
+                    fill(_board, start_pos, next_player=-1 if next_player == 1 else 1, path=_path)
 
         self._logger.info("Loading Tic Tac Toe data.")
 
@@ -92,8 +104,14 @@ class TicTacToeDataLoader(DataLoader):
         X, y = shuffle(X, y, random_state=self._seed)
         X = [x.flatten() for x in X]
         split = int(self._train_split * len(X))
-        x_train, y_train = X[:split], y[:split]
-        x_test, y_test = X[split:], y[split:]
+        x_train, y_train = np.array(X[:split]), np.array(y[:split])
+        x_test, y_test = np.array(X[split:]), np.array(y[split:])
+
+        # Show some data.
+        # import random
+        # for _ in range(10):
+        #     i = random.randrange(len(X))
+        #     print(X[i].reshape((self.width, self.length)), y[i])
 
         self._logger.info("Done loading data.\nCreated %d boards.", len(X))
         return (x_train, y_train), (x_test, y_test)
