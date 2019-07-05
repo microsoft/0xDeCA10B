@@ -13,6 +13,8 @@ from .data_loader import DataLoader
 class ImdbDataLoader(DataLoader):
     """
     Load data from IMDB reviews.
+
+    https://keras.io/datasets/#imdb-movie-reviews-sentiment-classification
     """
 
     _logger: Logger
@@ -27,18 +29,14 @@ class ImdbDataLoader(DataLoader):
             x_test, y_test = x_test[:test_size], y_test[:test_size]
 
         def get_features(data):
-            result = []
-            for x in data:
-                xx = np.zeros(self.num_words, dtype='int')
+            result = np.zeros((len(data), self.num_words), dtype='int')
+            for i, x in enumerate(data):
                 for v in x:
-                    xx[v] = 1
-                result.append(xx)
+                    result[i, v] = 1
             return result
 
-        x_train = np.array(get_features(x_train))
-        y_train = np.array(y_train)
-        x_test = np.array(get_features(x_test))
-        y_test = np.array(y_test)
+        x_train = get_features(x_train)
+        x_test = get_features(x_test)
 
         self._logger.info("Done loading IMDB review data.")
         return (x_train, y_train), (x_test, y_test)
