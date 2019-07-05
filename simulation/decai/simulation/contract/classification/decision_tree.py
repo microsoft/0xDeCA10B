@@ -35,7 +35,9 @@ class DecisionTreeClassifier(Classifier):
     def init_model(self, training_data, labels):
         assert self._model is None, "The model has already been initialized."
         self._logger.debug("Initializing model.")
-        self._model = HoeffdingTree()
+        self._model = HoeffdingTree(
+            # leaf_prediction='mc'
+        )
         self._model.fit(training_data, labels)
         self._logger.debug("Saving model to \"%s\".", self._original_model_path)
         os.makedirs(os.path.dirname(self._original_model_path), exist_ok=True)

@@ -52,8 +52,12 @@ class TicTacToeDataLoader(DataLoader):
             return result
         return None
 
+    def map_pos(self, pos):
+        return pos // self.width, pos % self.width
+
     def load_data(self, train_size: int = None, test_size: int = None) -> (tuple, tuple):
         X, y = [], []
+        bad_moves = set()
 
         players = (1, -1)
         assert self.width == self.length, "The following code assumes that the board is square."
@@ -62,7 +66,7 @@ class TicTacToeDataLoader(DataLoader):
             # See if there is a winning move.
             winner = None
             for pos in range(start_pos, self.width * self.length):
-                i, j = pos // self.width, pos % self.width
+                i, j = self.map_pos(pos)
                 if board[i, j] != 0:
                     continue
                 _board = board.copy()
@@ -76,13 +80,16 @@ class TicTacToeDataLoader(DataLoader):
                 # Only count wins for one of the players to make setting up games simpler.
                 if winner == players[0]:
                     for history_board, history_position, history_player in path:
+                        history_board = history_board.flatten()
                         if history_player == winner:
                             X.append(history_board)
                             y.append(history_position)
+                        else:
+                            bad_moves.add((tuple(-history_board.flatten()), -history_position))
             else:
                 # Recurse.
                 for pos in range(start_pos, self.width * self.length):
-                    i, j = pos // self.width, pos % self.width
+                    i, j = self.map_pos(pos)
                     if board[i, j] != 0:
                         continue
                     _path = list(path)
@@ -97,16 +104,18 @@ class TicTacToeDataLoader(DataLoader):
                                desc="Making boards",
                                unit_scale=True, mininterval=2, unit=" start positions"
                                ):
-            i, j = init_pos // self.width, init_pos % self.width
+            pos = self.map_pos(init_pos)
 
             for player in players:
                 board = np.zeros((self.width, self.length), dtype=np.int8)
                 path = [(board.copy(), init_pos, player)]
-                board[i, j] = player
+                board[pos] = player
                 fill(board, init_pos + 1, next_player=-1 if player == 1 else 1, path=path)
 
+        # Remove bad moves.
+        X, y = zip(*[(X[i], y[i]) for i in range(len(X)) if (tuple(X[i]), y[i]) not in bad_moves])
+
         X, y = shuffle(X, y, random_state=self._seed)
-        X = [x.flatten() for x in X]
         split = int(self._train_split * len(X))
         x_train, y_train = np.array(X[:split]), np.array(y[:split])
         x_test, y_test = np.array(X[split:]), np.array(y[split:])

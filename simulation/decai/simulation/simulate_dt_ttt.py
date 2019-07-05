@@ -94,6 +94,9 @@ def play_game(classifier, tic_tac_toe):
 
     print(f"The machine is O. You are X.\nPositions:\n{np.arange(board.size).reshape(board.shape)}")
     while True:
+        if np.count_nonzero(board) == board.size:
+            print("TIE")
+            break
         # Person's turn.
         print_board(board)
         while True:
@@ -136,28 +139,35 @@ def evaluate_on_self(classifier, tic_tac_toe):
         else:
             board_for_prediction = board
         pos = classifier.predict(board_for_prediction.flatten())
-        board[_map_pos(tic_tac_toe, board, pos)] = next_player
+        pos = _map_pos(tic_tac_toe, board, pos)
+        if board[pos] != 0:
+            return "TIE", np.count_nonzero(board == next_player)
+        board[pos] = next_player
         if tic_tac_toe.get_winner(board):
-            return next_player
+            return next_player, np.count_nonzero(board == next_player)
         else:
             return _run_game(board, -1 if next_player == 1 else 1)
 
     # Start with empty board and let the model pick where to start.
     board = np.zeros((tic_tac_toe.width, tic_tac_toe.length), dtype=np.int8)
-    winner = _run_game(board, 1)
+    winner, num_moves = _run_game(board, 1)
     if winner == 1:
-        print(f"When model starts: WINS")
+        print(f"When model starts: WINS in {num_moves} moves.")
     else:
-        print(f"When model starts: LOSES")
+        print(f"When model starts: LOSES. Winner has {num_moves} moves.")
 
     winners = Counter()
+    winner_move_counts = []
     for start_pos in range(board.size):
         board = np.zeros((tic_tac_toe.width, tic_tac_toe.length), dtype=np.int8)
         board[_map_pos(tic_tac_toe, board, start_pos)] = -1
-        winner = _run_game(board, 1)
+        winner, num_moves = _run_game(board, 1)
         winners[winner] += 1
+        winner_move_counts.append(num_moves)
     print("Winners when -1 starts in each position:")
     print(json.dumps(winners, indent=2))
+    print(f"Winner move counts:\n{winner_move_counts}")
+    print(f"Avg # winner moves: {np.average(winner_move_counts)}")
 
 
 if __name__ == '__main__':
@@ -172,7 +182,8 @@ if __name__ == '__main__':
     ttt = inj.get(DataLoader)
     assert isinstance(ttt, TicTacToeDataLoader)
     ttt = cast(TicTacToeDataLoader, ttt)
-    ttt._train_split = 1
+    # To train on all data.
+    # ttt._train_split = 1
     (x_train, y_train), (x_test, y_test) = ttt.load_data()
     c = inj.get(Classifier)
     c.init_model(x_train, y_train)
@@ -184,4 +195,5 @@ if __name__ == '__main__':
 
     evaluate_on_self(c, ttt)
 
-    play_game(c, ttt)
+    while True:
+        play_game(c, ttt)
