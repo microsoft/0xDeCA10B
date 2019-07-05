@@ -1,6 +1,8 @@
+import json
 import os
 import random
 import sys
+from collections import Counter
 from typing import cast
 
 import math
@@ -53,7 +55,7 @@ class Runner(object):
 
         # Start the simulation.
         self._s.simulate(agents,
-                         baseline_accuracy=0.647,
+                         baseline_accuracy=0.44,
                          init_train_data_portion=init_train_data_portion,
                          accuracy_plot_wait_s=math.inf,
                          )
@@ -71,6 +73,93 @@ if __name__.startswith('bk_script_'):
     ])
     inj.get(Runner).run()
 
+
+def _map_pos(tic_tac_toe, board, pos):
+    assert 0 <= pos < board.size
+    return pos // tic_tac_toe.width, pos % tic_tac_toe.width
+
+
+def play_game(classifier, tic_tac_toe):
+    board = np.zeros((tic_tac_toe.width, tic_tac_toe.length), dtype=np.int8)
+
+    if random.random() < 0.5:
+        # Machine is playing.
+        pos = classifier.predict(board.flatten())
+        board[_map_pos(tic_tac_toe, board, pos)] = 1
+    m = {0: '#', 1: 'O', -1: 'X'}
+    map_symbols = np.vectorize(lambda x: m[x])
+
+    def print_board(b):
+        print(np.array2string(map_symbols(b), formatter={'str_kind': lambda x: x}))
+
+    print(f"The machine is O. You are X.\nPositions:\n{np.arange(board.size).reshape(board.shape)}")
+    while True:
+        # Person's turn.
+        print_board(board)
+        while True:
+            pos = input("Where would you like to go?")
+            pos = _map_pos(tic_tac_toe, board, int(pos.strip()))
+            if board[pos] == 0:
+                board[pos] = -1
+                break
+            else:
+                print("There is already a value there.")
+
+        winner = tic_tac_toe.get_winner(board)
+        if winner is not None:
+            print("You WIN!")
+            break
+
+        # Machine's turn.
+        original_pos = classifier.predict(board.flatten())
+        pos = _map_pos(tic_tac_toe, board, original_pos)
+        if board[pos] != 0:
+            print(f"Machine picked a spot that already has a marker ({original_pos}). This probably means a draw.")
+            print_board(board)
+            break
+        board[pos] = 1
+
+        winner = tic_tac_toe.get_winner(board)
+        if winner is not None:
+            print("You lose :(")
+            break
+    print_board(board)
+
+
+def evaluate_on_self(classifier, tic_tac_toe):
+    print("Evaluating by playing against itself.")
+
+    def _run_game(board, next_player):
+        if next_player == -1:
+            # Flip the board since the bot always thinks it is 1.
+            board_for_prediction = -board
+        else:
+            board_for_prediction = board
+        pos = classifier.predict(board_for_prediction.flatten())
+        board[_map_pos(tic_tac_toe, board, pos)] = next_player
+        if tic_tac_toe.get_winner(board):
+            return next_player
+        else:
+            return _run_game(board, -1 if next_player == 1 else 1)
+
+    # Start with empty board and let the model pick where to start.
+    board = np.zeros((tic_tac_toe.width, tic_tac_toe.length), dtype=np.int8)
+    winner = _run_game(board, 1)
+    if winner == 1:
+        print(f"When model starts: WINS")
+    else:
+        print(f"When model starts: LOSES")
+
+    winners = Counter()
+    for start_pos in range(board.size):
+        board = np.zeros((tic_tac_toe.width, tic_tac_toe.length), dtype=np.int8)
+        board[_map_pos(tic_tac_toe, board, start_pos)] = -1
+        winner = _run_game(board, 1)
+        winners[winner] += 1
+    print("Winners when -1 starts in each position:")
+    print(json.dumps(winners, indent=2))
+
+
 if __name__ == '__main__':
     # Play the game.
     inj = Injector([
@@ -83,64 +172,16 @@ if __name__ == '__main__':
     ttt = inj.get(DataLoader)
     assert isinstance(ttt, TicTacToeDataLoader)
     ttt = cast(TicTacToeDataLoader, ttt)
+    ttt._train_split = 1
     (x_train, y_train), (x_test, y_test) = ttt.load_data()
-    d = inj.get(Classifier)
-    d.init_model(x_train, y_train)
-    score = d.evaluate(x_train, y_train)
-    print(score)
-    score = d.evaluate(x_test, y_test)
-    print(score)
+    c = inj.get(Classifier)
+    c.init_model(x_train, y_train)
+    score = c.evaluate(x_train, y_train)
+    print(f"Evaluation on training data: {score}")
+    if len(x_test) > 0:
+        score = c.evaluate(x_test, y_test)
+        print(f"Evaluation on test data: {score}")
 
-    b = np.zeros((ttt.width, ttt.length), dtype=np.int8)
+    evaluate_on_self(c, ttt)
 
-
-    def map_pos(pos):
-        assert 0 <= pos < b.size
-        return pos // ttt.width, pos % ttt.width
-
-
-    if random.random() < 0.5:
-        # Machine is playing.
-        pos = d.predict(b.flatten())
-        b[map_pos(pos)] = 1
-
-    m = {0: '#', 1: 'O', -1: 'X'}
-    map_symbols = np.vectorize(lambda x: m[x])
-
-
-    def print_board(board):
-        print(np.array2string(map_symbols(board), formatter={'str_kind': lambda x: x}))
-
-
-    print(f"The machine is O. You are X.\nPositions:\n{np.arange(b.size).reshape(b.shape)}")
-    while True:
-        # Person's turn.
-        print_board(b)
-        while True:
-            pos = input("Where would you like to go?")
-            pos = map_pos(int(pos.strip()))
-            if b[pos] == 0:
-                b[pos] = -1
-                break
-            else:
-                print("There is already a value there.")
-
-        winner = ttt.get_winner(b)
-        if winner is not None:
-            print("You WIN!")
-            break
-
-        # Machine's turn.
-        original_pos = d.predict(b.flatten())
-        pos = map_pos(original_pos)
-        if b[pos] != 0:
-            print(f"Machine picked a spot that already has a marker ({original_pos}). This probably means a draw.")
-            print_board(b)
-            break
-        b[pos] = 1
-
-        winner = ttt.get_winner(b)
-        if winner is not None:
-            print("You lose :(")
-            break
-    print_board(b)
+    play_game(c, ttt)

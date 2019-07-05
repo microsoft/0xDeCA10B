@@ -13,7 +13,11 @@ from .data_loader import DataLoader
 @dataclass
 class TicTacToeDataLoader(DataLoader):
     """
-    Load data from IMDB reviews.
+    Load data for Tic-Tac-Toe games.
+
+    Data is flattened `width` x `length` games.
+    The players are 1 and -1. The data is from the perspective of player 1, opponent is -1.
+    0 means no one has played in that position.
     """
 
     _logger: Logger
