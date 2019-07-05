@@ -35,8 +35,10 @@ class ImdbDataLoader(DataLoader):
                 result.append(xx)
             return result
 
-        x_train = get_features(x_train)
-        x_test = get_features(x_test)
+        x_train = np.array(get_features(x_train))
+        y_train = np.array(y_train)
+        x_test = np.array(get_features(x_test))
+        y_test = np.array(y_test)
 
         self._logger.info("Done loading IMDB review data.")
         return (x_train, y_train), (x_test, y_test)

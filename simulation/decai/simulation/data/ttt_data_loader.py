@@ -120,6 +120,11 @@ class TicTacToeDataLoader(DataLoader):
         x_train, y_train = np.array(X[:split]), np.array(y[:split])
         x_test, y_test = np.array(X[split:]), np.array(y[split:])
 
+        if train_size is not None:
+            x_train, y_train = x_train[:train_size], y_train[:train_size]
+        if test_size is not None:
+            x_test, y_test = x_test[:test_size], y_test[:test_size]
+
         # Show some data.
         # import random
         # for _ in range(10):
