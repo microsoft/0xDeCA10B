@@ -153,6 +153,8 @@ def evaluate_on_self(classifier, tic_tac_toe):
     winner, num_moves = _run_game(board, 1)
     if winner == 1:
         print(f"When model starts: WINS in {num_moves} moves.")
+    elif isinstance(winner, str):
+        print(f"When model starts: {winner} in {num_moves} moves.")
     else:
         print(f"When model starts: LOSES. Winner has {num_moves} moves.")
 

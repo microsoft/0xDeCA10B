@@ -1,12 +1,12 @@
 import os
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from logging import Logger
 
 import joblib
 import numpy as np
-from injector import inject, Module
-from skmultiflow.trees import HoeffdingTree
+from injector import inject, Module, singleton, provider, ClassAssistedBuilder
+from skmultiflow.trees import HAT, RegressionHAT
 
 from decai.simulation.contract.classification.classifier import Classifier
 
@@ -20,6 +20,8 @@ class DecisionTreeClassifier(Classifier):
     """
 
     _logger: Logger
+
+    regression: bool = field(default=False)
 
     def __post_init__(self):
         self._model = None
@@ -35,9 +37,14 @@ class DecisionTreeClassifier(Classifier):
     def init_model(self, training_data, labels):
         assert self._model is None, "The model has already been initialized."
         self._logger.debug("Initializing model.")
-        self._model = HoeffdingTree(
-            # leaf_prediction='mc'
-        )
+        if self.regression:
+            self._logger.debug("Creating decision tree for regression.")
+            self._model = RegressionHAT(
+                # leaf_prediction='mc'
+            )
+        else:
+            self._model = HAT()
+
         self._model.fit(training_data, labels)
         self._logger.debug("Saving model to \"%s\".", self._original_model_path)
         os.makedirs(os.path.dirname(self._original_model_path), exist_ok=True)
@@ -58,6 +65,13 @@ class DecisionTreeClassifier(Classifier):
         self._model = joblib.load(self._original_model_path)
 
 
+@dataclass
 class DecisionTreeModule(Module):
-    def configure(self, binder):
-        binder.bind(Classifier, to=DecisionTreeClassifier)
+    regression: bool = field(default=False)
+
+    @provider
+    @singleton
+    def provide_classifier(self, builder: ClassAssistedBuilder[DecisionTreeClassifier]) -> Classifier:
+        return builder.build(
+            regression=self.regression,
+        )
