@@ -254,8 +254,6 @@ class Simulator(object):
                     current_time, agent = q.get()
                     update_balance_plot = False
                     if current_time > next_accuracy_plot_time:
-                        # Might be need to sleep to allow the plot to update.
-                        # time.sleep(0.1)
                         self._logger.debug("Evaluating.")
                         next_accuracy_plot_time += accuracy_plot_wait_s
                         accuracy = self._decai.model.evaluate(x_test, y_test)
@@ -436,6 +434,10 @@ class Simulator(object):
                                              "\nWill not update it's balance.", agent.address)
 
                 self._logger.info("Done issuing rewards.")
+
+            accuracy = self._decai.model.evaluate(x_test, y_test)
+            doc.add_next_tick_callback(
+                partial(plot_accuracy_cb, t=current_time, a=accuracy))
 
             with open(save_path, 'w') as f:
                 json.dump(save_data, f, separators=(',', ':'))

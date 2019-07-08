@@ -8,8 +8,8 @@ from decai.simulation.contract.classification.classifier import Classifier
 from decai.simulation.contract.classification.decision_tree import DecisionTreeModule
 from decai.simulation.contract.collab_trainer import DefaultCollaborativeTrainerModule
 from decai.simulation.contract.incentive.stakeable import StakeableImModule
-from decai.simulation.data.bhp_data_loader import BhpDataModule
 from decai.simulation.data.data_loader import DataLoader
+from decai.simulation.data.titanic_data_loader import TitanicDataModule
 from decai.simulation.logging_module import LoggingModule
 from decai.simulation.simulate import Agent, Simulator
 
@@ -50,7 +50,7 @@ class Runner(object):
 
         # Start the simulation.
         self._s.simulate(agents,
-                         baseline_accuracy=0.44,
+                         baseline_accuracy=0.806,
                          init_train_data_portion=init_train_data_portion,
                          accuracy_plot_wait_s=math.inf,
                          )
@@ -64,18 +64,18 @@ if __name__.startswith('bk_script_'):
         DefaultCollaborativeTrainerModule,
         LoggingModule,
         StakeableImModule,
-        BhpDataModule,
+        TitanicDataModule,
     ])
     inj.get(Runner).run()
 
 if __name__ == '__main__':
     # Play the game.
     inj = Injector([
-        DecisionTreeModule(regression=True),
+        DecisionTreeModule(regression=False),
         DefaultCollaborativeTrainerModule,
         LoggingModule,
         StakeableImModule,
-        BhpDataModule,
+        TitanicDataModule
     ])
     d = inj.get(DataLoader)
     (x_train, y_train), (x_test, y_test) = d.load_data()
@@ -88,7 +88,7 @@ if __name__ == '__main__':
         i = random.randrange(len(x_train))
         print(f"{i:04d}: {x_train[i]}: {y_train[i]}")
         print(f"Prediction: {c.predict(x_train[i])}")
-    print(f"Evaluation on training data: {score}")
+    print(f"Evaluation on training data: {score * 100:0.2f}%")
     if len(x_test) > 0:
         score = c.evaluate(x_test, y_test)
-        print(f"Evaluation on test data: {score}")
+        print(f"Evaluation on test data: {score * 100:0.2f}%")

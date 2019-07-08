@@ -26,7 +26,7 @@ class BhpDataLoader(DataLoader):
         if test_size is not None:
             x_test, y_test = x_test[:test_size], y_test[:test_size]
 
-        self._logger.info("Done loading IMDB review data.")
+        self._logger.info("Done loading data.")
         return (x_train, y_train), (x_test, y_test)
 
 

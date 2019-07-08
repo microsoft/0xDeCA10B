@@ -43,7 +43,10 @@ class DecisionTreeClassifier(Classifier):
                 # leaf_prediction='mc'
             )
         else:
-            self._model = HAT()
+            self._model = HAT(
+                # leaf_prediction='mc',
+                # nominal_attributes=[ 4],
+            )
 
         self._model.fit(training_data, labels)
         self._logger.debug("Saving model to \"%s\".", self._original_model_path)
