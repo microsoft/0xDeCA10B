@@ -11,6 +11,7 @@ from queue import PriorityQueue
 from threading import Thread
 from typing import List
 
+import numpy as np
 from bokeh import colors
 from bokeh.document import Document
 from bokeh.io import export_png
@@ -254,8 +255,6 @@ class Simulator(object):
                     current_time, agent = q.get()
                     update_balance_plot = False
                     if current_time > next_accuracy_plot_time:
-                        # Might be need to sleep to allow the plot to update.
-                        # time.sleep(0.1)
                         self._logger.debug("Evaluating.")
                         next_accuracy_plot_time += accuracy_plot_wait_s
                         accuracy = self._decai.model.evaluate(x_test, y_test)
@@ -424,7 +423,7 @@ class Simulator(object):
                             data = key[0]
                             break
                     if data is not None:
-                        self._decai.refund(msg, data, stored_data.classification, stored_data.time)
+                        self._decai.refund(msg, np.array(data), stored_data.classification, stored_data.time)
                         balance = self._balances[agent.address]
                         doc.add_next_tick_callback(
                             partial(plot_cb, agent=agent, t=self._time(), b=balance))
@@ -436,6 +435,10 @@ class Simulator(object):
                                              "\nWill not update it's balance.", agent.address)
 
                 self._logger.info("Done issuing rewards.")
+
+            accuracy = self._decai.model.evaluate(x_test, y_test)
+            doc.add_next_tick_callback(
+                partial(plot_accuracy_cb, t=current_time, a=accuracy))
 
             with open(save_path, 'w') as f:
                 json.dump(save_data, f, separators=(',', ':'))

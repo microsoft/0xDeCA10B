@@ -302,6 +302,8 @@ class PredictionMarket(IncentiveMechanism):
             self.next_test_set_index_to_verify += 1
         if self.next_test_set_index_to_verify == len(self.test_set_hashes):
             self.state = MarketPhase.REWARD_RESTART
+            self.test_data = np.array(self.test_data)
+            self.test_labels = np.array(self.test_labels)
 
     def process_contribution(self):
         """

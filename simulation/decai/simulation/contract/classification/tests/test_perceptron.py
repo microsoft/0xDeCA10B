@@ -6,7 +6,7 @@ from injector import Injector
 
 from decai.simulation.contract.balances import Balances
 from decai.simulation.contract.classification.classifier import Classifier
-from decai.simulation.contract.classification.perceptron import PerceptronClassifier, PerceptronModule
+from decai.simulation.contract.classification.perceptron import PerceptronModule
 from decai.simulation.contract.collab_trainer import CollaborativeTrainer, DefaultCollaborativeTrainerModule
 from decai.simulation.contract.incentive.stakeable import StakeableImModule
 from decai.simulation.contract.objects import Msg, RejectException, TimeMock
@@ -48,7 +48,7 @@ class TestCollaborativeTrainer(unittest.TestCase):
             [1, 0, 1],
             [1, 1, 0],
         ])
-        y = [_ground_truth(x) for x in X]
+        y = np.array([_ground_truth(x) for x in X])
         cls.decai.model.init_model([X[0, :], X[1, :]],
                                    [y[0], y[1]])
         score = cls.decai.model.evaluate(X, y)
@@ -82,14 +82,14 @@ class TestCollaborativeTrainer(unittest.TestCase):
         assert cls.balances[msg.sender] > bal, "Refunding should return value."
 
     def test_predict(self):
-        data = [0, 1, 0]
+        data = np.array([0, 1, 0])
         correct_class = _ground_truth(data)
 
         prediction = self.decai.model.predict(data)
         self.assertEqual(prediction, correct_class)
 
     def test_refund(self):
-        data = [0, 2, 0]
+        data = np.array([0, 2, 0])
         correct_class = _ground_truth(data)
 
         orig_address = "Orig"
@@ -116,7 +116,7 @@ class TestCollaborativeTrainer(unittest.TestCase):
         self.assertGreater(self.balances[orig_address], bal)
 
     def test_report(self):
-        data = [0, 0, 0]
+        data = np.array([0, 0, 0])
         correct_class = _ground_truth(data)
         submitted_classification = 1 - correct_class
         # Add bad data.
@@ -146,7 +146,7 @@ class TestCollaborativeTrainer(unittest.TestCase):
         self.assertGreater(self.balances[self.good_address], bal)
 
     def test_report_take_all(self):
-        data = [0, 0, 0]
+        data = np.array([0, 0, 0])
         correct_class = _ground_truth(data)
         submitted_classification = 1 - correct_class
         # Add bad data.
@@ -181,15 +181,14 @@ class TestCollaborativeTrainer(unittest.TestCase):
             PerceptronModule,
         ])
         m = inj.get(Classifier)
-        self.assertIsInstance(m, PerceptronClassifier)
         X = np.array([
             # Initialization Data
             [0, 0, 0],
             [1, 1, 1],
         ])
-        y = [_ground_truth(x) for x in X]
+        y = np.array([_ground_truth(x) for x in X])
         m.init_model(X, y)
-        data = [
+        data = np.array([
             [0, 0, 0],
             [0, 0, 1],
             [0, 1, 0],
@@ -198,9 +197,9 @@ class TestCollaborativeTrainer(unittest.TestCase):
             [1, 0, 1],
             [1, 1, 0],
             [1, 1, 1],
-        ]
+        ])
         original_predictions = [m.predict(x) for x in data]
-        labels = [_ground_truth(x) for x in data]
+        labels = np.array([_ground_truth(x) for x in data])
         for x, y in zip(data, labels):
             m.update(x, y)
         predictions_after_training = [m.predict(x) for x in data]

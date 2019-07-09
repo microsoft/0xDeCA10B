@@ -2,6 +2,8 @@ saved_runs/
 
 saved_models/
 
+training_data/
+
 *.egg-info/
 __pycache__/
 *.py[ucod]
