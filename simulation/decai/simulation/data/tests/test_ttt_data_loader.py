@@ -1,11 +1,7 @@
-import random
 import unittest
-from dataclasses import dataclass, field
 from typing import cast
 
-import numpy as np
 from injector import Injector
-from sklearn.tree import DecisionTreeClassifier
 
 from decai.simulation.data.data_loader import DataLoader
 from decai.simulation.data.ttt_data_loader import TicTacToeDataLoader, TicTacToeDataModule
@@ -26,14 +22,10 @@ class TestTicTacToeDataLoader(unittest.TestCase):
 
     def test_boards(self):
         (x_train, y_train), (x_test, y_test) = self.ttt.load_data()
-        for _ in range(10):
-            i = random.randrange(len(x_train))
-            print(x_train[i], y_train[i])
-        d = DecisionTreeClassifier(random_state=0xDeCA10B)
-        d.fit(x_train, y_train)
-        score = d.score(x_train, y_train)
-        print(score)
-        score = d.score(x_test, y_test)
-        print(score)
+        assert x_train.shape[1] == self.ttt.width * self.ttt.length
+        assert set(x_train[x_train != 0]) == {1, -1}
+        assert x_test.shape[1] == self.ttt.width * self.ttt.length
+        assert set(x_test[x_test != 0]) == {1, -1}
 
-
+        assert set(y_train) <= set(range(9))
+        assert set(y_test) <= set(range(9))
