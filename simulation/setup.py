@@ -8,7 +8,6 @@ install_requires = [
     'injector>=0.16.2',
     'joblib>=0.13.2',
 
-
     # Use a specific commit because the latest released version has a bug:
     # https://github.com/keras-team/keras/issues/12729
     # Fix: https://github.com/keras-team/keras/pull/12714
@@ -25,6 +24,10 @@ install_requires = [
     'tqdm>=4.19',
 ]
 
+test_deps = [
+    'pytest',
+]
+
 setup(
     name='decai',
     version='0.1.0',
@@ -35,4 +38,8 @@ setup(
     author_email='',
     description="Simulate Decentralized & Collaborative AI.",
     install_requires=install_requires,
+    tests_require=test_deps,
+    extras_require=dict(
+        test=test_deps,
+    ),
 )

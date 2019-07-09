@@ -113,6 +113,7 @@ class TicTacToeDataLoader(DataLoader):
                 fill(board, init_pos + 1, next_player=-1 if player == 1 else 1, path=path)
 
         # Remove bad moves.
+        # Note this might not help much depending on the model.
         X, y = zip(*[(X[i], y[i]) for i in range(len(X)) if (tuple(X[i]), y[i]) not in bad_moves])
 
         X, y = shuffle(X, y, random_state=self._seed)
