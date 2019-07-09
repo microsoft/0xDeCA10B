@@ -11,6 +11,7 @@ from queue import PriorityQueue
 from threading import Thread
 from typing import List
 
+import numpy as np
 from bokeh import colors
 from bokeh.document import Document
 from bokeh.io import export_png
@@ -422,7 +423,7 @@ class Simulator(object):
                             data = key[0]
                             break
                     if data is not None:
-                        self._decai.refund(msg, data, stored_data.classification, stored_data.time)
+                        self._decai.refund(msg, np.array(data), stored_data.classification, stored_data.time)
                         balance = self._balances[agent.address]
                         doc.add_next_tick_callback(
                             partial(plot_cb, agent=agent, t=self._time(), b=balance))
