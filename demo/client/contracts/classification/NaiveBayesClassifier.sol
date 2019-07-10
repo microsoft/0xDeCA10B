@@ -17,18 +17,33 @@ contract NaiveBayesClassifier is Classifier64 {
 
     uint256 constant public dataCountLimit = 2 ** (256 - 64 - 1);
 
+
     /**
-     * The number of samples for each class.
+     * Information for a class.
      */
-    uint[] public dataCounts;
+    struct ClassInfo {
+        /**
+         * The number of occurrences of a feature.
+         */
+        uint[] featureCounts;
+        /**
+         * The total number of occurrences of all features (sum of featureCounts).
+         */
+        uint totalFeatureCount;
+    }
+    
+    uint public smoothingFactor;
+
+    uint[] public classPriorProbs;
 
     constructor(
         string[] memory _classifications,
-        uint[] memory _dataCounts)
+        uint[] memory _dataCounts,
+        uint _smoothingFactor)
         Classifier64(_classifications) public {
         require(_classifications.length > 0, "At least one class is required.");
         require(_classifications.length < 2 ** 64, "Too many classes given.");
-        dataCounts = _dataCounts;
+        smoothingFactor = _smoothingFactor;
     }
 
     function addClass(int64[] memory centroid, string memory classification, uint dataCount) public onlyOwner {
