@@ -4,13 +4,19 @@
 
 Tools to run simulations for AI models in smart contracts.
 
-Example:
+## Examples
 
 Even when a bad actor submits incorrect data, an honest contributor profits while the model's accuracy remains stable.
 
+<img src="./assets/drt.gif?raw=true" width=500 alt="Graph showing a good agent's balance increasing and a bad agent's balance decreasing while the model's accuracy on a hidden test remains stable around 70%.">
+
+In the above example, a Perceptron was trained on the [IMDB reviews dataset for sentiment classification][keras-imdb].
+
+Here's a more detailed example:
+
 <img src="./assets/1558466743_plot.png?raw=true" width=500 alt="Graph showing a good agent's balance increasing and a bad agent's balance decreasing while the model's accuracy on a hidden test remains stable around 79%.">
 
-For this simulation, a perceptron was trained on the [IMDB reviews dataset for sentiment classification][keras-imdb].
+For this simulation, again a Perceptron was trained on the [IMDB reviews dataset for sentiment classification][keras-imdb].
 The model was initially trained on 2000 of the 25000 training data samples.
 The model has 1000 binary features which are the presence of the 1000 most frequent words in the dataset.
 The graph below shows the results of a simulation where for simplicity, we show just one honest contributor and one malicious contributor but these contributors effectively represent many contributors submitting the remaining 92% of the training data over time.
