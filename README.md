@@ -1,5 +1,7 @@
 # Decentralized & Collaborative AI on Blockchain
 
+<img src="./assets/logo.gif?raw=true" width=500 alt="Animated logo for the project. A neural network appears on a block. The nodes change color until finally converging. The block slides away on a chain and the process restarts on the next blank block.">
+
 <!-- Put horizontally since build status badges are normally horizontal. -->
 | [Demo][demo-folder] | [Simulation][simulation-folder] | Security |
 |:-:|:-:|:-:|
