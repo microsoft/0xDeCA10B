@@ -27,6 +27,7 @@ The adversary is only submitting data about one sixth as often.
 Despite the malicious efforts, the accuracy can still be maintained and the honest contributors profit.
 
 # Setup
+This section explains how to set up locally, alternatively, you can skip ahead and use a Docker image.
 Run:
 ```bash
 conda create --channel conda-forge --name decai-simulation python=3.7 bokeh ipython mkl mkl-service numpy phantomjs scikit-learn scipy six tensorflow
@@ -35,10 +36,15 @@ pip install -e .
 ```
 
 ## Docker Setup
-You can use Docker by running:
+You can use a Docker image by running:
+```bash
+docker run --rm -it -p 5006:5006 -v ${PWD}:/root/workspace/0xDeCA10B/simulation --name decai-simulation mcr.microsoft.com/samples/blockchain-ai/0xdeca10b-simulation bash
+```
+
+### Building the Docker Image
+If you want to build your own fresh image:
 ```bash
 docker build -t decai-simulation .
-docker run --rm -it -p 5006:5006 -v ${PWD}:/root/workspace/0xDeCA10B/simulation --name decai-simulation decai-simulation bash 
 ```
 
 # Running Simulations
