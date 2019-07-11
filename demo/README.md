@@ -11,6 +11,8 @@ This work in its current form is just meant as an example and proof of concept.
 It is not ready to be deployed for production yet.
 
 # Setup
+This section explains how to set up locally on Linux/WSL, alternatively, you can skip ahead and use a Docker image.
+
 The following steps are made for Linux and require `npm`. They do work in WSL.
 
 Run
@@ -19,7 +21,7 @@ Run
 ```
 
 ## Docker Setup
-Instead, you can use a Docker image by running:
+You can use a Docker image by running:
 ```bash
 docker build -t decai-demo .
 docker run --rm -it -p 3000:3000 -p 5387:5387 -p 7545:7545 -v ${PWD}:/root/workspace/demo -v /root/workspace/demo/node_modules -v /root/workspace/demo/client/node_modules --name decai-demo decai-demo bash
