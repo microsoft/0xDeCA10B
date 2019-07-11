@@ -26,10 +26,45 @@ This repository contains:
 
 <img src="./assets/aka.ms 0xDeCA10B QR.png?raw=true" width=250 alt="Picture of a QR code with aka.ms/0xDeCA10B written in the middle.">
 
-[demo-folder]: demo/
-[simulation-folder]: simulation/
-[overview-paper]: https://aka.ms/0xDeCA10B-paper
-[overview-paper-dark]: https://aka.ms/0xDeCA10B-paper-dark
+# FAQ/Concerns
+
+## Aren't smart contracts just for simple code? 
+There are many options.
+We can restrict the framework to simple models: Perceptron, Naive Bayes, Nearest Centroid, etc.
+We can also combine off-chain computation with on-chain computation: encode off-chain to a higher dimensional representation and just have the final layers of the model fine-tune on-chain.
+
+External APIs can be used to train and run the model, though this isn't in the true spirit of the system which is to share models publicly.
+At least the data would be shared.
+
+## Will transaction fees be too high?
+Fees in Ethereum are low enough for simple models: a few cents as of July 2019.
+Simple machine learning models are good for many applications.
+As described the previous answer, there are ways to keep transactions simple.
+Fees are decreasing: Ethereum is switching to proof of stake.
+Other blockchains may have lower or possibly no fees.
+
+## What about storing models off-chain?
+Storing the model parameters off-chain, e.g. using IPFS, is an option but many of the popular solutions do not have robust mirroring to ensure that the model will still be available if a node goes down.
+One of the major goals of this project is to share models and improve their availability, the easiest way to do that now is to have the model stored and trained in a smart contract.
+
+We're happy to make improvements! If you do know of a solution that would be cheaper and more robust than storing models on a blockchain like Ethereum then let us know by filing an issue!
+
+## What if I just spam bad data?
+This depends on the incentive mechanism (IM) chosen but essentially, you will lose a lot of money.
+Others will notice the model is performing badly or does not work as expected and then stop contributing to it.
+Depending on the IM, such as in Deposit, Refund, and Take: Self-Assessment, others that already submitted "good" data will gladly take your deposits without submitting any more data.
+
+Furthermore, people can easily automatically correct your data using techniques from unsupervised learning such as clustering.
+They can then use the data offline for their own private model or even deploy a new collection system using that model.
+
+## What if no one gives bad data, then no one can profit?
+That’s great!
+This system will work as a source for quality data and models.
+People will contribute data to help improve the machine learning models they use in their daily life.
+
+Profit depends on the incentive mechanism (IM).
+Yes, in in Deposit, Refund, and Take: Self-Assessment, the contributors will not profit and should be able to claim back their own deposits.
+In the Prediction Market based mechanism, contributors can still get rewarded by the original provider of the bounty and test set.
 
 # Contributing
 
@@ -44,3 +79,10 @@ provided by the bot. You will only need to do this once across all repos using o
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
 For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
 contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
+[demo-folder]: demo/
+[simulation-folder]: simulation/
+
+[first-blog]: https://aka.ms/0xDeCA10B-first-blog
+[overview-paper]: https://aka.ms/0xDeCA10B-paper
+[overview-paper-dark]: https://aka.ms/0xDeCA10B-paper-dark
