@@ -3,7 +3,7 @@
 
 A dashboard and examples for deploying updatable AI models to Ethereum.
 
-This folder also contains Solidity examples for models, data handlers, and incentive mechanisms for deploying models that are free to use for inference as initially proposed in the paper [Decentralized & Collaborative AI on Blockchain Platforms][overview-paper], [dark theme version here][overview-paper-dark].
+This folder also contains Solidity examples for models, data handlers, and incentive mechanisms for deploying models that are free to use for inference as initially proposed in our introductory paper.
 
 This project is made from a React project with Truffle added. This [Truffle example][truffle-react] was used to help add Truffle.
 
@@ -11,6 +11,8 @@ This work in its current form is just meant as an example and proof of concept.
 It is not ready to be deployed for production yet.
 
 # Setup
+This section explains how to set up locally on Linux/WSL, alternatively, you can skip ahead and use a Docker image.
+
 The following steps are made for Linux and require `npm`. They do work in WSL.
 
 Run
@@ -19,12 +21,10 @@ Run
 ```
 
 ## Docker Setup
-You can use Docker by running:
+You can use a Docker image by running:
 ```bash
 docker build -t decai-demo .
 docker run --rm -it -p 3000:3000 -p 5387:5387 -p 7545:7545 -v ${PWD}:/root/workspace/demo -v /root/workspace/demo/node_modules -v /root/workspace/demo/client/node_modules --name decai-demo decai-demo bash
-# If you run into issues inside the Docker container, then
-# try to redo the setup by running: `rm -rf node_modules client/node_modules && ./setup.sh` in the container to ensure that everything is set up properly.
 
 # So that you can start a few processes in the Docker container, run:
 byobu
@@ -38,16 +38,6 @@ To update dependencies after already setting up:
 ```bash
 yarn global upgrade yarn && yarn upgrade && (cd client && yarn upgrade)
 ```
-
-## Linting
-### Solidity Files
-We use [Ethlint][ethlint] for linting.
-To check the contract code run:
-```bash
-yarn lint
-```
-
-Proper linting will be enforced when making a pull request.
 
 # Deploy
 ## Blockchain
@@ -118,8 +108,20 @@ If you get the spinning issue again, then also try following the steps above wit
 [truffle-react]: https://truffleframework.com/boxes/react
 
 # Testing
-Run `yarn test`.
-The blockchain will be started and stopped so it's best not to have a blockchain running at the same address and port (e.g. one running through `yarn blockchain`).
+Run
+```bash
+yarn test
+```
+
+A local blockchain will be started and stopped so it's best not to have a blockchain running at the same address and port (e.g. one running through `yarn blockchain`).
+
+# Linting
+### Solidity Files
+We use [Ethlint][ethlint] for linting and enforce it on pull requests.
+To check the contract code run:
+```bash
+yarn lint
+```
 
 [ethlint]: https://github.com/duaraghav8/Ethlint
 [overview-paper]: https://aka.ms/0xDeCA10B-paper
