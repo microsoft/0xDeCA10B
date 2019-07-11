@@ -25,7 +25,7 @@ contract NaiveBayesClassifier is Classifier64 {
         /**
          * The number of occurrences of a feature.
          */
-        uint[] featureCounts;
+        mapping(uint32 => uint) featureCounts;
         /**
          * The total number of occurrences of all features (sum of featureCounts).
          */

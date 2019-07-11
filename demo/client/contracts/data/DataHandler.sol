@@ -47,7 +47,7 @@ contract DataHandler64 is Ownable, DataHandler {
          */
         uint claimableAmount;
 
-        mapping (address => bool) claimedBy;
+        mapping(address => bool) claimedBy;
     }
 
     mapping(bytes32 => StoredData) public addedData;
