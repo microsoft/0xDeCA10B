@@ -23,11 +23,16 @@ Run
 ## Docker Setup
 You can use a Docker image by running:
 ```bash
-docker build -t decai-demo .
-docker run --rm -it -p 3000:3000 -p 5387:5387 -p 7545:7545 -v ${PWD}:/root/workspace/demo -v /root/workspace/demo/node_modules -v /root/workspace/demo/client/node_modules --name decai-demo decai-demo bash
+docker run --rm -it -p 3000:3000 -p 5387:5387 -p 7545:7545 -v ${PWD}:/root/workspace/demo -v /root/workspace/demo/node_modules -v /root/workspace/demo/client/node_modules --name decai-demo mcr.microsoft.com/samples/blockchain-ai/0xdeca10b-demo bash
 
 # So that you can start a few processes in the Docker container, run:
 byobu
+```
+
+### Building the Docker Image
+If you want to build your own fresh image:
+```bash
+docker build -t decai-demo .
 ```
 
 ## Troubleshooting Setup
