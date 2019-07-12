@@ -17,6 +17,7 @@ Adding data consists of validation by three steps as described below.
 2. The **DataHandler** stores data and meta-data on the blockchain. This ensures that it is accessible for all future uses, not limited to this smart contract.
 3. The machine learning **model** is updated according to predefined training algorithms. In addition to adding data, anyone can query the model for predictions, and the incentive mechanism may be triggered to provide users with payments or virtual "karma" points.
 
+The basics of the framework can be found in our [blog post][blog1].
 More details can be found in the initial paper describing the framework, accepted to Blockchain-2019, The IEEE International Conference on Blockchain: (coming July 2019)
 <!--[Decentralized & Collaborative AI on Blockchain Platforms][overview-paper], [dark theme version here][overview-paper-dark].-->
 
@@ -83,6 +84,6 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 [demo-folder]: demo/
 [simulation-folder]: simulation/
 
-[first-blog]: https://aka.ms/0xDeCA10B-first-blog
+[blog1]: https://aka.ms/0xDeCA10B-blog1
 [overview-paper]: https://aka.ms/0xDeCA10B-paper
 [overview-paper-dark]: https://aka.ms/0xDeCA10B-paper-dark
