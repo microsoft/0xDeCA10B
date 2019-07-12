@@ -25,6 +25,9 @@ You can use a Docker image by running:
 ```bash
 docker run --rm -it -p 3000:3000 -p 5387:5387 -p 7545:7545 -v ${PWD}:/root/workspace/demo -v /root/workspace/demo/node_modules -v /root/workspace/demo/client/node_modules --name decai-demo mcr.microsoft.com/samples/blockchain-ai/0xdeca10b-demo bash
 
+# If this is your first time setting up then run:
+./setup_libs.sh
+
 # So that you can start a few processes in the Docker container, run:
 byobu
 ```
