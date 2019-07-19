@@ -18,8 +18,7 @@ Adding data consists of validation by three steps as described below.
 3. The machine learning **model** is updated according to predefined training algorithms. In addition to adding data, anyone can query the model for predictions, and the incentive mechanism may be triggered to provide users with payments or virtual "karma" points.
 
 The basics of the framework can be found in our [blog post][blog1].
-More details can be found in the initial paper describing the framework, accepted to Blockchain-2019, The IEEE International Conference on Blockchain: (coming July 2019)
-<!--[Decentralized & Collaborative AI on Blockchain Platforms][overview-paper], [dark theme version here][overview-paper-dark].-->
+More details can be found in the [initial paper][overview-paper] describing the framework, accepted to Blockchain-2019, The IEEE International Conference on Blockchain: (coming July 2019)
 
 This repository contains:
 * [Demos][demo-folder] showcasing some proof of concept systems using the Ethereum blockchain. There is a locally deployable test blockchain and demo dashboard to interact with smart contracts written in Solidity.
@@ -32,10 +31,13 @@ This repository contains:
 ## Aren't smart contracts just for simple code? 
 There are many options.
 We can restrict the framework to simple models: Perceptron, Naive Bayes, Nearest Centroid, etc.
-We can also combine off-chain computation with on-chain computation: encode off-chain to a higher dimensional representation and just have the final layers of the model fine-tune on-chain.
+We can also combine off-chain computation with on-chain computation in a few ways such as:
+* encoding off-chain to a higher dimensional representation and just have the final layers of the model fine-tuned on-chain,
+* using secure multiparty computation, or
+* using external APIs, or as they are called the blockchain space, oracles, to train and run the model
 
-External APIs can be used to train and run the model, though this isn't in the true spirit of the system which is to share models publicly.
-At least the data would be shared.
+Some of those proposals are not in the true spirit of this system which is to share models completely publicly but for some applications they may be suitable.
+At least the data would be shared so others can still use it to train their own models.
 
 ## Will transaction fees be too high?
 Fees in Ethereum are low enough for simple models: a few cents as of July 2019.
@@ -86,4 +88,3 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 
 [blog1]: https://aka.ms/0xDeCA10B-blog1
 [overview-paper]: https://aka.ms/0xDeCA10B-paper
-[overview-paper-dark]: https://aka.ms/0xDeCA10B-paper-dark
