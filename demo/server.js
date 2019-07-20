@@ -28,23 +28,19 @@ initSqlJs().then(SQL => {
     return body && body.name && body.address;
   }
 
-  const insertModelStmt = db.prepare("INSERT INTO model VALUES (NULL, :name, :address, :description, :modelType, :encoder, :accuracy);");
-
   function persistModel(model) {
-    const vals = [
+    db.run('INSERT INTO model VALUES (NULL, ?, ?, ?, ?, ?, ?);', [
       model.name,
       model.address,
       model.description,
       model.modelType,
       model.encoder,
       model.accuracy,
-    ].join('\',\'');
-    const cmd = `INSERT INTO model VALUES (NULL, '${vals}');`;
-    db.run(cmd);
+    ]);
     fs.writeFileSync(dbPath, Buffer.from(db.export()));
   }
 
-  function marshalResult(res) {
+  function marshalResults(res) {
     if (!res[0]) {
       return null;
     }
@@ -63,14 +59,14 @@ initSqlJs().then(SQL => {
   // Get all models.
   app.get('/api/models', (req, res) => {
     const results = db.exec("SELECT * FROM model");
-    const models = marshalResult(results);
+    const models = marshalResults(results);
     res.send({ models });
   });
 
   // Get model with specific ID.
   app.get('/api/models/:modelId', (req, res) => {
-    const getModelStmt = db.prepare("SELECT * FROM model WHERE id == :modelId LIMIT 1;");
-    const model = getModelStmt.getAsObject({ ':modelId': req.params.modelId });
+    const getModelStmt = db.prepare("SELECT * FROM model WHERE id == $modelId LIMIT 1;");
+    const model = getModelStmt.getAsObject({ $modelId: req.params.modelId });
     getModelStmt.free();
     model.modelType = model.model_type;
     delete model.model_type;
@@ -89,12 +85,10 @@ initSqlJs().then(SQL => {
 
   // DATA MANAGEMENT
   function persistData(data) {
-    const vals = [
+    db.run('INSERT INTO data VALUES (?, ?);', [
       data.transactionHash,
       data.originalData,
-    ].join('\',\'');
-    const cmd = `INSERT INTO data VALUES ('${vals}');`;
-    db.run(cmd);
+    ]);
     fs.writeFile(dbPath, Buffer.from(db.export()), () => { });
   }
 
@@ -107,14 +101,12 @@ initSqlJs().then(SQL => {
 
   // Get original training data.
   app.get('/api/data/:transactionHash', (req, res) => {
-    const results = db.exec(`SELECT text FROM data WHERE transaction_hash == '${req.params.transactionHash}'`);
-    if (results[0]) {
-      result = null;
-    }
-    const originalData = results[0].values[0][0];
+    const getTextStmt = db.prepare('SELECT text FROM data WHERE transaction_hash == $transactionHash LIMIT 1;');
+    const textResult = getTextStmt.getAsObject({ $transactionHash: req.params.transactionHash });
+    getTextStmt.free();
+    const originalData = textResult.text;
     res.send({ originalData });
   });
+
+  app.listen(port, () => console.log(`Listening on port ${port}`));
 });
-
-app.listen(port, () => console.log(`Listening on port ${port}`));
-
