@@ -32,6 +32,8 @@ docker run --rm -it -p 3000:3000 -p 5387:5387 -p 7545:7545 -v ${PWD}:/root/works
 byobu
 ```
 
+You can find the available tags for the Docker image [here](https://mcr.microsoft.com/v2/samples/blockchain-ai/0xdeca10b-demo/tags/list).
+
 ### Building the Docker Image
 If you want to build your own fresh image:
 ```bash

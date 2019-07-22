@@ -7,10 +7,9 @@ LABEL org.label-schema.vcs-url="https://github.com/microsoft/0xDeCA10B/tree/mast
 
 WORKDIR /root/workspace/demo
 
-COPY setup.sh .
-COPY package.json .
-COPY client/package.json client/package.json
-
 RUN apt-get update && apt-get install --yes byobu locales locales-all
+
+COPY setup.sh setup_libs.sh package.json yarn.lock ./
+COPY client/package.json client/yarn.lock client/
 
 RUN bash setup.sh
