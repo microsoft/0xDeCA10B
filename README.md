@@ -36,6 +36,9 @@ We can also combine off-chain computation with on-chain computation in a few way
 * using secure multiparty computation, or
 * using external APIs, or as they are called the blockchain space, oracles, to train and run the model
 
+We can also use algorithms that do not require all models parameters to be updated (e.g. Perceptron).
+We hope to inspire more research in efficient ways to update more complex models.
+
 Some of those proposals are not in the true spirit of this system which is to share models completely publicly but for some applications they may be suitable.
 At least the data would be shared so others can still use it to train their own models.
 
