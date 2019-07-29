@@ -31,7 +31,7 @@ contract NaiveBayesClassifier is Classifier64 {
          */
         uint totalFeatureCount;
     }
-    
+
     uint public smoothingFactor;
 
     uint[] public classPriorProbs;
@@ -61,6 +61,6 @@ contract NaiveBayesClassifier is Classifier64 {
 
     function update(int64[] memory data, uint64 classification) public onlyOwner {
         require(classification < classifications.length, "Classification is out of bounds.");
-        // TODO
+        
     }
 }

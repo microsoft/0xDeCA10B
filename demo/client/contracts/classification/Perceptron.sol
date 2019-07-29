@@ -69,7 +69,6 @@ contract Perceptron is Classifier64 {
             // predict checks each data[i] >= 0.
             uint i;
             uint len = data.length;
-            // Data is binarized.
             int80 change = toFloat * learningRate;
             if (classification > 0) {
                 // sign = 1
