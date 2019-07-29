@@ -1,4 +1,7 @@
 .git/
+.vscode/
+
+blockchain_db/
 
 node_modules/
 client/node_modules/
