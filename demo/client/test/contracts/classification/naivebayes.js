@@ -7,13 +7,6 @@ contract('NaiveBayesClassifier', function (accounts) {
   let vocabLength = 0;
   let classifier;
 
-  function normalize(data) {
-    data = convertData(data);
-    return classifier.norm(data).then(norm => {
-      return data.map(x => x.mul(web3.utils.toBN(toFloat)).div(norm));
-    });
-  }
-
   function convertData(data) {
     return data.map(x => Math.round(x * toFloat)).map(web3.utils.toBN);
   }
@@ -33,21 +26,23 @@ contract('NaiveBayesClassifier', function (accounts) {
     return bn.toNumber() / toFloat;
   }
 
-  before("deploy classifier", function () {
+  function mapFeatures(query) {
+    return query.split(" ").map(w => {
+      let result = vocab[w];
+      if (result === undefined) {
+        vocab[w] = result = vocabLength++;
+      }
+      return result;
+    });
+  }
+
+  before("deploy classifier", async () => {
     const smoothingFactor = 1;
     const classifications = ["ALARM", "WEATHER"];
     const queries = [
       "alarm for 11 am tomorrow",
       "will i need a jacket for tomorrow"];
-    const featureMappedQueries = queries.map(q => {
-      return q.split(" ").map(w => {
-        let result = vocab[w];
-        if (result === undefined) {
-          vocab[w] = result = vocabLength++;
-        }
-        return result;
-      });
-    });
+    const featureMappedQueries = queries.map(mapFeatures);
     const featureCounts = featureMappedQueries.map(fv => {
       const result = {};
       fv.forEach(v => {
@@ -56,29 +51,36 @@ contract('NaiveBayesClassifier', function (accounts) {
         }
         result[v] += 1;
       });
-      return Object.entries(result).map(pair => [parseInt(pair[0]), pair[1]]);
+      return Object.entries(result).map(pair => [web3.utils.toBN(parseInt(pair[0])), web3.utils.toBN(pair[1])]);
     });
     const classCounts = [1, 1];
-    const numTrainingSamples = queries.length;
-    // TODO
-    return NaiveBayesClassifier.new(classifications, classCounts, smoothingFactor).then(c => {
-      classifier = c;
-    });
+    const totalNumFeatures = vocabLength;
+    classifier = await NaiveBayesClassifier.new(classifications, classCounts, featureCounts, totalNumFeatures, smoothingFactor);
   });
 
-  it("...should predict the classification", function () {
+  it("...should predict the classification ALARM", async () => {
+    const data = mapFeatures("alarm for 9 am tomorrow");
+    console.log(`data: ${JSON.stringify(data)}`);
+    const prediction = await classifier.predict(data).then(parseBN);
+    assert.equal(prediction, 0);
+  });
+
+  it("...should predict the classification WEATHER", async () => {
+    const data = mapFeatures("will i need a jacket today");
+    console.log(`data: ${JSON.stringify(data)}`);
+    const prediction = await classifier.ppredict(data).then(parseBN);
+    assert.equal(prediction, 1);
+  });
+
+  it("...should predict the classification", async () => {
     // TODO
   });
 
-  it("...should predict the classification", function () {
+  it("...should train", async () => {
     // TODO
   });
 
-  it("...should train", function () {
-    // TODO
-  });
-
-  it("...should add class", function () {
+  it("...should add class", async () => {
     // TODO
   });
 });
