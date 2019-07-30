@@ -1,4 +1,4 @@
-const NearestCentroidClassifier = artifacts.require("./classification/NaiveBayesClassifier");
+const NaiveBayesClassifier = artifacts.require("./classification/NaiveBayesClassifier");
 
 contract('NaiveBayesClassifier', function (accounts) {
   const toFloat = 1E9;
@@ -34,12 +34,13 @@ contract('NaiveBayesClassifier', function (accounts) {
   }
 
   before("deploy classifier", function () {
+    const smoothingFactor = 1;
     const classifications = ["ALARM", "WEATHER"];
     const queries = [
       "alarm for 11 am tomorrow",
       "will i need a jacket for tomorrow"];
     const featureMappedQueries = queries.map(q => {
-      return q.split().map(w => {
+      return q.split(" ").map(w => {
         let result = vocab[w];
         if (result === undefined) {
           vocab[w] = result = vocabLength++;
@@ -47,24 +48,22 @@ contract('NaiveBayesClassifier', function (accounts) {
         return result;
       });
     });
-    console.log(`featureMappedQueries: ${featureMappedQueries}`);
     const featureCounts = featureMappedQueries.map(fv => {
       const result = {};
-      for (v in fv) {
-        if (!v in result) {
+      fv.forEach(v => {
+        if (!(v in result)) {
           result[v] = 0;
         }
         result[v] += 1;
-      }
-      return Object.entries(result).map((k, v) => [parseInt(k), v]);
+      });
+      return Object.entries(result).map(pair => [parseInt(pair[0]), pair[1]]);
     });
-    console.log(`featureCounts: ${featureCounts}`);
     const classCounts = [1, 1];
     const numTrainingSamples = queries.length;
     // TODO
-    // return NearestCentroidClassifier.new(classifications, centroids, dataCounts).then(c => {
-    //   classifier = c;
-    // });
+    return NaiveBayesClassifier.new(classifications, classCounts, smoothingFactor).then(c => {
+      classifier = c;
+    });
   });
 
   it("...should predict the classification", function () {

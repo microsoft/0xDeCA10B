@@ -38,7 +38,7 @@ contract NaiveBayesClassifier is Classifier64 {
 
     constructor(
         string[] memory _classifications,
-        uint[] memory _dataCounts,
+        uint[] memory _classCounts,
         uint _smoothingFactor)
         Classifier64(_classifications) public {
         require(_classifications.length > 0, "At least one class is required.");
