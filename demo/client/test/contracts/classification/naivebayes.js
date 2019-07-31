@@ -13,10 +13,6 @@ contract('NaiveBayesClassifier', function (accounts) {
     return web3.utils.toBN(Math.round(num * toFloat));
   }
 
-  function convertData(data) {
-    return data.map(convertNum);
-  }
-
   function parseBN(num) {
     if (web3.utils.isBN(num)) {
       return num.toNumber();

@@ -73,11 +73,7 @@ contract NaiveBayesClassifier is Classifier64 {
         require(_classifications.length < 2 ** 64, "Too many classes given.");
         totalNumFeatures = _totalNumFeatures;
         smoothingFactor = _smoothingFactor;
-        // TODO classCounts = _classCounts;
-        classCounts = new uint[](_classCounts.length);
-        for (uint i = 0; i < _classCounts.length; ++i) {
-            classCounts[i] = _classCounts[i];
-        }
+        classCounts = _classCounts;
         for (uint i = 0; i < _featureCounts.length; ++i){
             ClassInfo memory info = ClassInfo(0);
             uint totalFeatureCount = 0;
