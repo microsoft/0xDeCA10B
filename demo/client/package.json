@@ -18,8 +18,8 @@
     "react-dom": "^16.8.6",
     "react-router-dom": "^5.0.0",
     "react-scripts": "^2.1.8",
-    "truffle": "^5.0.22",
-    "web3": "^1.0.0-beta.52"
+    "truffle": "^5.0.29",
+    "web3": "^1.2.0"
   },
   "scripts": {
     "start": "bash deploy_client.sh",

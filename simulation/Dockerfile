@@ -16,7 +16,7 @@ RUN conda init bash
 WORKDIR /root/workspace/0xDeCA10B/simulation
 COPY setup.py .
 
-RUN conda run --name decai-simulation pip install -e .
+RUN conda run --name decai-simulation pip install -e .[test]
 
 RUN echo "conda activate decai-simulation" >> ~/.bashrc
 

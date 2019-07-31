@@ -60,7 +60,7 @@ module.exports = async function (deployer) {
           for (let i = initNumWords; i < weights.length; i += numWordsPerUpdate) {
             await classifier.initializeWeights(i, weights.slice(i, i + numWordsPerUpdate),
               { gas: 7.9E6 });
-            console.log(`  Added weights ${i + numWordsPerUpdate}`);
+            console.log(`  Added ${i + numWordsPerUpdate} weights.`);
           }
 
           console.log(`Deploying collaborative trainer contract.`);
