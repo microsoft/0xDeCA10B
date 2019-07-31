@@ -147,7 +147,6 @@ contract('VpaClassifier', function (accounts) {
 
     const originalDataCount = await classifier.dataCounts(classification).then(parseBN);
 
-    console.log("  Adding data.");
     const r = await instance.addData(normalizedData, classification, { from: accounts[0], value: cost });
     assert.isBelow(r.receipt.gasUsed, 7.9E6, "Too much gas used.");
     assert.isBelow(r.receipt.cumulativeGasUsed, 7.9E6, "Too much gas used.");

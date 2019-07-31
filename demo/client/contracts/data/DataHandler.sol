@@ -46,8 +46,10 @@ contract DataHandler64 is Ownable, DataHandler {
          * The amount of the deposit that can still be claimed.
          */
         uint claimableAmount;
-
-        mapping (address => bool) claimedBy;
+        /**
+         * The set of addresses that claimed a refund or reward on this data.
+         */
+        mapping(address => bool) claimedBy;
     }
 
     mapping(bytes32 => StoredData) public addedData;

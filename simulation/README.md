@@ -81,7 +81,7 @@ Run `bokeh serve decai/simulation/simulate_imdb_neural_network.py` and open your
 # Testing
 Setup the testing environment: 
 ```bash
-pip install pytest
+pip install -e .[test]
 ```
 
 Run tests:
