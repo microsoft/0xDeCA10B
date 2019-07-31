@@ -63,6 +63,7 @@ contract Perceptron is Classifier64 {
     }
 
     function update(int64[] memory data, uint64 classification) public onlyOwner {
+        // Data is binarized (data holds the indices of the features that are present).
         uint64 prediction = predict(data);
         if (prediction != classification) {
             // Update model.
