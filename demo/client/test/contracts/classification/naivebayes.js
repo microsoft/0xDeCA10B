@@ -41,7 +41,7 @@ contract('NaiveBayesClassifier', function (accounts) {
   }
 
   before("deploy classifier", async () => {
-    const smoothingFactor = 1;//convertNum(1);
+    const smoothingFactor = convertNum(1);
     const classifications = ["ALARM", "WEATHER"];
     const queries = [
       "alarm for 11 am tomorrow",
@@ -61,18 +61,17 @@ contract('NaiveBayesClassifier', function (accounts) {
     const totalNumFeatures = vocabLength;
     classifier = await NaiveBayesClassifier.new(classifications, classCounts, featureCounts, totalNumFeatures, smoothingFactor);
 
-    assert.equal(await classifier.getClassTotalFeatureCount(0).then(parseBN), 5);
-    assert.equal(await classifier.getClassTotalFeatureCount(1).then(parseBN), 7);
+    assert.equal(await classifier.getClassTotalFeatureCount(0).then(parseBN), 5,
+      "Total feature count for class 0.");
+    assert.equal(await classifier.getClassTotalFeatureCount(1).then(parseBN), 7,
+      "Total feature count for class 1.");
 
     for (let featureIndex = 0; featureIndex < 5; ++featureIndex) {
       assert.equal(await classifier.getFeatureCount(0, featureIndex).then(parseBN), 1);
     }
-    assert.equal(await classifier.getFeatureCount(0, 5).then(parseBN), 0);
-    assert.equal(await classifier.getFeatureCount(0, 6).then(parseBN), 0);
-    assert.equal(await classifier.getFeatureCount(0, 7).then(parseBN), 0);
-    assert.equal(await classifier.getFeatureCount(0, 8).then(parseBN), 0);
-    assert.equal(await classifier.getFeatureCount(0, 9).then(parseBN), 0);
-    assert.equal(await classifier.getFeatureCount(0, 10).then(parseBN), 0);
+    for (let featureIndex = 5; featureIndex < 11; ++featureIndex) {
+      assert.equal(await classifier.getFeatureCount(0, featureIndex).then(parseBN), 0);
+    }
 
     assert.equal(await classifier.getFeatureCount(1, 0).then(parseBN), 0);
     assert.equal(await classifier.getFeatureCount(1, 1).then(parseBN), 1);
