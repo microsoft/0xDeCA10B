@@ -7,8 +7,12 @@ contract('NaiveBayesClassifier', function (accounts) {
   let vocabLength = 0;
   let classifier;
 
+  function convertNum(num) {
+    return web3.utils.toBN(Math.round(num * toFloat));
+  }
+
   function convertData(data) {
-    return data.map(x => Math.round(x * toFloat)).map(web3.utils.toBN);
+    return data.map(convertNum);
   }
 
   function parseBN(num) {
@@ -37,7 +41,7 @@ contract('NaiveBayesClassifier', function (accounts) {
   }
 
   before("deploy classifier", async () => {
-    const smoothingFactor = 1;
+    const smoothingFactor = 1;//convertNum(1);
     const classifications = ["ALARM", "WEATHER"];
     const queries = [
       "alarm for 11 am tomorrow",
@@ -51,24 +55,47 @@ contract('NaiveBayesClassifier', function (accounts) {
         }
         result[v] += 1;
       });
-      return Object.entries(result).map(pair => [web3.utils.toBN(parseInt(pair[0])), web3.utils.toBN(pair[1])]);
+      return Object.entries(result).map(pair => [parseInt(pair[0]), pair[1]].map(web3.utils.toBN));
     });
     const classCounts = [1, 1];
     const totalNumFeatures = vocabLength;
     classifier = await NaiveBayesClassifier.new(classifications, classCounts, featureCounts, totalNumFeatures, smoothingFactor);
+
+    assert.equal(await classifier.getClassTotalFeatureCount(0).then(parseBN), 5);
+    assert.equal(await classifier.getClassTotalFeatureCount(1).then(parseBN), 7);
+
+    for (let featureIndex = 0; featureIndex < 5; ++featureIndex) {
+      assert.equal(await classifier.getFeatureCount(0, featureIndex).then(parseBN), 1);
+    }
+    assert.equal(await classifier.getFeatureCount(0, 5).then(parseBN), 0);
+    assert.equal(await classifier.getFeatureCount(0, 6).then(parseBN), 0);
+    assert.equal(await classifier.getFeatureCount(0, 7).then(parseBN), 0);
+    assert.equal(await classifier.getFeatureCount(0, 8).then(parseBN), 0);
+    assert.equal(await classifier.getFeatureCount(0, 9).then(parseBN), 0);
+    assert.equal(await classifier.getFeatureCount(0, 10).then(parseBN), 0);
+
+    assert.equal(await classifier.getFeatureCount(1, 0).then(parseBN), 0);
+    assert.equal(await classifier.getFeatureCount(1, 1).then(parseBN), 1);
+    assert.equal(await classifier.getFeatureCount(1, 2).then(parseBN), 0);
+    assert.equal(await classifier.getFeatureCount(1, 3).then(parseBN), 0);
+    assert.equal(await classifier.getFeatureCount(1, 4).then(parseBN), 1);
+    assert.equal(await classifier.getFeatureCount(1, 5).then(parseBN), 1);
+    assert.equal(await classifier.getFeatureCount(1, 6).then(parseBN), 1);
+    assert.equal(await classifier.getFeatureCount(1, 7).then(parseBN), 1);
+    assert.equal(await classifier.getFeatureCount(1, 8).then(parseBN), 1);
+    assert.equal(await classifier.getFeatureCount(1, 9).then(parseBN), 1);
+    assert.equal(await classifier.getFeatureCount(1, 10).then(parseBN), 0);
   });
 
   it("...should predict the classification ALARM", async () => {
     const data = mapFeatures("alarm for 9 am tomorrow");
-    console.log(`data: ${JSON.stringify(data)}`);
     const prediction = await classifier.predict(data).then(parseBN);
     assert.equal(prediction, 0);
   });
 
   it("...should predict the classification WEATHER", async () => {
     const data = mapFeatures("will i need a jacket today");
-    console.log(`data: ${JSON.stringify(data)}`);
-    const prediction = await classifier.ppredict(data).then(parseBN);
+    const prediction = await classifier.predict(data).then(parseBN);
     assert.equal(prediction, 1);
   });
 
