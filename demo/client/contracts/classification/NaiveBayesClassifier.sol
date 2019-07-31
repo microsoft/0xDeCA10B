@@ -10,6 +10,11 @@ import {Classifier64} from "./Classifier.sol";
 /**
  * A Multinomial Naive Bayes classifier.
  * Works like in https://scikit-learn.org/stable/modules/naive_bayes.html#multinomial-naive-bayes.
+ *
+ * The prediction function is not optimized with typical things like working with log-probabilities because:
+ * * it is mainly an example,
+ * * storing log probabilities would be extra work for the update function which should be very efficient, and
+ * * computing log in solidity is not reliable (yet).
  */
 contract NaiveBayesClassifier is Classifier64 {
     using SafeMath for uint256;
@@ -68,6 +73,7 @@ contract NaiveBayesClassifier is Classifier64 {
         require(_classifications.length < 2 ** 64, "Too many classes given.");
         totalNumFeatures = _totalNumFeatures;
         smoothingFactor = _smoothingFactor;
+        // TODO classCounts = _classCounts;
         classCounts = new uint[](_classCounts.length);
         for (uint i = 0; i < _classCounts.length; ++i) {
             classCounts[i] = _classCounts[i];
@@ -88,11 +94,22 @@ contract NaiveBayesClassifier is Classifier64 {
 
     // Main overriden methods for training and predicting:
 
-    function addClass(uint32[][] memory _featureCounts, string memory classification) public onlyOwner {
+    function addClass(uint classCount, uint32[][] memory featureCounts, string memory classification) public onlyOwner {
         require(classifications.length + 1 < 2 ** 64, "There are too many classes already.");
         classifications.push(classification);
-        emit AddClass(classification, classifications.length - 1);
-        // TODO
+        uint classIndex = classifications.length - 1;
+        emit AddClass(classification, classIndex);
+        classCounts.push(classCount);
+        ClassInfo memory info = ClassInfo(0);
+        uint totalFeatureCount = 0;
+        classInfos.push(info);
+        ClassInfo storage storedInfo = classInfos[classIndex];
+        for (uint j = 0 ; j < featureCounts.length; ++j) {
+            storedInfo.featureCounts[featureCounts[j][0]] = featureCounts[j][1];
+            totalFeatureCount = totalFeatureCount.add(featureCounts[j][1]);
+        }
+        require(totalFeatureCount < 2 ** 64, "There are too many features.");
+        classInfos[classIndex].totalFeatureCount = uint64(totalFeatureCount);
     }
 
     function norm(int64[] memory /* data */) public pure returns (uint) {
@@ -100,6 +117,7 @@ contract NaiveBayesClassifier is Classifier64 {
     }
 
     function predict(int64[] memory data) public view returns (uint64 bestClass) {
+        // Implementation: simple calculation (no log-probabilities optimization, see contract docs for the reasons)
         bestClass = 0;
         uint maxProb = 0;
         uint denominatorSmoothFactor = uint(smoothingFactor).mul(totalNumFeatures);

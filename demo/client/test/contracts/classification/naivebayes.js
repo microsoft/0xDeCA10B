@@ -3,6 +3,8 @@ const NaiveBayesClassifier = artifacts.require("./classification/NaiveBayesClass
 contract('NaiveBayesClassifier', function (accounts) {
   const toFloat = 1E9;
 
+  const smoothingFactor = convertNum(1);
+  const classifications = ["ALARM", "WEATHER"];
   const vocab = {};
   let vocabLength = 0;
   let classifier;
@@ -41,8 +43,6 @@ contract('NaiveBayesClassifier', function (accounts) {
   }
 
   before("deploy classifier", async () => {
-    const smoothingFactor = convertNum(1);
-    const classifications = ["ALARM", "WEATHER"];
     const queries = [
       "alarm for 11 am tomorrow",
       "will i need a jacket for tomorrow"];
@@ -122,6 +122,29 @@ contract('NaiveBayesClassifier', function (accounts) {
   });
 
   it("...should add class", async () => {
-    // TODO
+    const classCount = 3;
+    const featureCounts = [[0, 2], [1, 3], [6, 5]];
+    const classification = "NEW";
+    const originalNumClassifications = await classifier.getNumClassifications().then(parseBN);
+    classifier.addClass(classCount, featureCounts, classification);
+    const newNumClassifications = await classifier.getNumClassifications().then(parseBN);
+    assert.equal(newNumClassifications, originalNumClassifications + 1);
+    const classIndex = originalNumClassifications;
+
+    assert.equal(await classifier.getClassTotalFeatureCount(classIndex).then(parseBN),
+      featureCounts.map(pair => pair[1]).reduce((a, b) => a + b),
+      "Total feature count for new class is wrong.");
+
+    assert.equal(await classifier.getFeatureCount(classIndex, 0).then(parseBN), 2);
+    assert.equal(await classifier.getFeatureCount(classIndex, 1).then(parseBN), 3);
+    assert.equal(await classifier.getFeatureCount(classIndex, 2).then(parseBN), 0);
+    assert.equal(await classifier.getFeatureCount(classIndex, 3).then(parseBN), 0);
+    assert.equal(await classifier.getFeatureCount(classIndex, 4).then(parseBN), 0);
+    assert.equal(await classifier.getFeatureCount(classIndex, 5).then(parseBN), 0);
+    assert.equal(await classifier.getFeatureCount(classIndex, 6).then(parseBN), 5);
+    assert.equal(await classifier.getFeatureCount(classIndex, 7).then(parseBN), 0);
+    assert.equal(await classifier.getFeatureCount(classIndex, 8).then(parseBN), 0);
+    assert.equal(await classifier.getFeatureCount(classIndex, 9).then(parseBN), 0);
+    assert.equal(await classifier.getFeatureCount(classIndex, 10).then(parseBN), 0);
   });
 });
