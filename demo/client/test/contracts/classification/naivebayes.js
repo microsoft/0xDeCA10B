@@ -98,12 +98,27 @@ contract('NaiveBayesClassifier', function (accounts) {
     assert.equal(prediction, 1);
   });
 
-  it("...should predict the classification", async () => {
-    // TODO
-  });
+  it("...should update", async () => {
+    const data = [0, 1, 2, vocabLength + 10];
+    const classification = 0;
+    const prevFeatureCounts = [];
+    for (let i in data) {
+      const featureIndex = data[i];
+      const featureCount = await classifier.getFeatureCount(classification, featureIndex).then(parseBN);
+      await prevFeatureCounts.push(featureCount);
+    }
+    const prevTotalFeatureCount = await classifier.getClassTotalFeatureCount(classification).then(parseBN);
 
-  it("...should train", async () => {
-    // TODO
+    await classifier.update(data, classification);
+
+    for (let i in prevFeatureCounts) {
+      const featureIndex = data[i];
+      const featureCount = await classifier.getFeatureCount(classification, featureIndex).then(parseBN);
+      assert.equal(featureCount, prevFeatureCounts[i] + 1);
+    }
+
+    const totalFeatureCount = await classifier.getClassTotalFeatureCount(classification).then(parseBN);
+    assert.equal(totalFeatureCount, prevTotalFeatureCount + data.length);
   });
 
   it("...should add class", async () => {
