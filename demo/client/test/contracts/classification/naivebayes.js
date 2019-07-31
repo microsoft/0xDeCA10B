@@ -99,8 +99,12 @@ contract('NaiveBayesClassifier', function (accounts) {
   });
 
   it("...should update", async () => {
-    const data = [0, 1, 2, vocabLength + 10];
-    const classification = 0;
+    const newFeature = vocabLength + 10;
+    const predictionData = [newFeature];
+    assert.equal(await classifier.predict(predictionData).then(parseBN), 0);
+
+    const data = [0, 1, 2, newFeature];
+    const classification = 1;
     const prevFeatureCounts = [];
     for (let i in data) {
       const featureIndex = data[i];
@@ -119,6 +123,8 @@ contract('NaiveBayesClassifier', function (accounts) {
 
     const totalFeatureCount = await classifier.getClassTotalFeatureCount(classification).then(parseBN);
     assert.equal(totalFeatureCount, prevTotalFeatureCount + data.length);
+
+    assert.equal(await classifier.predict(predictionData).then(parseBN), classification);
   });
 
   it("...should add class", async () => {
@@ -133,7 +139,7 @@ contract('NaiveBayesClassifier', function (accounts) {
 
     assert.equal(await classifier.getClassTotalFeatureCount(classIndex).then(parseBN),
       featureCounts.map(pair => pair[1]).reduce((a, b) => a + b),
-      "Total feature count for new class is wrong.");
+      "Total feature count for the new class is wrong.");
 
     assert.equal(await classifier.getFeatureCount(classIndex, 0).then(parseBN), 2);
     assert.equal(await classifier.getFeatureCount(classIndex, 1).then(parseBN), 3);
@@ -146,5 +152,7 @@ contract('NaiveBayesClassifier', function (accounts) {
     assert.equal(await classifier.getFeatureCount(classIndex, 8).then(parseBN), 0);
     assert.equal(await classifier.getFeatureCount(classIndex, 9).then(parseBN), 0);
     assert.equal(await classifier.getFeatureCount(classIndex, 10).then(parseBN), 0);
+
+    assert.equal(await classifier.predict([0, 1, 6]).then(parseBN), classIndex);
   });
 });
