@@ -103,8 +103,9 @@ contract('NaiveBayesClassifier', function (accounts) {
     }
     const prevTotalFeatureCount = await classifier.getClassTotalFeatureCount(classification).then(parseBN);
 
-    const updateResult = await classifier.update(data, classification);
-    // console.log(`update gasUsed: ${updateResult.receipt.gasUsed}`);
+    const updateResponse = await classifier.update(data, classification);
+    assert.isBelow(updateResponse.receipt.gasUsed, 2E5, "Too much gas used.");
+    // console.log(`  update gasUsed: ${updateResponse.receipt.gasUsed}`);
 
     for (let i in prevFeatureCounts) {
       const featureIndex = data[i];
