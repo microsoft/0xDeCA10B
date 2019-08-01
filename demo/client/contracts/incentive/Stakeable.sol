@@ -84,7 +84,7 @@ contract Stakeable is Ownable, IncentiveMechanism {
      *
      * Note that since this method uses `now` which depends on the last block time,
      * when testing, the output of this function may not change over time unless blocks are created.
-     * @see `getNextAddDataCost(uint)`
+     * @dev see also `getNextAddDataCost(uint)`
      */
     function getNextAddDataCost() public view returns (uint) {
         return getNextAddDataCost(now); // solium-disable-line security/no-block-members
