@@ -8,6 +8,9 @@ const NearestCentroidClassifier = artifacts.require("./classification/NearestCen
 const Stakeable64 = artifacts.require("./incentive/Stakeable64");
 
 module.exports = function (deployer) {
+  if (deployer.network === 'skipMigrations') {
+    return;
+  }
   // Information to persist to the DB.
   const modelInfo = {
     name: "VPA Classifier",

@@ -283,19 +283,9 @@ class Model extends React.Component {
   }
 
   addDataCost() {
-    return this.state.incentiveMechanism.methods.lastUpdateTimeS().call()
-      .then(parseInt)
-      .then(lastUpdateTimeS => {
-        const now = Math.floor(new Date().getTime() / 1000);
-        let divisor = now - lastUpdateTimeS;
-        if (divisor === 0) {
-          divisor = 1;
-        } else {
-          // Take the floor since that is what Solidity will do.      
-          divisor = Math.max(Math.floor(Math.sqrt(divisor)), 1);
-        }
-        return this.state.costWeight * 3600 / divisor;
-      });
+    const now = Math.floor(new Date().getTime() / 1000);
+    return this.state.incentiveMechanism.methods.getNextAddDataCost(now).call()
+      .then(parseInt);
   }
 
   canAttemptRefund(data, isForTaking, cb) {
@@ -367,7 +357,7 @@ class Model extends React.Component {
 
   getHumanReadableEth(amount) {
     // Could use web3.fromWei but it returns a string and then truncating would be trickier/less efficient.
-    return `Ξ${(amount / 1E18).toFixed(6)}`;
+    return `Ξ${(amount * 1E-18).toFixed(6)}`;
   }
 
   // Returns a Promise.

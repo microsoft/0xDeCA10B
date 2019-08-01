@@ -118,12 +118,21 @@ If you get the spinning issue again, then also try following the steps above wit
 [truffle-react]: https://truffleframework.com/boxes/react
 
 # Testing
-Run
+To simply run all tests:
 ```bash
 yarn test
 ```
 
 A local blockchain will be started and stopped so it's best not to have a blockchain running at the same address and port (e.g. one running through `yarn blockchain`).
+
+## Running Specific Tests
+To run specific smart contract tests and save time by not waiting for Truffle migrations:
+* In one terminal, start a blockchain: `yarn blockchain`
+* In another terminal session, run:
+```bash
+cd client
+npx truffle test [<test file paths>] --network skipMigrations
+```
 
 # Linting
 ### Solidity Files

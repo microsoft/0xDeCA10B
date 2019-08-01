@@ -1,6 +1,6 @@
 const Stakeable64 = artifacts.require("./incentive/Stakeable64");
 
-const utils = require('../../src/utils.js');
+const utils = require('../../../src/utils.js');
 
 contract('Stakeable64', function (accounts) {
   const refundTimeS = 1;
@@ -44,13 +44,12 @@ contract('Stakeable64', function (accounts) {
     await stakeable.handleAddData(cost, data, classification);
     await utils.setTimeoutPromise(refundTimeS * 1000);
     claimableAmount = cost;
-    refundAmount = await stakeable.handleRefund.call(ownerAddress, data, classification,
-      addedTime, claimableAmount, claimedBySubmitter,
-      prediction, { from: ownerAddress })
-    assert.equal(refundAmount, claimableAmount);
-    await stakeable.handleRefund(ownerAddress, data, classification,
+    let refundResponse = await stakeable.handleRefund(ownerAddress, data, classification,
       addedTime, claimableAmount, claimedBySubmitter,
       prediction, { from: ownerAddress });
+    let e = refundResponse.logs.filter(e => e.event == 'Refund')[0];
+    refundAmount = parseBN(e.args.amount);
+    assert.equal(refundAmount, claimableAmount);
 
     // Add data as someone else.
     cost = await stakeable.getNextAddDataCost().then(parseBN);
@@ -123,29 +122,29 @@ contract('Stakeable64', function (accounts) {
     await utils.setTimeoutPromise(ownerClaimWaitTimeS * 1000 - (new Date().getTime() - addedTime * 1000));
 
     // Check that the owner can take the entire deposit.
-    rewardAmount = await stakeable.handleReport.call(ownerAddress,
+    let reportResponse = await stakeable.handleReport(ownerAddress,
       data, classification,
       addedTime, ownerAddress,
       cost, cost, false,
-      prediction).then(parseBN);
+      prediction);
+    let e = reportResponse.logs.filter(e => e.event == 'Report')[0];
+    rewardAmount = parseBN(e.args.amount);
     assert.equal(rewardAmount, cost, "The reward amount should be the entire initial deposit.");
 
     // Sleep until any address can report.
     await utils.setTimeoutPromise(anyAddressClaimWaitTimeS * 1000 - (new Date().getTime() - addedTime * 1000));
 
     // Check that we can take the entire deposit as another address.
-    rewardAmount = await stakeable.handleReport.call(otherAddress,
-      data, classification,
-      addedTime, ownerAddress,
-      cost, cost, false,
-      prediction).then(parseBN);
-    assert.equal(rewardAmount, cost, "The reward amount should be the entire initial deposit.");
-
+    // Note that there are still funds left to claim because the IM does not update the meta-data.
     // Actually report.
-    await stakeable.handleReport(otherAddress,
+    reportResponse = await stakeable.handleReport(otherAddress,
       data, classification,
       addedTime, ownerAddress,
       cost, cost, false,
       prediction);
+    e = reportResponse.logs.filter(e => e.event == 'Report')[0];
+    rewardAmount = parseBN(e.args.amount);
+    assert.equal(rewardAmount, cost, "The reward amount should be the entire initial deposit.");
+
   });
 });

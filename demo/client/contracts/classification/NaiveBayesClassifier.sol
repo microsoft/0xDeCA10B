@@ -70,7 +70,7 @@ contract NaiveBayesClassifier is Classifier64 {
         uint32 _smoothingFactor)
         Classifier64(_classifications) public {
         require(_classifications.length > 0, "At least one class is required.");
-        require(_classifications.length < 2 ** 64, "Too many classes given.");
+        require(_classifications.length < 2 ** 65, "Too many classes given.");
         totalNumFeatures = _totalNumFeatures;
         smoothingFactor = _smoothingFactor;
         classCounts = _classCounts;
@@ -83,7 +83,7 @@ contract NaiveBayesClassifier is Classifier64 {
                 storedInfo.featureCounts[_featureCounts[i][j][0]] = _featureCounts[i][j][1];
                 totalFeatureCount = totalFeatureCount.add(_featureCounts[i][j][1]);
             }
-            require(totalFeatureCount < 2 ** 64, "There are too many features.");
+            require(totalFeatureCount < 2 ** 65, "There are too many features.");
             classInfos[i].totalFeatureCount = uint64(totalFeatureCount);
         }
     }
@@ -91,7 +91,7 @@ contract NaiveBayesClassifier is Classifier64 {
     // Main overriden methods for training and predicting:
 
     function addClass(uint classCount, uint32[][] memory featureCounts, string memory classification) public onlyOwner {
-        require(classifications.length + 1 < 2 ** 64, "There are too many classes already.");
+        require(classifications.length + 1 < 2 ** 65, "There are too many classes already.");
         classifications.push(classification);
         uint classIndex = classifications.length - 1;
         emit AddClass(classification, classIndex);
@@ -104,7 +104,7 @@ contract NaiveBayesClassifier is Classifier64 {
             storedInfo.featureCounts[featureCounts[j][0]] = featureCounts[j][1];
             totalFeatureCount = totalFeatureCount.add(featureCounts[j][1]);
         }
-        require(totalFeatureCount < 2 ** 64, "There are too many features.");
+        require(totalFeatureCount < 2 ** 65, "There are too many features.");
         classInfos[classIndex].totalFeatureCount = uint64(totalFeatureCount);
     }
 
@@ -134,18 +134,22 @@ contract NaiveBayesClassifier is Classifier64 {
 
     function update(int64[] memory data, uint64 classification) public onlyOwner {
         // Data is binarized (data holds the indices of the features that are present).
+        // We could also change this to hold the feature index and counts without changing the interface:
+        // each int64 would be split into featureIndex|count and decomposed using bit shift operations.
+
         require(classification < classifications.length, "Classification is out of bounds.");
         classCounts[classification] = classCounts[classification].add(1);
 
         ClassInfo storage info = classInfos[classification];
 
         uint totalFeatureCount = data.length.add(info.totalFeatureCount);
-        require(totalFeatureCount < 2 ** 64, "Feature count will be too high.");
+        require(totalFeatureCount < 2 ** 65, "Feature count will be too high.");
         info.totalFeatureCount = uint64(totalFeatureCount);
 
         for (uint dataIndex = 0; dataIndex < data.length; ++dataIndex) {
             int64 featureIndex = data[dataIndex];
-            require(featureIndex < 2 ** 32, "A feature index is too high.");
+            require(featureIndex < 2 ** 33, "A feature index is too high.");
+            require(info.featureCounts[uint32(featureIndex)] < 2 ** 33 - 1, "A feature count in the class would become too high.");
             info.featureCounts[uint32(featureIndex)] += 1;
         }
     }
