@@ -13,6 +13,16 @@ import {Ownable} from "../ownership/Ownable.sol";
 contract Stakeable is Ownable, IncentiveMechanism {
     using SafeMath for uint256;
 
+    event Refund(
+        address recipient,
+        uint amount
+    );
+
+    event Report(
+        address recipient,
+        uint amount
+    );
+
     // The following members are in chronologically increasing order of when they should occur.
     /**
      * Amount of time to wait to get a refund back.
@@ -148,6 +158,7 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
 
         numGoodDataPerAddress[submitter] += 1;
         totalGoodDataCount += 1;
+        emit Refund(submitter, refundAmount);
     }
 
     function handleReport(
@@ -187,5 +198,7 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
                 rewardAmount = claimableAmount;
             }
         }
+
+        emit Report(reporter, rewardAmount);
     }
 }
