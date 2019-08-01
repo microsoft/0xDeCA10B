@@ -15,7 +15,7 @@
     "body-parser": "^1.18.3",
     "ethlint": "^1.2.4",
     "express": "^4.16.4",
-    "ganache-cli": "^6.4.4",
+    "ganache-cli": "^6.5.1",
     "nodemon": "^1.18.11",
     "sql.js": "^1.0.0"
   },

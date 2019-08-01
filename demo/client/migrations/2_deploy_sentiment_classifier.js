@@ -8,6 +8,9 @@ const Classifier = artifacts.require("./classification/Perceptron");
 const Stakeable64 = artifacts.require("./incentive/Stakeable64");
 
 module.exports = async function (deployer) {
+  if (deployer.network === 'skipMigrations') {
+    return;
+  }
   // Information to persist to the DB.
   const modelInfo = {
     name: "IMDB Review Sentiment Classifier",

@@ -22,12 +22,6 @@ contract('NaiveBayesClassifier', function (accounts) {
     }
   }
 
-  function parseFloatBN(bn) {
-    assert(web3.utils.isBN(bn), `${bn} is not a BN`);
-    // Can't divide first since a BN can only be an integer.
-    return bn.toNumber() / toFloat;
-  }
-
   function mapFeatures(query) {
     return query.split(" ").map(w => {
       let result = vocab[w];
@@ -109,7 +103,8 @@ contract('NaiveBayesClassifier', function (accounts) {
     }
     const prevTotalFeatureCount = await classifier.getClassTotalFeatureCount(classification).then(parseBN);
 
-    await classifier.update(data, classification);
+    const updateResult = await classifier.update(data, classification);
+    // console.log(`update gasUsed: ${updateResult.receipt.gasUsed}`);
 
     for (let i in prevFeatureCounts) {
       const featureIndex = data[i];
