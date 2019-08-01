@@ -82,14 +82,24 @@ contract Stakeable is Ownable, IncentiveMechanism {
     /**
      * @return The amount of wei required to add data now.
      *
-     * Note that since `now` depends on the last block time,
+     * Note that since this method uses `now` which depends on the last block time,
      * when testing, the output of this function may not change over time unless blocks are created.
+     * @see `getNextAddDataCost(uint)`
      */
     function getNextAddDataCost() public view returns (uint) {
+        return getNextAddDataCost(now); // solium-disable-line security/no-block-members
+    }
+
+    /**
+     * @param currentTimeS The current time in seconds since the epoch.
+     *
+     * @return The amount of wei required to add data at `currentTimeS`.
+     */
+    function getNextAddDataCost(uint currentTimeS) public view returns (uint) {
         // Value sent is in wei (1E18 wei = 1 ether).
-        require(lastUpdateTimeS <= now, "The last update time is after the current time."); // solium-disable-line security/no-block-members
+        require(lastUpdateTimeS <= currentTimeS, "The last update time is after the current time.");
         // No SafeMath check needed because already done above.
-        uint divisor = now - lastUpdateTimeS; // solium-disable-line security/no-block-members
+        uint divisor = currentTimeS - lastUpdateTimeS;
         if (divisor == 0) {
             divisor = 1;
         } else {
