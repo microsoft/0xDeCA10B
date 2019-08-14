@@ -1,7 +1,7 @@
 # Decentralized & Collaborative AI on Blockchain Demo
 [![Build Status](https://dev.azure.com/maluuba/0xDeCA10B/_apis/build/status/demo-CI?branchName=master)](https://dev.azure.com/maluuba/0xDeCA10B/_build/latest?definitionId=116&branchName=master)
 
-A dashboard and examples for deploying updatable AI models to Ethereum.
+A dashboard and examples for deploying updatable AI models to Ethereum. A video demo is available There is a video example showing how to deploy <a href="https://aka.ms/0xDeCA10B-demo" target="_blank">here</a>.
 
 This folder also contains Solidity examples for models, data handlers, and incentive mechanisms for deploying models that are free to use for inference as initially proposed in our introductory paper.
 
@@ -50,6 +50,8 @@ yarn global upgrade yarn && yarn upgrade && (cd client && yarn upgrade)
 ```
 
 # Deploy
+There is a video example showing how to deploy <a href="https://aka.ms/0xDeCA10B-deploy" target="_blank">here</a>.
+
 ## Blockchain
 Start the blockchain (Ganache) in one terminal.
 Run:
@@ -141,6 +143,9 @@ To check the contract code run:
 ```bash
 yarn lint
 ```
+
+[deploy-video]: https://aka.ms/0xDeCA10B-deploy
+[demo-video]: https://aka.ms/0xDeCA10B-demo
 
 [ethlint]: https://github.com/duaraghav8/Ethlint
 [overview-paper]: https://aka.ms/0xDeCA10B-paper
