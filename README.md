@@ -13,11 +13,12 @@ Adding data consists of validation by three steps as described below.
 
 <img src="./assets/architecture_flow.png?raw=true" width=500 alt="Picture of a someone sending data to the addData method in CollaborativeTrainer which sends data to the 3 main components as further described next.">
 
-1. The **IncentiveMechanism** validates the transaction, for instance, in some cases a "stake" or deposit is required.
+1. The **IncentiveMechanism** validates the request to add data, for instance, in some cases a "stake" or deposit is required. In some cases, the incentive mechanism can also be triggered later to provide users with payments or virtual "karma" points.
 2. The **DataHandler** stores data and meta-data on the blockchain. This ensures that it is accessible for all future uses, not limited to this smart contract.
-3. The machine learning **model** is updated according to predefined training algorithms. In addition to adding data, anyone can query the model for predictions, and the incentive mechanism may be triggered to provide users with payments or virtual "karma" points.
+3. The machine learning **model** is updated according to predefined training algorithms. In addition to adding data, anyone can query the model for predictions **for free**.
 
 The basics of the framework can be found in our [blog post][blog1].
+A demo of one incentive mechanism can be found [here][demo].
 More details can be found in the [initial paper][overview-paper] describing the framework, accepted to Blockchain-2019, The IEEE International Conference on Blockchain: (coming July 2019)
 
 This repository contains:
@@ -89,5 +90,6 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 [demo-folder]: demo/
 [simulation-folder]: simulation/
 
+[demo]: https://aka.ms/0xDeCA10B-demo
 [blog1]: https://aka.ms/0xDeCA10B-blog1
 [overview-paper]: https://aka.ms/0xDeCA10B-paper
