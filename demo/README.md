@@ -46,7 +46,7 @@ If you have problems running the setup steps related to node-gyp, then you might
 ## Update
 To update dependencies after already setting up:
 ```bash
-yarn global upgrade yarn && yarn upgrade && (cd client && yarn upgrade)
+yarn global add yarn && yarn install && (cd client && yarn install)
 ```
 
 # Deploy

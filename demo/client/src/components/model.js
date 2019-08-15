@@ -15,6 +15,7 @@ import TableRow from '@material-ui/core/TableRow';
 import Tabs from '@material-ui/core/Tabs';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
+import * as mobilenet from '@tensorflow-models/mobilenet';
 import * as UniversalSentenceEncoder from '@tensorflow-models/universal-sentence-encoder';
 import axios from 'axios';
 import update from 'immutability-helper';
@@ -152,9 +153,7 @@ class Model extends React.Component {
   componentDidMount = async () => {
     try {
       const fallbackProvider = new Web3.providers.HttpProvider("http://127.0.0.1:7545");
-      this.web3 = await getWeb3({ fallbackProvider });
-      // Get permission and sets access to accounts.
-      await window.ethereum.enable();
+      this.web3 = await getWeb3({ fallbackProvider, requestPermission: true });
 
       axios.get(`/api/models/${this.state.modelId}`).then(r => {
         this.setState({ contractInfo: r.data.model },
@@ -260,6 +259,21 @@ class Model extends React.Component {
               .map(x => this.web3.utils.toHex(x.toNumber()));
           });
       };
+    } else if (this.state.contractInfo.encoder === 'MobileNetv2') {
+      // https://github.com/tensorflow/tfjs-models/tree/master/mobilenet
+      const model = await mobilenet.load(
+        {
+          version: 2,
+          alpha: 1,
+        }
+      );
+      transformInput = async (imgElement) => {
+        const toFloat = this.state.toFloat;
+        let imgEmbedding = await model.infer(imgElement, { embedding: true });
+        imgEmbedding = imgEmbedding.arraySync();
+        const convertedEmbedding = imgEmbedding.map(x => Math.round(x * toFloat));
+        return convertedEmbedding.map(v => this.web3.utils.toHex(v));
+      }
     } else if (this.state.contractInfo.encoder === 'IMDB vocab') {
       this.vocab = [];
       Object.entries(ImdbVocab).forEach(([key, value]) => {
@@ -450,6 +464,9 @@ class Model extends React.Component {
         .then(parseInt)
         .then(ownerClaimWaitTimeS => {
           this.setState({ ownerClaimWaitTimeS });
+        }).catch(err => {
+          console.error("Couldn't get ownerClaimWaitTimeS value from IM.");
+          console.error(err);
         }),
       this.state.incentiveMechanism.methods.costWeight().call()
         .then(parseInt)
@@ -698,11 +715,15 @@ class Model extends React.Component {
           }
           <Typography component="p">
             <b>Refund Time: </b>
-            {moment.duration(this.state.refundWaitTimeS, 's').humanize()}
+            {this.state.refundWaitTimeS ?
+              moment.duration(this.state.refundWaitTimeS, 's').humanize() :
+              "(loading)"}
           </Typography>
           <Typography component="p">
             <b>Claim Time: </b>
-            {moment.duration(this.state.ownerClaimWaitTimeS, 's').humanize()}
+            {this.state.ownerClaimWaitTimeS ?
+              moment.duration(this.state.ownerClaimWaitTimeS, 's').humanize() :
+              "(loading)"}
           </Typography>
           <Typography component="p" title={`${this.state.depositCost} wei`}>
             <b>Current Required Deposit: </b>
