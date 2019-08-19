@@ -11,11 +11,18 @@ const intents = {
     'not_hot_dog': "NOT_HOT_DOG",
 };
 
+// Classifier type can be: ncc/perceptron
+const classifierType = 'ncc';
+
+// Perceptron Classifier Config
+
+// Nearest Centroid Classifier Config
 // Normalize each sample like what will happen in production to avoid changing the centroid by too much.
 const normalizeEachEmbedding = true;
 // Normalizing the centroid didn't change performance by much.
 // It was slightly worse for HOT_DOG precision.
 const normalizeCentroid = false;
+
 
 let embeddingCache;
 const embeddingCachePath = path.join(__dirname, 'embedding_cache.json');
@@ -58,6 +65,7 @@ function normalize2d(x) {
 }
 
 async function predict(model, sample) {
+    // FIXME Assumes NCC.
     let minDistance = Number.MAX_VALUE;
     let result;
     const emb = await getEmbedding(sample);
@@ -72,7 +80,7 @@ async function predict(model, sample) {
     return result;
 }
 
-async function evaluate(intents, model) {
+async function evaluate(model) {
     const evalStats = [];
     const evalIntents = Object.entries(intents);
 
@@ -114,6 +122,60 @@ async function evaluate(intents, model) {
     console.log(JSON.stringify(evalStats, null, 2));
 }
 
+async function getCentroid(intent) {
+    const pathPrefix = path.join('train', intent);
+    const dataDir = path.join(dataPath, pathPrefix);
+    const samples = fs.readdirSync(dataDir);
+
+    console.log(`Training with ${samples.length} samples for ${intents[intent]}.`);
+
+    const allEmbeddings = [];
+    for (let i = 0; i < samples.length; ++i) {
+        if (i % 100 == 0) {
+            console.log(`  ${intents[intent]}: ${(100 * i / samples.length).toFixed(1)}% (${i}/${samples.length})`);
+        }
+
+        let emb = await getEmbedding(path.join(pathPrefix, samples[i]));
+        allEmbeddings.push(emb);
+    }
+    console.log(`  ${intents[intent]}: Done getting embeddings.`);
+    let allEmbTensor = tf.concat(allEmbeddings);
+
+    if (allEmbTensor.shape[0] !== samples.length) {
+        throw new Error(`Some embeddings are missing: allEmbTensor.shape[0] !== samples.length: ${allEmbTensor.shape[0]} !== ${samples.length}`);
+    }
+    let centroid = allEmbTensor.mean(axis = 0);
+    if (normalizeCentroid) {
+        centroid = normalize1d(centroid);
+    }
+    return {
+        centroid: centroid.arraySync(),
+        dataCount: samples.length,
+    };
+}
+
+function getNearestCentroidModel() {
+    return new Promise((resolve, reject) => {
+        Promise.all(Object.keys(intents).map(getCentroid))
+            .then(async centroidInfos => {
+                const model = {};
+                Object.values(intents).forEach((intent, i) => {
+                    model[intent] = centroidInfos[i];
+                });
+                const path = `${__dirname}/classifier-centroids.json`;
+                console.log(`Saving centroids to "${path}".`);
+                fs.writeFileSync(path, JSON.stringify(model));
+                resolve(model);
+            }).catch(reject);
+    });
+}
+
+function getPerceptronModel() {
+    return new Promise((resolve, reject) => {
+        // TODO
+    });
+}
+
 async function main() {
     global.encoder = await mobilenet.load(
         {
@@ -122,59 +184,27 @@ async function main() {
         }
     );
 
-    async function getCentroid(intent) {
-        const pathPrefix = path.join('train', intent);
-        const dataDir = path.join(dataPath, pathPrefix);
-        const samples = fs.readdirSync(dataDir);
-
-        console.log(`Training with ${samples.length} samples for ${intents[intent]}.`);
-
-        const allEmbeddings = [];
-        for (let i = 0; i < samples.length; ++i) {
-            if (i % 100 == 0) {
-                console.log(`  ${intents[intent]}: ${(100 * i / samples.length).toFixed(1)}% (${i}/${samples.length})`);
-            }
-
-            let emb = await getEmbedding(path.join(pathPrefix, samples[i]));
-            allEmbeddings.push(emb);
-        }
-        console.log(`  ${intents[intent]}: Done getting embeddings.`);
-        let allEmbTensor = tf.concat(allEmbeddings);
-
-        if (allEmbTensor.shape[0] !== samples.length) {
-            throw new Error(`Some embeddings are missing: allEmbTensor.shape[0] !== samples.length: ${allEmbTensor.shape[0]} !== ${samples.length}`);
-        }
-        let centroid = allEmbTensor.mean(axis = 0);
-        if (normalizeCentroid) {
-            centroid = normalize1d(centroid);
-        }
-        return {
-            centroid: centroid.arraySync(),
-            dataCount: samples.length,
-        };
+    let model;
+    switch (classifierType) {
+        case 'ncc':
+            model = await getNearestCentroidModel();
+            break;
+        case 'perceptron':
+            break;
+        default:
+            break;
     }
 
-    Promise.all(Object.keys(intents).map(getCentroid))
-        .then(async centroidInfos => {
-            const model = {};
-            Object.values(intents).forEach((intent, i) => {
-                model[intent] = centroidInfos[i];
-            });
-            const path = `${__dirname}/classifier-centroids.json`;
-            console.log(`Saving centroids to "${path}".`);
-            fs.writeFileSync(path, JSON.stringify(model));
+    evaluate(model);
 
-            evaluate(intents, model);
-
-            fs.writeFile(embeddingCachePath, JSON.stringify(embeddingCache), (err) => {
-                if (err) {
-                    console.error("Error writing embedding cache.");
-                    console.error(err);
-                } else {
-                    console.debug(`Wrote embedding cache to \"${embeddingCachePath}\".`);
-                }
-            });
-        });
+    fs.writeFile(embeddingCachePath, JSON.stringify(embeddingCache), (err) => {
+        if (err) {
+            console.error("Error writing embedding cache.");
+            console.error(err);
+        } else {
+            console.debug(`Wrote embedding cache to \"${embeddingCachePath}\".`);
+        }
+    });
 };
 
 main();
