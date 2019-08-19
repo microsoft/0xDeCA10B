@@ -65,20 +65,17 @@ function normalize2d(x) {
 }
 
 async function predict(model, sample) {
-    // FIXME Assumes NCC.
-    let minDistance = Number.MAX_VALUE;
-    let result;
-    const emb = await getEmbedding(sample);
-    Object.entries(model).forEach(([intent, centroidInfo]) => {
-        const centroid = tf.tensor1d(centroidInfo.centroid);
-        const distance = centroid.sub(emb).pow(2).sum();
-        if (distance.less(minDistance).dataSync()[0]) {
-            result = intent;
-            minDistance = distance;
-        }
-    });
-    return result;
+    switch (classifierType) {
+        case 'ncc':
+            return await predictNearestCentroidModel(model, sample);
+        case 'perceptron':
+            return await predictPerceptron(model, sample);
+        default:
+            throw new Error(`Unrecognized classifierType: "${classifierType}"`);
+    }
 }
+
+
 
 async function evaluate(model) {
     const evalStats = [];
@@ -121,6 +118,8 @@ async function evaluate(model) {
     console.log(`normalizeCentroid: ${normalizeCentroid}`);
     console.log(JSON.stringify(evalStats, null, 2));
 }
+
+// Nearest Centroid Classifier Section
 
 async function getCentroid(intent) {
     const pathPrefix = path.join('train', intent);
@@ -170,10 +169,31 @@ function getNearestCentroidModel() {
     });
 }
 
-function getPerceptronModel() {
+async function predictNearestCentroidModel(model, sample) {
+    let minDistance = Number.MAX_VALUE;
+    let result;
+    const emb = await getEmbedding(sample);
+    Object.entries(model).forEach(([intent, centroidInfo]) => {
+        const centroid = tf.tensor1d(centroidInfo.centroid);
+        const distance = centroid.sub(emb).pow(2).sum();
+        if (distance.less(minDistance).dataSync()[0]) {
+            result = intent;
+            minDistance = distance;
+        }
+    });
+    return result;
+}
+
+// Perceptron Section
+
+async function getPerceptronModel() {
     return new Promise((resolve, reject) => {
         // TODO
     });
+}
+
+async function predictPerceptron(model, sample) {
+    // TODO
 }
 
 async function main() {
@@ -190,9 +210,10 @@ async function main() {
             model = await getNearestCentroidModel();
             break;
         case 'perceptron':
+            model = await getPerceptronModel();
             break;
         default:
-            break;
+            throw new Error(`Unrecognized classifierType: "${classifierType}"`);
     }
 
     evaluate(model);
