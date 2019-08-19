@@ -1,23 +1,23 @@
-// TODO Finish converting for images.
-
-const tf = require('@tensorflow/tfjs');
-const mobilenet = require('@tensorflow-models/mobilenet');
 const fs = require('fs');
 const path = require('path');
 
-const dataPath = './seefood';
+const mobilenet = require('@tensorflow-models/mobilenet');
+const tf = require('@tensorflow/tfjs-node');
+const { createCanvas, loadImage } = require('canvas');
+
+const dataPath = path.join(__dirname, './seefood');
 const intents = {
     'hot_dog': "HOT_DOG",
     'not_hot_dog': "NOT_HOT_DOG",
 };
 
 // Normalize each sample like what will happen in production to avoid changing the centroid by too much.
-const normalizeEachEmbedding = true;
+const normalizeEachEmbedding = false;
 // Normalizing the centroid didn't change performance.
 const normalizeCentroid = false;
 
 let embeddingCache;
-const embeddingCachePath = 'embedding_cache.json';
+const embeddingCachePath = path.join(__dirname, 'embedding_cache.json');
 if (fs.existsSync(embeddingCachePath)) {
     embeddingCache = fs.readFileSync(embeddingCachePath, 'utf8');
     embeddingCache = JSON.parse(embeddingCache);
@@ -25,17 +25,18 @@ if (fs.existsSync(embeddingCachePath)) {
     embeddingCache = {};
 }
 
-async function getEmbedding(query) {
-    // FIXME Cache with file path as the key.
-    let result = embeddingCache[query];
+async function getEmbedding(sample) {
+    let result = embeddingCache[sample];
     if (result !== undefined) {
-        result = tf.tensor1d(result);
+        result = tf.tensor2d([result]);
     } else {
-        let imgEmbedding = await encoder.infer(imgElement, { embedding: true });
-        imgEmbedding = imgEmbedding.arraySync();
-        const newEmbeddings = await sentenceEncoder.embed([query]);
-        result = newEmbeddings.gather(0);
-        embeddingCache[query] = result.arraySync();
+        const img = await loadImage(path.join(dataPath, sample));
+        const canvas = createCanvas(img.width, img.height);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        result = await encoder.infer(canvas, { embedding: true });
+        result = result;
+        embeddingCache[sample] = result.gather(0).arraySync();
     }
     if (normalizeEachEmbedding) {
         result = normalize1d(result);
@@ -72,9 +73,7 @@ async function predict(model, query) {
 }
 
 async function evaluate(intents, model) {
-    if (trainSplit == 1) {
-        return;
-    }
+    // FIXME
     const evalStats = [];
     const evalIntents = Object.entries(intents);
     for (let i = 0; i < evalIntents.length; ++i) {
@@ -83,7 +82,6 @@ async function evaluate(intents, model) {
         let data = fs.readFileSync(path.join(dataPath, intent, filename), 'utf8');
         data = JSON.parse(data)[intent];
 
-        data = data.slice(Math.round(trainSplit * data.length));
         const queries = data.map(datum => datum.data.map(o => o.text).join(""));
         console.log(`${expectedIntent}: Evaluating with ${queries.length} samples.`);
         const stats = {
@@ -113,72 +111,44 @@ async function evaluate(intents, model) {
 }
 
 async function main() {
-    const encoder = await mobilenet.load(
-        {
-          version: 2,
-          alpha: 1,
-        }
-      );
-
     // The code for the encoder gives too many warnings.
     // tf.disableDeprecationWarnings();
 
+    global.encoder = await mobilenet.load(
+        {
+            version: 2,
+            alpha: 1,
+        }
+    );
+
     async function getCentroid(intent) {
-        // FIXME
-        const filename = `train_${intent}_full.json`;
-        let data = fs.readFileSync(path.join(dataPath, intent, filename), 'utf8');
-        data = JSON.parse(data)[intent];
+        const pathPrefix = path.join('train', intent)
+        const dataDir = path.join(dataPath, pathPrefix);
+        const samples = fs.readdirSync(dataDir);
 
-        console.log(`Found ${data.length} samples for ${intents[intent]}.`);
-        if (trainSplit < 1) {
-            data = data.slice(0, Math.round(trainSplit * data.length));
-        }
-        const queries = data.map(datum => datum.data.map(o => o.text).join(""));
-        console.log(`  Training with ${queries.length} samples.`);
+        console.log(`Training with ${samples.length} samples for ${intents[intent]}.`);
 
-        const chunkSize = 128;
         const allEmbeddings = [];
-        for (let i = 0; i < queries.length; i += chunkSize) {
-            console.log(`  ${intents[intent]}: ${(100 * i / queries.length).toFixed(1)}% (${i}/${queries.length})`);
-            const queriesNeedingEmbedding = [];
-            const currentQueries = queries.slice(i, i + chunkSize);
-            for (let j = 0; j < currentQueries.length; ++j) {
-                const query = currentQueries[j];
-                let emb = embeddingCache[query];
-                if (emb !== undefined) {
-                    emb = tf.tensor2d([emb]);
-                    if (normalizeEachEmbedding) {
-                        emb = normalize2d(emb);
-                    }
-                    allEmbeddings.push(emb);
-                } else {
-                    queriesNeedingEmbedding.push(query);
-                }
+        for (let i = 0; i < samples.length; ++i) {
+            if (i % 100 == 0) {
+                console.log(`  ${intents[intent]}: ${(100 * i / samples.length).toFixed(1)}% (${i}/${samples.length})`);
             }
-            if (queriesNeedingEmbedding.length > 0) {
-                let newEmbeddings = await sentenceEncoder.embed(queriesNeedingEmbedding);
-                const n = newEmbeddings.arraySync();
-                for (let j = 0; j < queriesNeedingEmbedding.length; ++j) {
-                    embeddingCache[queriesNeedingEmbedding[j]] = n[j];
-                }
 
-                if (normalizeEachEmbedding) {
-                    newEmbeddings = normalize2d(newEmbeddings);
-                }
-                allEmbeddings.push(newEmbeddings);
-            }
+            let emb = await getEmbedding(path.join(pathPrefix, samples[i]));
+            allEmbeddings.push(emb);
         }
+        console.log(`  ${intents[intent]}: Done getting embeddings.`);
         const allEmbTensor = tf.concat(allEmbeddings);
-        if (allEmbTensor.shape[0] !== queries.length) {
-            throw new Exception(`Some embeddings are missing: allEmbTensor.shape[0] !== queries.length: ${allEmbTensor.shape[0]} !== ${queries.length}`);
+        if (allEmbTensor.shape[0] !== samples.length) {
+            throw new Error(`Some embeddings are missing: allEmbTensor.shape[0] !== samples.length: ${allEmbTensor.shape[0]} !== ${samples.length}`);
         }
-        let centroid = allEmbTensor.mean(axis = 0);;
+        let centroid = allEmbTensor.mean(axis = 0);
         if (normalizeCentroid) {
             centroid = normalize1d(centroid);
         }
         return {
             centroid: centroid.arraySync(),
-            dataCount: queries.length,
+            dataCount: samples.length,
         };
     }
 
@@ -188,11 +158,11 @@ async function main() {
             Object.values(intents).forEach((intent, i) => {
                 model[intent] = centroidInfos[i];
             });
-            const path = `${__dirname}/vpa-classifier-centroids.json`;
+            const path = `${__dirname}/classifier-centroids.json`;
             console.log(`Saving centroids to "${path}".`);
             fs.writeFileSync(path, JSON.stringify(model));
 
-            evaluate(intents, model);
+            // evaluate(intents, model);
 
             fs.writeFile(embeddingCachePath, JSON.stringify(embeddingCache), (err) => {
                 if (err) {

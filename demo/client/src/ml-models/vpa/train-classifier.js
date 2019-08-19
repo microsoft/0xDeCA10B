@@ -18,7 +18,7 @@ const normalizeEachEmbedding = true;
 const normalizeCentroid = false;
 
 let embeddingCache;
-const embeddingCachePath = 'embedding_cache.json';
+const embeddingCachePath = path.join(__dirname, 'embedding_cache.json');
 if (fs.existsSync(embeddingCachePath)) {
     embeddingCache = fs.readFileSync(embeddingCachePath, 'utf8');
     embeddingCache = JSON.parse(embeddingCache);
