@@ -12,9 +12,14 @@ const intents = {
 };
 
 // Classifier type can be: ncc/perceptron
-const classifierType = 'ncc';
+const classifierType = 'perceptron';
 
 // Perceptron Classifier Config
+const learningRate = 1;
+const classes = {
+    "HOT_DOG": 1,
+    "NOT_HOT_DOG": 0,
+};
 
 // Nearest Centroid Classifier Config
 // Normalize each sample like what will happen in production to avoid changing the centroid by too much.
@@ -64,6 +69,19 @@ function normalize2d(x) {
     return x.div(norms);
 }
 
+/**
+ * Shuffles array in place.
+ * @param {Array} a items An array containing the items.
+ */
+// From https://stackoverflow.com/a/6274381/1226799
+function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
 async function predict(model, sample) {
     switch (classifierType) {
         case 'ncc':
@@ -74,8 +92,6 @@ async function predict(model, sample) {
             throw new Error(`Unrecognized classifierType: "${classifierType}"`);
     }
 }
-
-
 
 async function evaluate(model) {
     const evalStats = [];
@@ -134,7 +150,7 @@ async function getCentroid(intent) {
             console.log(`  ${intents[intent]}: ${(100 * i / samples.length).toFixed(1)}% (${i}/${samples.length})`);
         }
 
-        let emb = await getEmbedding(path.join(pathPrefix, samples[i]));
+        const emb = await getEmbedding(path.join(pathPrefix, samples[i]));
         allEmbeddings.push(emb);
     }
     console.log(`  ${intents[intent]}: Done getting embeddings.`);
@@ -187,13 +203,68 @@ async function predictNearestCentroidModel(model, sample) {
 // Perceptron Section
 
 async function getPerceptronModel() {
-    return new Promise((resolve, reject) => {
-        // TODO
+    return new Promise(async (resolve, reject) => {
+        // Load data.
+        const samples = [];
+        Object.keys(intents).forEach(intent => {
+            const pathPrefix = path.join('train', intent);
+            const dataDir = path.join(dataPath, pathPrefix);
+            const samplesForClass = fs.readdirSync(dataDir).map(sample => {
+                return {
+                    classification: intents[intent],
+                    path: path.join(pathPrefix, sample)
+                }
+            });
+            samples.push(...samplesForClass);
+        });
+        shuffle(samples);
+
+        const model = {
+            weights: undefined,
+            bias: 0
+        }
+        for (let i = 0; i < samples.length; ++i) {
+            if (i % 100 == 0) {
+                console.log(`  training: ${(100 * i / samples.length).toFixed(1)}% (${i}/${samples.length})`);
+            }
+            const sample = samples[i];
+            const emb = await getEmbedding(sample.path);
+            const { classification } = sample;
+
+            if (model.weights === undefined) {
+                // Initialize the weights.
+                model.weights = new Array(emb.shape[1]);
+                for (let j = 0; j < model.weights.length; ++j) {
+                    model.weights[j] = Math.random();
+                }
+                model.weights = normalize1d(tf.tensor1d(model.weights));
+            }
+            const prediction = predictPerceptron(model, emb);
+            if (prediction !== classification) {
+                // TODO Update weights.
+            }
+        }
+        model.weights = weights.arraySync();
+        resolve(model);
     });
 }
 
 async function predictPerceptron(model, sample) {
-    // TODO
+    // TODO Make sure it works.
+    let emb = sample;
+    if (typeof sample === 'string') {
+        emb = await getEmbedding(sample);
+    }
+    const prod = model.weights.dot(emb.gather(0));
+    // console.log(`prod:`);
+    // console.log(prod.arraySync());
+    const prediction = prod.add(model.bias);
+    // console.log(prediction.arraySync());
+    if (prediction.dataSync()[0] > 0) {
+        return Object.values(intents)[0];
+    } else {
+        return Object.values(intents)[1];
+    }
 }
 
 async function main() {
