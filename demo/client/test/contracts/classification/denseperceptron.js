@@ -4,7 +4,7 @@ contract('DensePerceptron', function (accounts) {
   const toFloat = 1E9;
 
   const classifications = ["NEGATIVE", "POSITIVE"];
-  const weights = convertData([0, 1, -1]);
+  const weights = convertData([0, 1, -1, 0, 0, 0, 0, 1]);
   const intercept = web3.utils.toBN(0 * toFloat);
   const learningRate = 1;
 
@@ -43,26 +43,27 @@ contract('DensePerceptron', function (accounts) {
   });
 
   it("...should predict the classification POSITIVE", async () => {
-    const prediction = await predict([0, 2, 1]);
+    const prediction = await predict([0, 2, 1, 0, 0, 0, 0, 0]);
     assert.equal(prediction, 1, "Wrong classification.");
   });
 
   it("...should predict the classification NEGATIVE", async () => {
 
-    const prediction = await predict([1, 0, 2])
+    const prediction = await predict([1, 0, 2, 0, 0, 0, 0, 0])
     assert.equal(prediction, 0, "Wrong classification.");
   });
 
   it("...should update", async () => {
-    const data = [1, 1, 1];
+    const data = [1, 1, 1, 0, 0, 0, 0, 0];
     const classification = await predict(data);
-    const updateResponse = await classifier.update(await normalize(data), classification);
+    let updateResponse = await classifier.update(await normalize(data), classification);
     assert.isBelow(updateResponse.receipt.gasUsed, 2E5, "Too much gas used.");
-    // console.log(`  update gasUsed: ${updateResponse.receipt.gasUsed}`);
+    // console.log(`  update (same class) gasUsed: ${updateResponse.receipt.gasUsed}`);
     assert.equal(await predict(data), classification);
 
     const newClassification = 1 - classification;
-    await classifier.update(await normalize(data), newClassification);
+    updateResponse = await classifier.update(await normalize(data), newClassification);
+    // console.log(`  update (different class) gasUsed: ${updateResponse.receipt.gasUsed}`);
     assert.equal(await predict(data), newClassification);
   });
 });

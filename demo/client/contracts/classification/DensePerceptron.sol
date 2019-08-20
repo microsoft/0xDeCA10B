@@ -12,7 +12,7 @@ contract DensePerceptron is Classifier64 {
     using SafeMath for uint256;
     using SignedSafeMath for int256;
 
-    mapping(uint64 => int80) public weights;
+    int80[] public weights;
     int80 public intercept;
     uint8 public learningRate;
 
@@ -28,20 +28,20 @@ contract DensePerceptron is Classifier64 {
         learningRate = _learningRate;
 
         require(_weights.length < 2**64 - 1, "Too many weights given.");
-        for (uint64 i = 0; i < _weights.length; ++i) {
-            weights[i] = _weights[i];
-        }
+        // for (uint64 i = 0; i < _weights.length; ++i) {
+        //     weights[i] = _weights[i];
+        // }
+        weights = _weights;
     }
 
     /**
-     * Initialize weights for the model.
+     * Initialize more weights for the model.
      * Made to be called just after the contract is created and never again.
-     * @param startIndex The index to start placing `_weights` into the model's weights.
-     * @param _weights The weights to set for the model.
+     * @param _weights The weights to append to the model.
      */
-    function initializeWeights(uint64 startIndex, int80[] memory _weights) public onlyOwner {
+    function initializeWeights(int80[] memory _weights) public onlyOwner {
         for (uint64 i = 0; i < _weights.length; ++i) {
-            weights[startIndex + i] = _weights[i];
+            weights.push(_weights[i]);
         }
     }
 
@@ -54,12 +54,10 @@ contract DensePerceptron is Classifier64 {
     }
 
     function predict(int64[] memory data) public view returns (uint64) {
-        // FIXME
         int m = intercept;
+        require(data.length == weights.length, "The data must have the same dimension as the weights.");
         for (uint i = 0; i < data.length; ++i) {
-            // `update` assumes this check is done.
-            require(data[i] >= 0, "Not all indices are >= 0.");
-            m = m.add(weights[uint64(data[i])]);
+            m = m.add(int(weights[i]).mul(data[i]));
         }
         if (m <= 0) {
             return 0;
@@ -69,24 +67,22 @@ contract DensePerceptron is Classifier64 {
     }
 
     function update(int64[] memory data, uint64 classification) public onlyOwner {
-        // FIXME
-        // Data is binarized (data holds the indices of the features that are present).
+        // TODO Use more SafeMath.
+        // TODO Make sure normalized.
         uint64 prediction = predict(data);
         if (prediction != classification) {
             // Update model.
-            // predict checks each data[i] >= 0.
-            uint i;
+            // predict checks `data.length == weights.length`.
             uint len = data.length;
-            int80 change = toFloat * learningRate;
             if (classification > 0) {
                 // sign = 1
-                for(i = 0; i < len; ++i) {
-                    weights[uint64(data[i])] += change;
+                for(uint i = 0; i < len; ++i) {
+                    weights[i] += data[i] * learningRate;
                 }
             } else {
                 // sign = -1
-                for(i = 0; i < len; ++i) {
-                    weights[uint64(data[i])] -= change;
+                for(uint i = 0; i < len; ++i) {
+                    weights[i] -= data[i] * learningRate;
                 }
             }
         }
