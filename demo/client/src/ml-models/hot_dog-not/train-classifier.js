@@ -235,7 +235,7 @@ async function getPerceptronModel() {
                 // Initialize the weights.
                 model.weights = new Array(emb.shape[1]);
                 for (let j = 0; j < model.weights.length; ++j) {
-                    model.weights[j] = Math.random();
+                    model.weights[j] = Math.random() - 0.5;
                 }
                 model.weights = normalize1d(tf.tensor1d(model.weights));
             }
