@@ -16,19 +16,23 @@ const intents = {
     'not_hot_dog': negativeClass,
 };
 
+// Normalize each sample like what will happen in production to avoid changing the centroid by too much.
+const normalizeEachEmbedding = false;
+
 // Classifier type can be: ncc/perceptron
 const classifierType = 'perceptron';
 
 // Perceptron Classifier Config
-const learningRate = 1 / 250;
+let learningRate = 0.2;
+const LEARNING_RATE_CHANGE_FACTOR = 0.618;
+const LEARNING_RATE_CUTTING_PERCENT_OF_BEST = 0.618;
+const MAX_STABILITY_COUNT = 3;
 const classes = {
     [positiveClass]: +1,
     [negativeClass]: -1,
 };
 
 // Nearest Centroid Classifier Config
-// Normalize each sample like what will happen in production to avoid changing the centroid by too much.
-const normalizeEachEmbedding = true;
 // Normalizing the centroid didn't change performance by much.
 // It was slightly worse for HOT_DOG precision.
 const normalizeCentroid = false;
@@ -235,8 +239,9 @@ async function getPerceptronModel() {
             bias: 0,
         }
 
-        let numUpdates;
+        let numUpdates, bestNumUpdatesBeforeLearningRateChange;
         let epoch = 0;
+        let stabilityCount = 0;
         do {
             numUpdates = 0;
             shuffle(samples);
@@ -254,7 +259,8 @@ async function getPerceptronModel() {
                     for (let j = 0; j < model.weights.length; ++j) {
                         model.weights[j] = Math.random() - 0.5;
                     }
-                    model.weights = normalize1d(tf.tensor1d(model.weights));
+                    model.weights = tf.tensor1d(model.weights);
+                    model.weights = normalize1d(model.weights);
                 }
                 const prediction = await predictPerceptron(model, emb);
                 if (prediction !== classification) {
@@ -264,9 +270,24 @@ async function getPerceptronModel() {
                 }
                 emb.dispose();
             }
-            console.log(`Training epoch: ${epoch}: numUpdates: ${numUpdates}`);
+            console.log(`Training epoch: ${epoch.toString().padStart(4, '0')}: numUpdates: ${numUpdates}`);
             epoch += 1;
-        } while (numUpdates > samples.length * 0.01);
+            if (bestNumUpdatesBeforeLearningRateChange !== undefined &&
+                numUpdates < bestNumUpdatesBeforeLearningRateChange * LEARNING_RATE_CUTTING_PERCENT_OF_BEST) {
+                learningRate *= LEARNING_RATE_CHANGE_FACTOR;
+                console.log(`Changed learning rate to: ${learningRate.toFixed(3)}`);
+                bestNumUpdatesBeforeLearningRateChange = numUpdates;
+            }
+            if (bestNumUpdatesBeforeLearningRateChange === undefined) {
+                bestNumUpdatesBeforeLearningRateChange = numUpdates;
+            }
+
+            if (numUpdates < Math.max(samples.length * 0.01, 1)) {
+                stabilityCount += 1;
+            } else {
+                stabilityCount = 0;
+            }
+        } while (stabilityCount < MAX_STABILITY_COUNT);
         const modelPath = path.join(__dirname, 'classifier-perceptron.json');
         console.log(`Saving Perceptron to "${modelPath}".`);
         fs.writeFileSync(modelPath, JSON.stringify({
