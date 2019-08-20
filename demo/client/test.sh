@@ -22,5 +22,8 @@ CI=true truffle test || cleanup exit
 
 cleanup
 
+# Add CI=true before to remove colors.
+mocha --recursive src/**/__tests__/*.test.js
+
 # Set `CI=true` to avoid watching for changes.
 CI=true react-scripts test --env=jsdom || exit 1

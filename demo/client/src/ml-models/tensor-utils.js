@@ -3,6 +3,9 @@ const tf = require('@tensorflow/tfjs-node');
 exports.normalize1d = function (x) {
     const ord = 2;
     const norm = tf.norm(x, ord);
+    if (norm.dataSync()[0] === 0) {
+        return x;
+    }
     return x.div(norm);
 }
 
