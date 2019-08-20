@@ -1,12 +1,13 @@
 pragma solidity ^0.5.0;
 pragma experimental ABIEncoderV2;
 
+import "../libs/Math.sol";
 import "../libs/SafeMath.sol";
 import "../libs/SignedSafeMath.sol";
 
 import {Classifier64} from "./Classifier.sol";
 
-contract Perceptron is Classifier64 {
+contract DensePerceptron is Classifier64 {
 
     using SafeMath for uint256;
     using SignedSafeMath for int256;
@@ -44,11 +45,16 @@ contract Perceptron is Classifier64 {
         }
     }
 
-    function norm(int64[] memory /* data */) public pure returns (uint) {
-        revert("Normalization is not required.");
+    function norm(int64[] memory data) public pure returns (uint result) {
+        result = 0;
+        for (uint i = 0; i < data.length; ++i) {
+            result = result.add(uint(int128(data[i]) * data[i]));
+        }
+        result = Math.sqrt(result);
     }
 
     function predict(int64[] memory data) public view returns (uint64) {
+        // FIXME
         int m = intercept;
         for (uint i = 0; i < data.length; ++i) {
             // `update` assumes this check is done.
@@ -63,6 +69,7 @@ contract Perceptron is Classifier64 {
     }
 
     function update(int64[] memory data, uint64 classification) public onlyOwner {
+        // FIXME
         // Data is binarized (data holds the indices of the features that are present).
         uint64 prediction = predict(data);
         if (prediction != classification) {
@@ -81,40 +88,6 @@ contract Perceptron is Classifier64 {
                 for(i = 0; i < len; ++i) {
                     weights[uint64(data[i])] -= change;
                 }
-            }
-        }
-    }
-
-    /**
-     * Evaluate a batch.
-     *
-     * Force samples to have a size of 60 because about 78% of the IMDB test data has less than 60 tokens. If the sample has less than 60 unique tokens, then use a value > weights.length.
-     *
-     * @return The number correct in the batch.
-     */
-    function evaluateBatch(uint24[60][] calldata dataBatch, uint64[] calldata _classifications) external view returns (uint numCorrect) {
-        numCorrect = 0;
-        uint len = dataBatch.length;
-        uint i;
-        uint dataLen;
-        uint24[60] memory data;
-        int80 prediction;
-        for (uint dataIndex = 0; dataIndex < len; ++dataIndex) {
-            data = dataBatch[dataIndex];
-            // Re-implement prediction for speed and to handle the type of data not matching.
-            prediction = intercept;
-            dataLen = data.length;
-            for (i = 0; i < dataLen; ++i) {
-                prediction += weights[data[i]];
-            }
-            if (prediction <= 0) {
-                prediction = 0;
-            } else {
-                prediction = 1;
-            }
-
-            if (prediction == _classifications[dataIndex]) {
-                numCorrect += 1;
             }
         }
     }
