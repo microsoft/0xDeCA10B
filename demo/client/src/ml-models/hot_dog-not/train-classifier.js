@@ -9,33 +9,39 @@ const { normalize1d, normalize2d } = require('../tensor-utils');
 
 const dataPath = path.join(__dirname, './seefood');
 
-const positiveClass = "HOT_DOG";
-const negativeClass = "NOT_HOT_DOG";
-const intents = {
-    'hot_dog': positiveClass,
-    'not_hot_dog': negativeClass,
+const POSITIVE_CLASS = "HOT_DOG";
+const NEGATIVE_CLASS = "NOT_HOT_DOG";
+const INTENTS = {
+    'hot_dog': POSITIVE_CLASS,
+    'not_hot_dog': NEGATIVE_CLASS,
 };
 
 // Normalize each sample like what will happen in production to avoid changing the centroid by too much.
-const normalizeEachEmbedding = false;
+const NORMALIZE_EACH_EMBEDDING = true;
 
 // Classifier type can be: ncc/perceptron
-const classifierType = 'perceptron';
+const CLASSIFIER_TYPE = 'perceptron';
 
 // Perceptron Classifier Config
-let learningRate = 0.2;
+
+// Sort of like regularization but it does not converge.
+// Probably because it ruins the Perceptron assumption of updating weights.
+const NORMALIZE_PERCEPTRON_WEIGHTS = false;
+
+let learningRate = 1;
 const LEARNING_RATE_CHANGE_FACTOR = 0.618;
 const LEARNING_RATE_CUTTING_PERCENT_OF_BEST = 0.618;
 const MAX_STABILITY_COUNT = 3;
+const PERCENT_OF_TRAINING_SET_TO_FIT = 0.9;
 const classes = {
-    [positiveClass]: +1,
-    [negativeClass]: -1,
+    [POSITIVE_CLASS]: +1,
+    [NEGATIVE_CLASS]: -1,
 };
 
 // Nearest Centroid Classifier Config
 // Normalizing the centroid didn't change performance by much.
 // It was slightly worse for HOT_DOG precision.
-const normalizeCentroid = false;
+const NORMALIZE_CENTROID = false;
 
 
 let embeddingCache;
@@ -59,7 +65,7 @@ async function getEmbedding(sample) {
         result = await encoder.infer(canvas, { embedding: true });
         embeddingCache[sample] = result.gather(0).arraySync();
     }
-    if (normalizeEachEmbedding) {
+    if (NORMALIZE_EACH_EMBEDDING) {
         result = normalize2d(result);
     }
     return result;
@@ -79,19 +85,19 @@ function shuffle(a) {
 }
 
 async function predict(model, sample) {
-    switch (classifierType) {
+    switch (CLASSIFIER_TYPE) {
         case 'ncc':
             return await predictNearestCentroidModel(model, sample);
         case 'perceptron':
             return await predictPerceptron(model, sample);
         default:
-            throw new Error(`Unrecognized classifierType: "${classifierType}"`);
+            throw new Error(`Unrecognized classifierType: "${CLASSIFIER_TYPE}"`);
     }
 }
 
 async function evaluate(model) {
     const evalStats = [];
-    const evalIntents = Object.entries(intents);
+    const evalIntents = Object.entries(INTENTS);
     let precisionHarmonicMean = 0;
 
     for (let i = 0; i < evalIntents.length; ++i) {
@@ -107,7 +113,7 @@ async function evaluate(model) {
         const dataDir = path.join(dataPath, pathPrefix);
         const samples = fs.readdirSync(dataDir);
 
-        console.log(`Evaluating with ${samples.length} samples for ${intents[intent]}.`);
+        console.log(`Evaluating with ${samples.length} samples for ${INTENTS[intent]}.`);
 
         for (let i = 0; i < samples.length; ++i) {
             if (i % Math.round(samples.length / 5) == 0) {
@@ -128,16 +134,17 @@ async function evaluate(model) {
         evalStats.push(stats);
         console.log(`  ${expectedIntent}: Done evaluating.`);
     }
-    console.log(`normalizeEachEmbedding: ${normalizeEachEmbedding}`);
-    switch (classifierType) {
+    console.log(`NORMALIZE_EACH_EMBEDDING: ${NORMALIZE_EACH_EMBEDDING}`);
+    console.log(`NORMALIZE_PERCEPTRON_WEIGHTS: ${NORMALIZE_PERCEPTRON_WEIGHTS}`);
+    switch (CLASSIFIER_TYPE) {
         case 'ncc':
-            console.log(`normalizeCentroid: ${normalizeCentroid}`);
+            console.log(`normalizeCentroid: ${NORMALIZE_CENTROID}`);
             break;
         case 'perceptron':
             console.log(`learningRate: ${learningRate}`);
             break;
         default:
-            throw new Error(`Unrecognized classifierType: "${classifierType}"`);
+            throw new Error(`Unrecognized classifierType: "${CLASSIFIER_TYPE}"`);
     }
     console.log(JSON.stringify(evalStats, null, 2));
     precisionHarmonicMean = evalStats.length / precisionHarmonicMean;
@@ -151,18 +158,18 @@ async function getCentroid(intent) {
     const dataDir = path.join(dataPath, pathPrefix);
     const samples = fs.readdirSync(dataDir);
 
-    console.log(`Training with ${samples.length} samples for ${intents[intent]}.`);
+    console.log(`Training with ${samples.length} samples for ${INTENTS[intent]}.`);
 
     const allEmbeddings = [];
     for (let i = 0; i < samples.length; ++i) {
         if (i % 100 == 0) {
-            console.log(`  ${intents[intent]}: ${(100 * i / samples.length).toFixed(1)}% (${i}/${samples.length})`);
+            console.log(`  ${INTENTS[intent]}: ${(100 * i / samples.length).toFixed(1)}% (${i}/${samples.length})`);
         }
 
         const emb = await getEmbedding(path.join(pathPrefix, samples[i]));
         allEmbeddings.push(emb);
     }
-    console.log(`  ${intents[intent]}: Done getting embeddings.`);
+    console.log(`  ${INTENTS[intent]}: Done getting embeddings.`);
     const centroid = tf.tidy(() => {
         const allEmbTensor = tf.concat(allEmbeddings);
 
@@ -170,7 +177,7 @@ async function getCentroid(intent) {
             throw new Error(`Some embeddings are missing: allEmbTensor.shape[0] !== samples.length: ${allEmbTensor.shape[0]} !== ${samples.length}`);
         }
         let centroid = allEmbTensor.mean(axis = 0);
-        if (normalizeCentroid) {
+        if (NORMALIZE_CENTROID) {
             centroid = normalize1d(centroid);
         }
         return centroid.arraySync();
@@ -184,10 +191,10 @@ async function getCentroid(intent) {
 
 function getNearestCentroidModel() {
     return new Promise((resolve, reject) => {
-        Promise.all(Object.keys(intents).map(getCentroid))
+        Promise.all(Object.keys(INTENTS).map(getCentroid))
             .then(async centroidInfos => {
                 const model = {};
-                Object.values(intents).forEach((intent, i) => {
+                Object.values(INTENTS).forEach((intent, i) => {
                     model[intent] = centroidInfos[i];
                 });
                 const modelPath = path.join(__dirname, 'classifier-centroids.json');
@@ -222,12 +229,12 @@ async function getPerceptronModel() {
     return new Promise(async (resolve, reject) => {
         // Load data.
         const samples = [];
-        Object.keys(intents).forEach(intent => {
+        Object.keys(INTENTS).forEach(intent => {
             const pathPrefix = path.join('train', intent);
             const dataDir = path.join(dataPath, pathPrefix);
             const samplesForClass = fs.readdirSync(dataDir).map(sample => {
                 return {
-                    classification: intents[intent],
+                    classification: INTENTS[intent],
                     path: path.join(pathPrefix, sample)
                 }
             });
@@ -243,6 +250,11 @@ async function getPerceptronModel() {
         let epoch = 0;
         let stabilityCount = 0;
         do {
+            if (model.weights !== undefined && NORMALIZE_PERCEPTRON_WEIGHTS) {
+                // Sort of like regularization.
+                model.weights = normalize1d(model.weights);
+            }
+
             numUpdates = 0;
             shuffle(samples);
             for (let i = 0; i < samples.length; ++i) {
@@ -282,7 +294,7 @@ async function getPerceptronModel() {
                 bestNumUpdatesBeforeLearningRateChange = numUpdates;
             }
 
-            if (numUpdates < Math.max(samples.length * 0.01, 1)) {
+            if (numUpdates < Math.max(samples.length * (1 - PERCENT_OF_TRAINING_SET_TO_FIT), 1)) {
                 stabilityCount += 1;
             } else {
                 stabilityCount = 0;
@@ -308,9 +320,9 @@ async function predictPerceptron(model, sample) {
         let prediction = model.weights.dot(emb.gather(0));
         prediction = prediction.add(model.bias);
         if (prediction.greater(0).dataSync()[0]) {
-            result = positiveClass;
+            result = POSITIVE_CLASS;
         } else {
-            result = negativeClass;
+            result = NEGATIVE_CLASS;
         }
     });
     if (typeof sample === 'string') {
@@ -328,7 +340,7 @@ async function main() {
     );
 
     let model;
-    switch (classifierType) {
+    switch (CLASSIFIER_TYPE) {
         case 'ncc':
             model = await getNearestCentroidModel();
             break;
@@ -336,7 +348,7 @@ async function main() {
             model = await getPerceptronModel();
             break;
         default:
-            throw new Error(`Unrecognized classifierType: "${classifierType}"`);
+            throw new Error(`Unrecognized classifierType: "${CLASSIFIER_TYPE}"`);
     }
 
     evaluate(model);
