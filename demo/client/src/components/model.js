@@ -123,6 +123,16 @@ class Model extends React.Component {
       trainData: undefined,
       trainClassIndex: 0,
       input: "[]",
+      inputType: undefined,
+      // inputImageUrl: "https://images.unsplash.com/photo-1518791841217-8f162f1e1131",
+      // inputImageUrl: "https://hips.hearstapps.com/hmg-prod.s3.amazonaws.com/images/gettyimages-1094874726.png?crop=0.542xw:0.814xh;0.0472xw,0.127xh&resize=640:*",
+      // inputImageUrl: "https://github.com/tensorflow/tfjs-models/blob/master/mobilenet/demo/coffee.jpg?raw=true",
+      // inputImageUrl: "https://d17fnq9dkz9hgj.cloudfront.net/breed-uploads/2018/09/dog-landing-hero-lg.jpg?bust=1536935129&width=1080",
+      // inputImageUrl: "https://leitesculinaria.com/wp-content/uploads/fly-images/96169/best-hot-dog-recipe-fi-400x225-c.jpg",
+      // inputImageUrl: "https://www.ballparkbrand.com/sites/default/files/Hero_Dog_0.png",
+      inputImageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Hotdog_-_Evan_Swigart.jpg/1200px-Hotdog_-_Evan_Swigart.jpg",
+      // inputImageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/VitalikButerinProfile.jpg/250px-VitalikButerinProfile.jpg",
+      // inputImageUrl: "https://pbs.twimg.com/profile_images/977496875887558661/L86xyLF4_400x400.jpg",
       accounts: undefined,
       prediction: "",
       accountScore: undefined,
@@ -158,7 +168,11 @@ class Model extends React.Component {
 
       axios.get(`/api/models/${this.state.modelId}`).then(r => {
         this.setState({ contractInfo: r.data.model },
-          this.setContractInstance);
+          async _ => {
+            await this.setContractInstance();
+            // TODO Add a toast and enable buttons.
+            console.log("Ready for interactions.");
+          });
       });
     } catch (error) {
       alert(`Failed to load web3, accounts, or contract. Check console for details.`);
@@ -216,24 +230,24 @@ class Model extends React.Component {
     await this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism });
     await Promise.all([this.updateContractInfo(), this.updateDynamicInfo()]);
 
-          if (this.state.tab !== 0) {
-            this.handleTabChange(null, this.state.tab);
-          }
-      setInterval(this.updateDynamicInfo, 15 * 1000);
-      if (typeof window !== "undefined" && window.ethereum) {
-        window.ethereum.on('accountsChanged', accounts => {
-          this.setState({ accounts, addedData: [], rewardData: [] }, _ => {
-            this.updateDynamicAccountInfo().then(() => {
-              if (this.state.tab !== 0) {
-                this.handleTabChange(null, this.state.tab);
-              }
-            });
+    if (this.state.tab !== 0) {
+      this.handleTabChange(null, this.state.tab);
+    }
+    setInterval(this.updateDynamicInfo, 15 * 1000);
+    if (typeof window !== "undefined" && window.ethereum) {
+      window.ethereum.on('accountsChanged', accounts => {
+        this.setState({ accounts, addedData: [], rewardData: [] }, _ => {
+          this.updateDynamicAccountInfo().then(() => {
+            if (this.state.tab !== 0) {
+              this.handleTabChange(null, this.state.tab);
+            }
           });
         });
-        window.ethereum.on('networkChanged', netId => {
-          this.setContractInstance();
-        });
-      }
+      });
+      window.ethereum.on('networkChanged', netId => {
+        this.setContractInstance();
+      });
+    }
 
     const transformInput = await this.getTransformInputMethod();
     this.transformInput = transformInput.bind(this);
@@ -270,8 +284,9 @@ class Model extends React.Component {
       transformInput = async (imgElement) => {
         const toFloat = this.state.toFloat;
         let imgEmbedding = await model.infer(imgElement, { embedding: true });
-        imgEmbedding = imgEmbedding.arraySync();
-        const convertedEmbedding = imgEmbedding.map(x => Math.round(x * toFloat));
+        const emb = imgEmbedding.arraySync()[0];
+        imgEmbedding.dispose();
+        const convertedEmbedding = emb.map(x => Math.round(x * toFloat));
         return convertedEmbedding.map(v => this.web3.utils.toHex(v));
       }
     } else if (this.state.contractInfo.encoder === 'IMDB vocab') {
@@ -484,9 +499,9 @@ class Model extends React.Component {
 
   updateDynamicInfo() {
     return Promise.all([
-    this.addDataCost()
-      .then((depositCost) => {
-        this.setState({ depositCost });
+      this.addDataCost()
+        .then((depositCost) => {
+          this.setState({ depositCost });
         }),
       this.updateDynamicAccountInfo()
     ]);
@@ -613,11 +628,16 @@ class Model extends React.Component {
 
   predictInput() {
     this.setState({ encodedPredictionData: null });
-    this.setState({ prediction: "(Transforming Input)" }, () => {
-      this.transformInput(this.state.input)
+    this.setState({ prediction: "(Transforming Input)" }, _ => {
+      let input = this.state.input;
+      if (this.state.inputType === 'image') {
+        input = document.getElementById('input-image');
+      }
+
+      this.transformInput(input)
         .then(input => {
           this.setState({ encodedPredictionData: `Encoded data: ${this.getDisplayableEncodedData(input)}` });
-          this.setState({ prediction: "(Predicting)" }, () => {
+          this.setState({ prediction: "(Predicting)" }, _ => {
             this.predict(input)
               .then(prediction => {
                 this.setState({ prediction });
@@ -750,11 +770,19 @@ class Model extends React.Component {
               <TabContainer>
                 <form id="predict-form" onSubmit={(e) => { e.preventDefault(); this.predictInput(); }}>
                   <div className={this.classes.tabContainer}>
-                    <TextField
-                      name="input"
-                      label="Input"
-                      onChange={this.handleInputChange}
-                      margin="normal" />
+                    {this.state.inputType === 'text' ?
+                      <TextField
+                        name="input"
+                        label="Input"
+                        onChange={this.handleInputChange}
+                        margin="normal" />
+                      : <img
+                        id="input-image"
+                        width="500"
+                        crossOrigin="anonymous"
+                        src={this.state.inputImageUrl}
+                        alt="The item to classify."
+                      />}
                     <Button type="submit" className={this.classes.button} variant="outlined"> Get Prediction </Button>
                     <br />
                     <br />
