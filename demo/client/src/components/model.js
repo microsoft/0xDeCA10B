@@ -19,6 +19,7 @@ import * as mobilenet from '@tensorflow-models/mobilenet';
 import * as UniversalSentenceEncoder from '@tensorflow-models/universal-sentence-encoder';
 import axios from 'axios';
 import update from 'immutability-helper';
+import moment from 'moment';
 import PropTypes from 'prop-types';
 import React from 'react';
 import Web3 from "web3"; // Only required for custom/fallback provider option.
@@ -28,7 +29,7 @@ import DataHandler from '../contracts/DataHandler64.json';
 import IncentiveMechanism from '../contracts/Stakeable64.json';
 import ImdbVocab from '../data/imdb.json';
 
-const moment = require('moment');
+moment.relativeTimeThreshold('ss', 4);
 
 const styles = theme => ({
   root: {
@@ -181,9 +182,6 @@ class Model extends React.Component {
       // TODO Get abi from https://etherscan.io/apis#contracts
     }
 
-    const transformInput = await this.getTransformInputMethod();
-    this.transformInput = transformInput.bind(this);
-
     const contractInstance = await this.getContractInstance({
       web3: this.web3,
       abi: CollaborativeTrainer.abi,
@@ -215,14 +213,12 @@ class Model extends React.Component {
       abi: IncentiveMechanism.abi,
       address: incentiveMechanismAddress
     });
-    this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism }, _ => {
-      this.updateContractInfo()
-        .then(this.updateDynamicInfo)
-        .then(() => {
+    await this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism });
+    await Promise.all([this.updateContractInfo(), this.updateDynamicInfo()]);
+
           if (this.state.tab !== 0) {
             this.handleTabChange(null, this.state.tab);
           }
-        });
       setInterval(this.updateDynamicInfo, 15 * 1000);
       if (typeof window !== "undefined" && window.ethereum) {
         window.ethereum.on('accountsChanged', accounts => {
@@ -238,12 +234,15 @@ class Model extends React.Component {
           this.setContractInstance();
         });
       }
-    });
+
+    const transformInput = await this.getTransformInputMethod();
+    this.transformInput = transformInput.bind(this);
   }
 
   async getTransformInputMethod() {
     let transformInput;
     if (this.state.contractInfo.encoder === 'universal sentence encoder') {
+      await this.setState({ inputType: 'text' });
       const use = await UniversalSentenceEncoder.load();
       transformInput = async (query) => {
         const toFloat = this.state.toFloat;
@@ -260,6 +259,7 @@ class Model extends React.Component {
           });
       };
     } else if (this.state.contractInfo.encoder === 'MobileNetv2') {
+      await this.setState({ inputType: 'image' });
       // https://github.com/tensorflow/tfjs-models/tree/master/mobilenet
       const model = await mobilenet.load(
         {
@@ -275,6 +275,7 @@ class Model extends React.Component {
         return convertedEmbedding.map(v => this.web3.utils.toHex(v));
       }
     } else if (this.state.contractInfo.encoder === 'IMDB vocab') {
+      await this.setState({ inputType: 'text' });
       this.vocab = [];
       Object.entries(ImdbVocab).forEach(([key, value]) => {
         this.vocab[value] = key;
@@ -482,11 +483,13 @@ class Model extends React.Component {
   }
 
   updateDynamicInfo() {
+    return Promise.all([
     this.addDataCost()
       .then((depositCost) => {
         this.setState({ depositCost });
-      });
-    return this.updateDynamicAccountInfo();
+        }),
+      this.updateDynamicAccountInfo()
+    ]);
   }
 
   updateDynamicAccountInfo() {
@@ -714,13 +717,13 @@ class Model extends React.Component {
             </Typography>
           }
           <Typography component="p">
-            <b>Refund Time: </b>
+            <b>Time to wait before requesting a refund: </b>
             {this.state.refundWaitTimeS ?
               moment.duration(this.state.refundWaitTimeS, 's').humanize() :
               "(loading)"}
           </Typography>
           <Typography component="p">
-            <b>Claim Time: </b>
+            <b>Time to wait before taking another's deposit: </b>
             {this.state.ownerClaimWaitTimeS ?
               moment.duration(this.state.ownerClaimWaitTimeS, 's').humanize() :
               "(loading)"}
