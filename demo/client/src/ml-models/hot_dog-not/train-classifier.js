@@ -9,8 +9,8 @@ const { normalize1d, normalize2d } = require('../tensor-utils');
 
 const dataPath = path.join(__dirname, './seefood');
 
-const POSITIVE_CLASS = "HOT_DOG";
-const NEGATIVE_CLASS = "NOT_HOT_DOG";
+const POSITIVE_CLASS = "HOT DOG";
+const NEGATIVE_CLASS = "NOT HOT DOG";
 const INTENTS = {
     'hot_dog': POSITIVE_CLASS,
     'not_hot_dog': NEGATIVE_CLASS,
