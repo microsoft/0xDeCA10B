@@ -4,24 +4,24 @@ contract('DensePerceptron', function (accounts) {
   const toFloat = 1E9;
 
   const classifications = ["NEGATIVE", "POSITIVE"];
-  const weights = convertData([0, 1, -1, 0, 0, 0, 0, 1]);
-  const intercept = web3.utils.toBN(0 * toFloat);
+  const weights = [0, 1, -1, 0, 0, 0, 0, 1];
+  const intercept = convertNum(0);
   const learningRate = 1;
 
   let classifier;
 
+  function convertNum(num) {
+    return web3.utils.toBN(Math.round(num * toFloat));
+  }
+
   function convertData(data) {
-    return data.map(x => Math.round(x * toFloat)).map(web3.utils.toBN);
+    return data.map(convertNum);
   }
 
   async function normalize(data) {
     data = convertData(data);
     const norm = await classifier.norm(data);
     return data.map(x => x.mul(web3.utils.toBN(toFloat)).div(norm));
-  }
-
-  function convertNum(num) {
-    return web3.utils.toBN(Math.round(num * toFloat));
   }
 
   function parseBN(num) {
@@ -33,13 +33,20 @@ contract('DensePerceptron', function (accounts) {
     }
   }
 
+  function mapBackBN(num) {
+    return parseBN(num) / toFloat;
+  }
+
   async function predict(data) {
     data = await normalize(data);
     return parseBN(await classifier.predict(data));
   }
 
   before("deploy classifier", async () => {
-    classifier = await Classifier.new(classifications, weights, intercept, learningRate);
+    classifier = await Classifier.new(classifications, convertData(weights), intercept, learningRate);
+
+    const retrievedWeights = await Promise.all([...Array(weights.length).keys()].map(i => classifier.weights(i).then(mapBackBN)));
+    expect(weights).to.eql(retrievedWeights);
   });
 
   it("...should predict the classification POSITIVE", async () => {
@@ -55,15 +62,34 @@ contract('DensePerceptron', function (accounts) {
 
   it("...should update", async () => {
     const data = [1, 1, 1, 0, 0, 0, 0, 0];
-    const classification = await predict(data);
-    let updateResponse = await classifier.update(await normalize(data), classification);
+    const normalizedData = await normalize(data);
+    const classification = await predict(normalizedData);
+    const _weights = await Promise.all([...Array(data.length).keys()].map(i => classifier.weights(i).then(mapBackBN)));
+    let updateResponse = await classifier.update(normalizedData, classification);
     assert.isBelow(updateResponse.receipt.gasUsed, 2E5, "Too much gas used.");
     // console.log(`  update (same class) gasUsed: ${updateResponse.receipt.gasUsed}`);
-    assert.equal(await predict(data), classification);
+
+    let updatedWeights = await Promise.all([...Array(data.length).keys()].map(i => classifier.weights(i).then(mapBackBN)));
+    expect(_weights).to.eql(updatedWeights);
+
+    assert.equal(await predict(normalizedData), classification);
+
 
     const newClassification = 1 - classification;
     updateResponse = await classifier.update(await normalize(data), newClassification);
     // console.log(`  update (different class) gasUsed: ${updateResponse.receipt.gasUsed}`);
-    assert.equal(await predict(data), newClassification);
+
+    updatedWeights = await Promise.all([...Array(data.length).keys()].map(i => classifier.weights(i).then(mapBackBN)));
+    for (let i = 0; i < normalizedData.length; ++i) {
+      let sign = -1;
+      if (newClassification > 0) {
+        sign = +1;
+      }
+      _weights[i] += sign * learningRate * mapBackBN(normalizedData[i]);
+    }
+    expect(_weights).to.eql(updatedWeights);
+
+    // FIXME Handle decimal accuracy.
+    assert.equal(await predict(normalizedData), newClassification);
   });
 });
