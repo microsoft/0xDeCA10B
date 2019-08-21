@@ -43,7 +43,11 @@ contract('DensePerceptron', function (accounts) {
   }
 
   before("deploy classifier", async () => {
-    classifier = await Classifier.new(classifications, convertData(weights), intercept, learningRate);
+    const weightIndexLimit = 5;
+    assert.isBelow(weightIndexLimit, weights.length);
+    classifier = await Classifier.new(classifications, convertData(weights.slice(0, weightIndexLimit)), intercept, learningRate);
+
+    await classifier.initializeWeights(convertData(weights.slice(weightIndexLimit)));
 
     const retrievedWeights = await Promise.all([...Array(weights.length).keys()].map(i => classifier.weights(i).then(mapBackBN)));
     expect(weights).to.eql(retrievedWeights);
@@ -66,7 +70,7 @@ contract('DensePerceptron', function (accounts) {
     const classification = await predict(normalizedData);
     const _weights = await Promise.all([...Array(data.length).keys()].map(i => classifier.weights(i).then(mapBackBN)));
     let updateResponse = await classifier.update(normalizedData, classification);
-    assert.isBelow(updateResponse.receipt.gasUsed, 2E5, "Too much gas used.");
+    assert.isBelow(updateResponse.receipt.gasUsed, 1E5, "Too much gas used.");
     // console.log(`  update (same class) gasUsed: ${updateResponse.receipt.gasUsed}`);
 
     let updatedWeights = await Promise.all([...Array(data.length).keys()].map(i => classifier.weights(i).then(mapBackBN)));
@@ -77,6 +81,7 @@ contract('DensePerceptron', function (accounts) {
 
     const newClassification = 1 - classification;
     updateResponse = await classifier.update(await normalize(data), newClassification);
+    assert.isBelow(updateResponse.receipt.gasUsed, 1E5, "Too much gas used.");
     // console.log(`  update (different class) gasUsed: ${updateResponse.receipt.gasUsed}`);
 
     updatedWeights = await Promise.all([...Array(data.length).keys()].map(i => classifier.weights(i).then(mapBackBN)));
@@ -87,9 +92,10 @@ contract('DensePerceptron', function (accounts) {
       }
       _weights[i] += sign * learningRate * mapBackBN(normalizedData[i]);
     }
-    expect(_weights).to.eql(updatedWeights);
+    for (let i = 0; i < _weights.length; ++i) {
+      assert.closeTo(updatedWeights[i], _weights[i], 1 / toFloat);
+    }
 
-    // FIXME Handle decimal accuracy.
     assert.equal(await predict(normalizedData), newClassification);
   });
 });
