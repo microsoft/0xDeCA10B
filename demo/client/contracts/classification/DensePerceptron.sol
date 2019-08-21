@@ -7,6 +7,9 @@ import "../libs/SignedSafeMath.sol";
 
 import {Classifier64} from "./Classifier.sol";
 
+/**
+ * A Perceptron where the data given for updating and predicting is dense.
+ */
 contract DensePerceptron is Classifier64 {
 
     using SafeMath for uint256;
@@ -22,15 +25,10 @@ contract DensePerceptron is Classifier64 {
         int80 _intercept,
         uint8 _learningRate
     ) Classifier64(_classifications) public {
-        require(_learningRate > 0, "The learning rate must be > 0.");
-
         intercept = _intercept;
         learningRate = _learningRate;
 
         require(_weights.length < 2**64 - 1, "Too many weights given.");
-        // for (uint64 i = 0; i < _weights.length; ++i) {
-        //     weights[i] = _weights[i];
-        // }
         weights = _weights;
     }
 
@@ -67,24 +65,32 @@ contract DensePerceptron is Classifier64 {
     }
 
     function update(int64[] memory data, uint64 classification) public onlyOwner {
-        // TODO Use more SafeMath.
-        // TODO Make sure normalized.
         uint64 prediction = predict(data);
         if (prediction != classification) {
             // Update model.
             // predict checks `data.length == weights.length`.
             uint len = data.length;
+            uint _norm = 0;
+            int128 datum;
             if (classification > 0) {
                 // sign = 1
                 for(uint i = 0; i < len; ++i) {
-                    weights[i] += data[i] * learningRate;
+                    datum = data[i];
+                    _norm = _norm.add(uint(datum * datum));
+                    weights[i] += int80(data[i]) * learningRate;
                 }
             } else {
                 // sign = -1
                 for(uint i = 0; i < len; ++i) {
-                    weights[i] -= data[i] * learningRate;
+                    datum = data[i];
+                    _norm = _norm.add(uint(datum * datum));
+                    weights[i] -= int80(data[i]) * learningRate;
                 }
             }
+
+            uint oneSquared = uint(toFloat).mul(toFloat);
+            // Must be almost within `toFloat` of `toFloat*toFloat` because we only care about the first `toFloat` digits.
+            require(oneSquared - 100 * toFloat < _norm && _norm < oneSquared + 100 * toFloat, "The provided data does not have a norm of 1.");
         }
     }
 }

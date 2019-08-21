@@ -107,7 +107,7 @@ contract NearestCentroidClassifier is Classifier64 {
         uint _norm = 0;
         for (uint j = 0; j < data.length; ++j) {
             int128 datum = int128(data[j]);
-            _norm += uint(datum * datum);
+            _norm = _norm.add(uint(datum * datum));
             c[j] = int64((int(centroid[j]) * int(n) + datum) / int(newN));
         }
         centroids[classification] = c;

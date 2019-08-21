@@ -6,6 +6,9 @@ import "../libs/SignedSafeMath.sol";
 
 import {Classifier64} from "./Classifier.sol";
 
+/**
+ * A Perceptron where the data given for updating and predicting is sparse and binarized (each feature is present or not).
+ */
 contract SparsePerceptron is Classifier64 {
 
     using SafeMath for uint256;
@@ -21,8 +24,6 @@ contract SparsePerceptron is Classifier64 {
         int80 _intercept,
         uint8 _learningRate
     ) Classifier64(_classifications) public {
-        require(_learningRate > 0, "The learning rate must be > 0.");
-
         intercept = _intercept;
         learningRate = _learningRate;
 
@@ -70,7 +71,7 @@ contract SparsePerceptron is Classifier64 {
             // predict checks each data[i] >= 0.
             uint i;
             uint len = data.length;
-            int80 change = toFloat * learningRate;
+            int80 change = int80(toFloat) * learningRate;
             if (classification > 0) {
                 // sign = 1
                 for(i = 0; i < len; ++i) {
