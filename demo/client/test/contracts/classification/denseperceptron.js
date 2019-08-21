@@ -58,12 +58,12 @@ contract('DensePerceptron', function (accounts) {
     const classification = await predict(data);
     let updateResponse = await classifier.update(await normalize(data), classification);
     assert.isBelow(updateResponse.receipt.gasUsed, 2E5, "Too much gas used.");
-    console.log(`  update (same class) gasUsed: ${updateResponse.receipt.gasUsed}`);
+    // console.log(`  update (same class) gasUsed: ${updateResponse.receipt.gasUsed}`);
     assert.equal(await predict(data), classification);
 
     const newClassification = 1 - classification;
     updateResponse = await classifier.update(await normalize(data), newClassification);
-    console.log(`  update (different class) gasUsed: ${updateResponse.receipt.gasUsed}`);
+    // console.log(`  update (different class) gasUsed: ${updateResponse.receipt.gasUsed}`);
     assert.equal(await predict(data), newClassification);
   });
 });
