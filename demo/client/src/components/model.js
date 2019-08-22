@@ -130,8 +130,9 @@ class Model extends React.Component {
       // inputImageUrl: "https://d17fnq9dkz9hgj.cloudfront.net/breed-uploads/2018/09/dog-landing-hero-lg.jpg?bust=1536935129&width=1080",
       // inputImageUrl: "https://leitesculinaria.com/wp-content/uploads/fly-images/96169/best-hot-dog-recipe-fi-400x225-c.jpg",
       // inputImageUrl: "https://www.ballparkbrand.com/sites/default/files/Hero_Dog_0.png",
-      inputImageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Hotdog_-_Evan_Swigart.jpg/1200px-Hotdog_-_Evan_Swigart.jpg",
+      // inputImageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Hotdog_-_Evan_Swigart.jpg/1200px-Hotdog_-_Evan_Swigart.jpg",
       // inputImageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/VitalikButerinProfile.jpg/250px-VitalikButerinProfile.jpg",
+      inputImageUrl: "https://pbs.twimg.com/profile_images/877269203153072128/d9CDANz-_400x400.jpg",
       // inputImageUrl: "https://pbs.twimg.com/profile_images/977496875887558661/L86xyLF4_400x400.jpg",
       accounts: undefined,
       prediction: "",
@@ -228,11 +229,18 @@ class Model extends React.Component {
       address: incentiveMechanismAddress
     });
     await this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism });
-    await Promise.all([this.updateContractInfo(), this.updateDynamicInfo()]);
+    const promises = await Promise.all([
+      this.updateContractInfo(),
+      this.updateDynamicInfo(),
+      this.getTransformInputMethod(),
+    ]);
+
+    this.transformInput = promises[2].bind(this);
 
     if (this.state.tab !== 0) {
       this.handleTabChange(null, this.state.tab);
     }
+
     setInterval(this.updateDynamicInfo, 15 * 1000);
     if (typeof window !== "undefined" && window.ethereum) {
       window.ethereum.on('accountsChanged', accounts => {
@@ -248,9 +256,6 @@ class Model extends React.Component {
         this.setContractInstance();
       });
     }
-
-    const transformInput = await this.getTransformInputMethod();
-    this.transformInput = transformInput.bind(this);
   }
 
   async getTransformInputMethod() {
@@ -378,11 +383,16 @@ class Model extends React.Component {
 
   getDisplayableEncodedData(data) {
     let d = data.map(v => this.web3.utils.toBN(v).toNumber());
-    if (this.state.contractInfo.encoder === 'universal sentence encoder') {
+    const divideFloatList = ['MobileNetv2', 'universal sentence encoder'];
+    if (divideFloatList.indexOf(this.state.contractInfo.encoder) > -1) {
       const _toFloat = this.state.toFloat;
       d = d.map(v => v / _toFloat);
     }
-    return JSON.stringify(d);
+    let result = JSON.stringify(d);
+    if (result.length > 110) {
+      result = result.slice(0, 100) + "...";
+    }
+    return result;
   }
 
   getHumanReadableEth(amount) {
@@ -680,7 +690,10 @@ class Model extends React.Component {
 
   train() {
     const classification = this.state.trainClassIndex;
-    const originalData = this.state.trainData;
+    let originalData = this.state.trainData;
+    if (this.state.inputType === 'image') {
+      originalData = document.getElementById('input-image');
+    }
     return this.transformInput(originalData)
       .then(trainData => {
         return this.state.contractInstance.methods.addData(trainData, classification)
@@ -694,12 +707,16 @@ class Model extends React.Component {
             // because there would be no way to enforce that it matches the data.
             // A malicious person could submit different data and encoded data
             // or just save funds by submitting no unencoded data.
+
+            // FIXME If it's an image, use an identifier.
             return axios.post('/api/data', {
               originalData,
               transactionHash,
             }).then(() => {
               console.log("Saved info to DB.")
               return this.updateRefundData().then(this.updateDynamicInfo);
+            }).catch(err=>{
+              console.error("Error saving original data to DB.")
             });
           })
           .on('receipt', (receipt) => {
@@ -770,7 +787,9 @@ class Model extends React.Component {
               <TabContainer>
                 <form id="predict-form" onSubmit={(e) => { e.preventDefault(); this.predictInput(); }}>
                   <div className={this.classes.tabContainer}>
-                    {this.state.inputType === 'text' ?
+                    {this.state.inputType === undefined ?
+                      <div></div>
+                      : this.state.inputType === 'text' ?
                       <TextField
                         name="input"
                         label="Input"
@@ -798,12 +817,23 @@ class Model extends React.Component {
               <TabContainer>
                 <form id="train-form" onSubmit={(e) => { e.preventDefault(); this.train(); }}>
                   <div className={this.classes.tabContainer}>
+                    {this.state.inputType === undefined ?
+                      <div></div>
+                      : this.state.inputType === 'text' ?
                     <TextField
                       name="trainData"
                       label="Data Sample"
                       margin="normal"
                       onChange={this.handleInputChange}
                     />
+                        : <img
+                          id="input-image"
+                          width="500"
+                          crossOrigin="anonymous"
+                          src={this.state.inputImageUrl}
+                          alt="The item to use to train the model."
+                        />}
+
                     <InputLabel htmlFor="classification-selector">Classification</InputLabel>
                     <Select
                       value={this.state.trainClassIndex}

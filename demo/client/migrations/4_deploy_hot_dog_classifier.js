@@ -34,7 +34,7 @@ module.exports = function (deployer) {
 
   // Model
   // TODO Get classifications from the model file.
-  const classifications = ["HOT DOG", "NOT HOT DOG"];
+  const classifications = ["NOT HOT DOG", "HOT DOG"];
   let model = fs.readFileSync('./src/ml-models/hot_dog-not/classifier-perceptron.json', 'utf8');
   model = JSON.parse(model);
 
