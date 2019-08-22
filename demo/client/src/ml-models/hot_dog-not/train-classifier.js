@@ -19,6 +19,11 @@ const INTENTS = {
 // Normalize each sample like what will happen in production to avoid changing the centroid by too much.
 const NORMALIZE_EACH_EMBEDDING = true;
 
+// Reduce the size of the embeddings.
+const REDUCE_EMBEDDINGS = false;
+const EMB_SIZE = 1280;
+const EMB_REDUCTION_FACTOR = REDUCE_EMBEDDINGS ? 4 : 1;
+
 // Classifier type can be: ncc/perceptron
 const CLASSIFIER_TYPE = 'perceptron';
 
@@ -53,13 +58,31 @@ if (fs.existsSync(embeddingCachePath)) {
     embeddingCache = {};
 }
 
+// Useful for making the embedding smaller.
+// This did not change the precision by much.
+if (EMB_SIZE % EMB_REDUCTION_FACTOR !== 0) {
+    throw new Error("The embedding reduction factor is not a multiple of the embedding size.");
+}
+const EMB_MAPPER =
+    tf.tidy(_ => {
+        const mapper = tf.fill([EMB_SIZE / EMB_REDUCTION_FACTOR, EMB_SIZE], 0, 'int32');
+        const buffer = mapper.bufferSync();
+        for (let i = 0; i < mapper.shape[0]; ++i) {
+            for (let j = 0; j < EMB_REDUCTION_FACTOR; ++j) {
+                buffer.set(1, i, 2 * i + j);
+            }
+        }
+        return buffer.toTensor();
+    });
+
 /**
  * @param {string} sample The relative path from `dataPath` for the image.
  * @returns The embedding for the image. Shape has 1 dimension.
  */
 async function getEmbedding(sample) {
     let result = embeddingCache[sample];
-    if (result !== undefined) {
+    if (result !== undefined
+        && result.length === EMB_SIZE / EMB_REDUCTION_FACTOR) {
         result = tf.tensor1d(result);
     } else {
         const img = await loadImage(path.join(dataPath, sample));
@@ -67,12 +90,20 @@ async function getEmbedding(sample) {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0);
         const emb = await encoder.infer(canvas, { embedding: true });
-        result = emb.gather(0);
-        embeddingCache[sample] = result.arraySync();
+        result = tf.tidy(_ => {
+            let result = emb.gather(0);
+            if (REDUCE_EMBEDDINGS) {
+                result = EMB_MAPPER.dot(result);
+            }
+            embeddingCache[sample] = result.arraySync();
+            return result;
+        });
         emb.dispose();
     }
     if (NORMALIZE_EACH_EMBEDDING) {
-        result = normalize1d(result);
+        const normalizedResult = normalize1d(result);
+        result.dispose();
+        result = normalizedResult;
     }
     return result;
 }
@@ -273,12 +304,15 @@ async function getPerceptronModel() {
 
                 if (model.weights === undefined) {
                     // Initialize the weights.
+                    const numWeights = emb.shape[0];
+                    console.log(` Training with ${numWeights} weights.`);
                     model.weights = new Array(emb.shape[0]);
                     for (let j = 0; j < model.weights.length; ++j) {
                         model.weights[j] = Math.random() - 0.5;
                     }
-                    model.weights = tf.tensor1d(model.weights);
-                    model.weights = normalize1d(model.weights);
+                    model.weights = tf.tidy(_ => {
+                        return normalize1d(tf.tensor1d(model.weights));
+                    });
                 }
                 const prediction = await predictPerceptron(model, emb);
                 if (prediction !== classification) {

@@ -292,6 +292,7 @@ class Model extends React.Component {
         const emb = imgEmbedding.arraySync()[0];
         imgEmbedding.dispose();
         const convertedEmbedding = emb.map(x => Math.round(x * toFloat));
+        // FIXME normalize.
         return convertedEmbedding.map(v => this.web3.utils.toHex(v));
       }
     } else if (this.state.contractInfo.encoder === 'IMDB vocab') {
