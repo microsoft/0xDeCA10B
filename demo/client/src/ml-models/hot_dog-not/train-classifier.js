@@ -5,7 +5,7 @@ const mobilenet = require('@tensorflow-models/mobilenet');
 const tf = require('@tensorflow/tfjs-node');
 const { createCanvas, loadImage } = require('canvas');
 
-const { normalize1d, normalize2d } = require('../tensor-utils');
+const { normalize1d } = require('../tensor-utils');
 
 const dataPath = path.join(__dirname, './seefood');
 
@@ -32,7 +32,7 @@ let learningRate = 1;
 const LEARNING_RATE_CHANGE_FACTOR = 0.618;
 const LEARNING_RATE_CUTTING_PERCENT_OF_BEST = 0.618;
 const MAX_STABILITY_COUNT = 3;
-const PERCENT_OF_TRAINING_SET_TO_FIT = 0.9;
+const PERCENT_OF_TRAINING_SET_TO_FIT = 0.95;
 const classes = {
     [POSITIVE_CLASS]: +1,
     [NEGATIVE_CLASS]: -1,
@@ -53,20 +53,26 @@ if (fs.existsSync(embeddingCachePath)) {
     embeddingCache = {};
 }
 
+/**
+ * @param {string} sample The relative path from `dataPath` for the image.
+ * @returns The embedding for the image. Shape has 1 dimension.
+ */
 async function getEmbedding(sample) {
     let result = embeddingCache[sample];
     if (result !== undefined) {
-        result = tf.tensor2d([result]);
+        result = tf.tensor1d(result);
     } else {
         const img = await loadImage(path.join(dataPath, sample));
         const canvas = createCanvas(img.width, img.height);
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0);
-        result = await encoder.infer(canvas, { embedding: true });
-        embeddingCache[sample] = result.gather(0).arraySync();
+        const emb = await encoder.infer(canvas, { embedding: true });
+        result = emb.gather(0);
+        embeddingCache[sample] = result.arraySync();
+        emb.dispose();
     }
     if (NORMALIZE_EACH_EMBEDDING) {
-        result = normalize2d(result);
+        result = normalize1d(result);
     }
     return result;
 }
@@ -167,7 +173,7 @@ async function getCentroid(intent) {
         }
 
         const emb = await getEmbedding(path.join(pathPrefix, samples[i]));
-        allEmbeddings.push(emb);
+        allEmbeddings.push(emb.expandDims());
     }
     console.log(`  ${INTENTS[intent]}: Done getting embeddings.`);
     const centroid = tf.tidy(() => {
@@ -267,7 +273,7 @@ async function getPerceptronModel() {
 
                 if (model.weights === undefined) {
                     // Initialize the weights.
-                    model.weights = new Array(emb.shape[1]);
+                    model.weights = new Array(emb.shape[0]);
                     for (let j = 0; j < model.weights.length; ++j) {
                         model.weights[j] = Math.random() - 0.5;
                     }
@@ -278,7 +284,7 @@ async function getPerceptronModel() {
                 if (prediction !== classification) {
                     numUpdates += 1;
                     const sign = classes[classification];
-                    model.weights = model.weights.add(emb.gather(0).mul(sign * learningRate));
+                    model.weights = model.weights.add(emb.mul(sign * learningRate));
                 }
                 emb.dispose();
             }
@@ -317,7 +323,7 @@ async function predictPerceptron(model, sample) {
         emb = await getEmbedding(sample);
     }
     tf.tidy(() => {
-        let prediction = model.weights.dot(emb.gather(0));
+        let prediction = model.weights.dot(emb);
         prediction = prediction.add(model.bias);
         if (prediction.greater(0).dataSync()[0]) {
             result = POSITIVE_CLASS;

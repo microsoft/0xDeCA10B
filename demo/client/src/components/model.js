@@ -790,18 +790,18 @@ class Model extends React.Component {
                     {this.state.inputType === undefined ?
                       <div></div>
                       : this.state.inputType === 'text' ?
-                      <TextField
-                        name="input"
-                        label="Input"
-                        onChange={this.handleInputChange}
-                        margin="normal" />
-                      : <img
-                        id="input-image"
-                        width="500"
-                        crossOrigin="anonymous"
-                        src={this.state.inputImageUrl}
-                        alt="The item to classify."
-                      />}
+                        <TextField
+                          name="input"
+                          label="Input"
+                          onChange={this.handleInputChange}
+                          margin="normal" />
+                        : <img
+                          id="input-image"
+                          width="500"
+                          crossOrigin="anonymous"
+                          src={this.state.inputImageUrl}
+                          alt="The item to classify."
+                        />}
                     <Button type="submit" className={this.classes.button} variant="outlined"> Get Prediction </Button>
                     <br />
                     <br />
@@ -820,12 +820,12 @@ class Model extends React.Component {
                     {this.state.inputType === undefined ?
                       <div></div>
                       : this.state.inputType === 'text' ?
-                    <TextField
-                      name="trainData"
-                      label="Data Sample"
-                      margin="normal"
-                      onChange={this.handleInputChange}
-                    />
+                        <TextField
+                          name="trainData"
+                          label="Data Sample"
+                          margin="normal"
+                          onChange={this.handleInputChange}
+                        />
                         : <img
                           id="input-image"
                           width="500"
