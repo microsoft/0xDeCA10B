@@ -86,7 +86,7 @@ async function evaluate(intents, model) {
         console.log(`${expectedIntent}: Evaluating with ${queries.length} samples.`);
         const stats = {
             intent: expectedIntent,
-            precision: undefined,
+            recall: undefined,
             numCorrect: 0,
             confusion: {},
         };
@@ -102,7 +102,7 @@ async function evaluate(intents, model) {
                 stats.confusion[prediction] += 1;
             }
         }
-        stats.precision = stats.numCorrect / queries.length;
+        stats.recall = stats.numCorrect / queries.length;
         evalStats.push(stats);
     }
     console.log(`normalizeEachEmbedding: ${normalizeEachEmbedding}`);

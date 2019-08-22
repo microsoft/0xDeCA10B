@@ -45,9 +45,8 @@ const classes = {
 
 // Nearest Centroid Classifier Config
 // Normalizing the centroid didn't change performance by much.
-// It was slightly worse for HOT_DOG precision.
+// It was slightly worse for HOT_DOG accuracy.
 const NORMALIZE_CENTROID = false;
-
 
 let embeddingCache;
 const embeddingCachePath = path.join(__dirname, 'embedding_cache.json');
@@ -59,7 +58,7 @@ if (fs.existsSync(embeddingCachePath)) {
 }
 
 // Useful for making the embedding smaller.
-// This did not change the precision by much.
+// This did not change the accuracy by much.
 if (EMB_SIZE % EMB_REDUCTION_FACTOR !== 0) {
     throw new Error("The embedding reduction factor is not a multiple of the embedding size.");
 }
@@ -135,13 +134,12 @@ async function predict(model, sample) {
 async function evaluate(model) {
     const evalStats = [];
     const evalIntents = Object.entries(INTENTS);
-    let precisionHarmonicMean = 0;
 
     for (let i = 0; i < evalIntents.length; ++i) {
         const [intent, expectedIntent] = evalIntents[i];
         const stats = {
             intent: expectedIntent,
-            precision: undefined,
+            recall: undefined,
             numCorrect: 0,
             confusion: {},
         };
@@ -166,8 +164,7 @@ async function evaluate(model) {
                 stats.confusion[prediction] += 1;
             }
         }
-        stats.precision = stats.numCorrect / samples.length;
-        precisionHarmonicMean += 1 / stats.precision;
+        stats.recall = stats.numCorrect / samples.length;
         evalStats.push(stats);
         console.log(`  ${expectedIntent}: Done evaluating.`);
     }
@@ -183,9 +180,28 @@ async function evaluate(model) {
         default:
             throw new Error(`Unrecognized classifierType: "${CLASSIFIER_TYPE}"`);
     }
+    // Compute precision.
+    Object.values(INTENTS).forEach(intent => {
+        evalStats.forEach(stats => {
+            if (stats.intent === intent) {
+                let numFalsePositives = 0;
+                evalStats.forEach(otherStats => {
+                    if (otherStats.intent !== intent) {
+                        numFalsePositives += otherStats.confusion[intent];
+                    }
+                });
+                stats.precision = stats.numCorrect / (stats.numCorrect + numFalsePositives);
+                stats.f1 = 2 / (1 / stats.precision + 1 / stats.recall);
+            }
+        });
+    })
     console.log(JSON.stringify(evalStats, null, 2));
-    precisionHarmonicMean = evalStats.length / precisionHarmonicMean;
-    console.log(`precision harmonic mean: ${precisionHarmonicMean.toFixed(2)}`);
+    let f1HarmonicMean = 0;
+    for (let i = 0; i < evalStats.length; ++i) {
+        f1HarmonicMean += 1 / evalStats[i].f1;
+    }
+    f1HarmonicMean = evalStats.length / f1HarmonicMean;
+    console.log(`f1 harmonic mean: ${f1HarmonicMean.toFixed(3)}`);
 }
 
 // Nearest Centroid Classifier Section
@@ -308,7 +324,8 @@ async function getPerceptronModel() {
                     console.log(` Training with ${numWeights} weights.`);
                     model.weights = new Array(emb.shape[0]);
                     for (let j = 0; j < model.weights.length; ++j) {
-                        model.weights[j] = Math.random() - 0.5;
+                        // Can initialize randomly with `Math.random() - 0.5` but it doesn't seem to make much of a difference.
+                        model.weights[j] = 0;
                     }
                     model.weights = tf.tidy(_ => {
                         return normalize1d(tf.tensor1d(model.weights));
