@@ -18,10 +18,12 @@ import Typography from '@material-ui/core/Typography';
 import * as mobilenet from '@tensorflow-models/mobilenet';
 import * as UniversalSentenceEncoder from '@tensorflow-models/universal-sentence-encoder';
 import axios from 'axios';
+import loadImage from 'blueimp-load-image';
 import update from 'immutability-helper';
 import moment from 'moment';
 import PropTypes from 'prop-types';
 import React from 'react';
+import Dropzone from 'react-dropzone';
 import Web3 from "web3"; // Only required for custom/fallback provider option.
 import Classifier from "../contracts/Classifier64.json";
 import CollaborativeTrainer from '../contracts/CollaborativeTrainer64.json';
@@ -152,6 +154,7 @@ class Model extends React.Component {
     this.hasEnoughTimePassed = this.hasEnoughTimePassed.bind(this);
     this.predict = this.predict.bind(this);
     this.predictInput = this.predictInput.bind(this);
+    this.processUploadedImageInput = this.processUploadedImageInput.bind(this);
     this.refund = this.refund.bind(this);
     this.setContractInstance = this.setContractInstance.bind(this);
     this.takeDeposit = this.takeDeposit.bind(this);
@@ -632,6 +635,27 @@ class Model extends React.Component {
     });
   }
 
+  processUploadedImageInput(acceptedFiles) {
+    const reader = new FileReader();
+    const file = acceptedFiles[0];
+
+    // Examples of extra error processing.
+    // reader.onabort = (err) => {console.error("File reading was aborted."); console.error(err);};
+    // reader.onerror = (err) => {console.error("File reading has failed."); console.error(err);};
+    reader.onload = () => {
+      const binaryStr = reader.result;
+      // Correct the orientation.
+      loadImage(`data:${file.type};base64,${btoa(binaryStr)}`, (canvas) => {
+        const imgElement = document.getElementById('input-image');
+        imgElement.src = canvas.toDataURL();
+      }, { orientation: true });
+    }
+    if (acceptedFiles.length > 1) {
+      // TODO Report that extra files are ignored.
+    }
+    reader.readAsBinaryString(file);
+  }
+
   /* MAIN CONTRACT FUNCTIONS */
   predict(data) {
     return this.state.classifier.methods.predict(data).call().then(parseInt);
@@ -716,7 +740,7 @@ class Model extends React.Component {
             }).then(() => {
               console.log("Saved info to DB.")
               return this.updateRefundData().then(this.updateDynamicInfo);
-            }).catch(err=>{
+            }).catch(err => {
               console.error("Error saving original data to DB.")
             });
           })
@@ -796,13 +820,23 @@ class Model extends React.Component {
                           label="Input"
                           onChange={this.handleInputChange}
                           margin="normal" />
-                        : <img
-                          id="input-image"
-                          width="500"
-                          crossOrigin="anonymous"
-                          src={this.state.inputImageUrl}
-                          alt="The item to classify."
-                        />}
+                        : <Dropzone onDrop={this.processUploadedImageInput}>
+                          {({ getRootProps, getInputProps }) => (
+                            <section>
+                              <div {...getRootProps()}>
+                                <input {...getInputProps()} />
+                                <p>Drag 'n' drop some files here, or click to select files</p>
+                                <img
+                                  id="input-image"
+                                  width="500"
+                                  crossOrigin="anonymous"
+                                  src={this.state.inputImageUrl}
+                                  alt="The item to classify."
+                                />
+                              </div>
+                            </section>
+                          )}
+                        </Dropzone>}
                     <Button type="submit" className={this.classes.button} variant="outlined"> Get Prediction </Button>
                     <br />
                     <br />
@@ -827,13 +861,23 @@ class Model extends React.Component {
                           margin="normal"
                           onChange={this.handleInputChange}
                         />
-                        : <img
-                          id="input-image"
-                          width="500"
-                          crossOrigin="anonymous"
-                          src={this.state.inputImageUrl}
-                          alt="The item to use to train the model."
-                        />}
+                        : <Dropzone onDrop={this.processUploadedImageInput}>
+                          {({ getRootProps, getInputProps }) => (
+                            <section>
+                              <div {...getRootProps()}>
+                                <input {...getInputProps()} />
+                                <p>Drag 'n' drop some files here, or click to select files</p>
+                                <img
+                                  id="input-image"
+                                  width="500"
+                                  crossOrigin="anonymous"
+                                  src={this.state.inputImageUrl}
+                                  alt="The item to classify."
+                                />
+                              </div>
+                            </section>
+                          )}
+                        </Dropzone>}
 
                     <InputLabel htmlFor="classification-selector">Classification</InputLabel>
                     <Select
