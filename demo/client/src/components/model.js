@@ -295,8 +295,15 @@ class Model extends React.Component {
         const emb = imgEmbedding.arraySync()[0];
         imgEmbedding.dispose();
         const convertedEmbedding = emb.map(x => Math.round(x * toFloat));
-        // FIXME normalize.
-        return convertedEmbedding.map(v => this.web3.utils.toHex(v));
+        const _toFloat = this.web3.utils.toBN(toFloat);
+        // TODO Test.
+        let norm = await this.state.classifier.methods.norm(convertedEmbedding.map(v => this.web3.utils.toHex(v)))
+          .call()
+          .then(parseInt);
+          console.log(`norm: ${norm}`);
+        norm = this.web3.utils.toBN(norm);
+        return convertedEmbedding.map(v => this.web3.utils.toBN(v).mul(_toFloat).div(norm))
+          .map(this.web3.utils.toHex);
       }
     } else if (this.state.contractInfo.encoder === 'IMDB vocab') {
       await this.setState({ inputType: 'text' });
