@@ -29,13 +29,16 @@ const CLASSIFIER_TYPE = 'perceptron';
 
 // Perceptron Classifier Config
 
+// Take only the top features.
+const PERCEPTRON_NUM_FEATS = EMB_SIZE;
+
 // Sort of like regularization but it does not converge.
 // Probably because it ruins the Perceptron assumption of updating weights.
 const NORMALIZE_PERCEPTRON_WEIGHTS = false;
 
 let learningRate = 1;
-const LEARNING_RATE_CHANGE_FACTOR = 0.618;
-const LEARNING_RATE_CUTTING_PERCENT_OF_BEST = 0.618;
+const LEARNING_RATE_CHANGE_FACTOR = 0.8618;
+const LEARNING_RATE_CUTTING_PERCENT_OF_BEST = 0.8618;
 const MAX_STABILITY_COUNT = 3;
 const PERCENT_OF_TRAINING_SET_TO_FIT = 0.95;
 const classes = {
@@ -54,7 +57,7 @@ if (fs.existsSync(embeddingCachePath)) {
     try {
         embeddingCache = fs.readFileSync(embeddingCachePath, 'utf8');
         embeddingCache = JSON.parse(embeddingCache);
-        console.log(`Loaded ${Object.keys(embeddingCache).length} cached embeddings.`);
+        console.debug(`Loaded ${Object.keys(embeddingCache).length} cached embeddings.`);
     } catch (error) {
         console.error("Error loading embedding cache.\nWill create a new one.");
         console.error(error);
@@ -175,7 +178,7 @@ async function evaluate(model) {
         }
         stats.recall = stats.numCorrect / samples.length;
         evalStats.push(stats);
-        console.log(`  ${expectedIntent}: Done evaluating.`);
+        // console.log(`  ${expectedIntent}: Done evaluating.`);
     }
     console.log(`NORMALIZE_EACH_EMBEDDING: ${NORMALIZE_EACH_EMBEDDING}`);
     console.log(`NORMALIZE_PERCEPTRON_WEIGHTS: ${NORMALIZE_PERCEPTRON_WEIGHTS}`);
@@ -304,9 +307,20 @@ async function getPerceptronModel() {
         });
 
         const model = {
-            weights: undefined,
             bias: 0,
         }
+
+        // Initialize the weights.
+        console.log(` Training with ${EMB_SIZE} weights.`);
+        model.weights = new Array(EMB_SIZE);
+        for (let j = 0; j < model.weights.length; ++j) {
+            // Can initialize randomly with `Math.random() - 0.5` but it doesn't seem to make much of a difference.
+            // model.weights[j] = 0;
+            model.weights[j] = Math.random() - 0.5;
+        }
+        model.weights = tf.tidy(_ => {
+            return normalize1d(tf.tensor1d(model.weights));
+        });
 
         let numUpdates, bestNumUpdatesBeforeLearningRateChange;
         let epoch = 0;
@@ -327,33 +341,24 @@ async function getPerceptronModel() {
                 const emb = await getEmbedding(sample.path);
                 const { classification } = sample;
 
-                if (model.weights === undefined) {
-                    // Initialize the weights.
-                    const numWeights = emb.shape[0];
-                    console.log(` Training with ${numWeights} weights.`);
-                    model.weights = new Array(emb.shape[0]);
-                    for (let j = 0; j < model.weights.length; ++j) {
-                        // Can initialize randomly with `Math.random() - 0.5` but it doesn't seem to make much of a difference.
-                        model.weights[j] = 0;
-                    }
-                    model.weights = tf.tidy(_ => {
-                        return normalize1d(tf.tensor1d(model.weights));
-                    });
-                }
                 const prediction = await predictPerceptron(model, emb);
                 if (prediction !== classification) {
                     numUpdates += 1;
                     const sign = classes[classification];
-                    model.weights = model.weights.add(emb.mul(sign * learningRate));
+                    model.weights = tf.tidy(_ => { return model.weights.add(emb.mul(sign * learningRate)); });
                 }
                 emb.dispose();
             }
             console.log(`Training epoch: ${epoch.toString().padStart(4, '0')}: numUpdates: ${numUpdates}`);
+            if (numUpdates === 0) {
+                // There cannot be any more updates.
+                break
+            }
             epoch += 1;
             if (bestNumUpdatesBeforeLearningRateChange !== undefined &&
                 numUpdates < bestNumUpdatesBeforeLearningRateChange * LEARNING_RATE_CUTTING_PERCENT_OF_BEST) {
                 learningRate *= LEARNING_RATE_CHANGE_FACTOR;
-                console.log(`Changed learning rate to: ${learningRate.toFixed(3)}`);
+                console.debug(`  Changed learning rate to: ${learningRate.toFixed(3)}`);
                 bestNumUpdatesBeforeLearningRateChange = numUpdates;
             }
             if (bestNumUpdatesBeforeLearningRateChange === undefined) {
@@ -366,9 +371,21 @@ async function getPerceptronModel() {
                 stabilityCount = 0;
             }
         } while (stabilityCount < MAX_STABILITY_COUNT);
+
+        if (PERCEPTRON_NUM_FEATS !== EMB_SIZE) {
+            console.log(`Reducing weights to ${PERCEPTRON_NUM_FEATS} dimensions.`)
+            model.featureIndices = tf.tidy(_ => {
+                return tf.abs(model.weights).topk(PERCEPTRON_NUM_FEATS).indices;
+            });
+            model.weights = tf.tidy(_ => {
+                return model.weights.gather(model.featureIndices);
+            });
+        }
+
         const modelPath = path.join(__dirname, 'classifier-perceptron.json');
         console.log(`Saving Perceptron to "${modelPath}".`);
         fs.writeFileSync(modelPath, JSON.stringify({
+            featureIndices: model.featureIndices !== undefined ? model.featureIndices.arraySync() : null,
             weights: model.weights.arraySync(),
             bias: model.bias
         }));
@@ -383,6 +400,9 @@ async function predictPerceptron(model, sample) {
         emb = await getEmbedding(sample);
     }
     tf.tidy(() => {
+        if (model.featureIndices !== undefined) {
+            emb = emb.gather(model.featureIndices);
+        }
         let prediction = model.weights.dot(emb);
         prediction = prediction.add(model.bias);
         if (prediction.greater(0).dataSync()[0]) {
