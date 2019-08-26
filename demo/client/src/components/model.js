@@ -300,7 +300,7 @@ class Model extends React.Component {
         let norm = await this.state.classifier.methods.norm(convertedEmbedding.map(v => this.web3.utils.toHex(v)))
           .call()
           .then(parseInt);
-          console.log(`norm: ${norm}`);
+        console.log(`norm: ${norm}`);
         norm = this.web3.utils.toBN(norm);
         return convertedEmbedding.map(v => this.web3.utils.toBN(v).mul(_toFloat).div(norm))
           .map(this.web3.utils.toHex);

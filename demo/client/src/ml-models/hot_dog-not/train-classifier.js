@@ -51,8 +51,15 @@ const NORMALIZE_CENTROID = false;
 let embeddingCache;
 const embeddingCachePath = path.join(__dirname, 'embedding_cache.json');
 if (fs.existsSync(embeddingCachePath)) {
-    embeddingCache = fs.readFileSync(embeddingCachePath, 'utf8');
-    embeddingCache = JSON.parse(embeddingCache);
+    try {
+        embeddingCache = fs.readFileSync(embeddingCachePath, 'utf8');
+        embeddingCache = JSON.parse(embeddingCache);
+        console.log(`Loaded ${Object.keys(embeddingCache).length} cached embeddings.`);
+    } catch (error) {
+        console.error("Error loading embedding cache.\nWill create a new one.");
+        console.error(error);
+        embeddingCache = {};
+    }
 } else {
     embeddingCache = {};
 }
@@ -80,8 +87,7 @@ const EMB_MAPPER =
  */
 async function getEmbedding(sample) {
     let result = embeddingCache[sample];
-    if (result !== undefined
-        && result.length === EMB_SIZE / EMB_REDUCTION_FACTOR) {
+    if (result !== undefined) {
         result = tf.tensor1d(result);
     } else {
         const img = await loadImage(path.join(dataPath, sample));
@@ -89,12 +95,15 @@ async function getEmbedding(sample) {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0);
         const emb = await encoder.infer(canvas, { embedding: true });
+        if (emb.shape[1] !== EMB_SIZE) {
+            throw new Error(`Expected embedding to have ${EMB_SIZE} dimensions. Got shape: ${emb.shape}.`);
+        }
         result = tf.tidy(_ => {
             let result = emb.gather(0);
+            embeddingCache[sample] = result.arraySync();
             if (REDUCE_EMBEDDINGS) {
                 result = EMB_MAPPER.dot(result);
             }
-            embeddingCache[sample] = result.arraySync();
             return result;
         });
         emb.dispose();
@@ -152,7 +161,7 @@ async function evaluate(model) {
 
         for (let i = 0; i < samples.length; ++i) {
             if (i % Math.round(samples.length / 5) == 0) {
-                console.log(`  ${expectedIntent}: ${(100 * i / samples.length).toFixed(1)}% (${i}/${samples.length})`);
+                // console.log(`  ${expectedIntent}: ${(100 * i / samples.length).toFixed(1)}% (${i}/${samples.length})`);
             }
             const prediction = await predict(model, path.join(pathPrefix, samples[i]));
             if (prediction === expectedIntent) {
@@ -408,16 +417,10 @@ async function main() {
             throw new Error(`Unrecognized classifierType: "${CLASSIFIER_TYPE}"`);
     }
 
-    evaluate(model);
+    await evaluate(model);
 
-    fs.writeFile(embeddingCachePath, JSON.stringify(embeddingCache), (err) => {
-        if (err) {
-            console.error("Error writing embedding cache.");
-            console.error(err);
-        } else {
-            console.debug(`Wrote embedding cache to \"${embeddingCachePath}\".`);
-        }
-    });
+    fs.writeFileSync(embeddingCachePath, JSON.stringify(embeddingCache));
+    console.debug(`Wrote embedding cache to \"${embeddingCachePath}\" with ${Object.keys(embeddingCache).length} cached embeddings.`);
 };
 
 main();
