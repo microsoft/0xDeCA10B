@@ -30,7 +30,7 @@ const CLASSIFIER_TYPE = 'perceptron';
 // Perceptron Classifier Config
 
 // Take only the top features.
-const PERCEPTRON_NUM_FEATS = EMB_SIZE;
+const PERCEPTRON_NUM_FEATS = 400;
 
 // Sort of like regularization but it does not converge.
 // Probably because it ruins the Perceptron assumption of updating weights.
@@ -40,7 +40,7 @@ let learningRate = 1;
 const LEARNING_RATE_CHANGE_FACTOR = 0.8618;
 const LEARNING_RATE_CUTTING_PERCENT_OF_BEST = 0.8618;
 const MAX_STABILITY_COUNT = 3;
-const PERCENT_OF_TRAINING_SET_TO_FIT = 0.95;
+const PERCENT_OF_TRAINING_SET_TO_FIT = 0.99;
 const classes = {
     [POSITIVE_CLASS]: +1,
     [NEGATIVE_CLASS]: -1,
@@ -199,7 +199,9 @@ async function evaluate(model) {
                 let numFalsePositives = 0;
                 evalStats.forEach(otherStats => {
                     if (otherStats.intent !== intent) {
-                        numFalsePositives += otherStats.confusion[intent];
+                        if (otherStats.confusion[intent] !== undefined) {
+                            numFalsePositives += otherStats.confusion[intent];
+                        }
                     }
                 });
                 stats.precision = stats.numCorrect / (stats.numCorrect + numFalsePositives);
@@ -372,20 +374,9 @@ async function getPerceptronModel() {
             }
         } while (stabilityCount < MAX_STABILITY_COUNT);
 
-        if (PERCEPTRON_NUM_FEATS !== EMB_SIZE) {
-            console.log(`Reducing weights to ${PERCEPTRON_NUM_FEATS} dimensions.`)
-            model.featureIndices = tf.tidy(_ => {
-                return tf.abs(model.weights).topk(PERCEPTRON_NUM_FEATS).indices;
-            });
-            model.weights = tf.tidy(_ => {
-                return model.weights.gather(model.featureIndices);
-            });
-        }
-
         const modelPath = path.join(__dirname, 'classifier-perceptron.json');
         console.log(`Saving Perceptron to "${modelPath}".`);
         fs.writeFileSync(modelPath, JSON.stringify({
-            featureIndices: model.featureIndices !== undefined ? model.featureIndices.arraySync() : null,
             weights: model.weights.arraySync(),
             bias: model.bias
         }));
@@ -441,6 +432,26 @@ async function main() {
 
     fs.writeFileSync(embeddingCachePath, JSON.stringify(embeddingCache));
     console.debug(`Wrote embedding cache to \"${embeddingCachePath}\" with ${Object.keys(embeddingCache).length} cached embeddings.`);
+
+    if (PERCEPTRON_NUM_FEATS !== EMB_SIZE) {
+        console.log(`Reducing weights to ${PERCEPTRON_NUM_FEATS} dimensions.`)
+        model.featureIndices = tf.tidy(_ => {
+            return tf.abs(model.weights).topk(PERCEPTRON_NUM_FEATS).indices;
+        });
+        model.weights = tf.tidy(_ => {
+            return model.weights.gather(model.featureIndices);
+        });
+
+        const modelPath = path.join(__dirname, `classifier-perceptron-${PERCEPTRON_NUM_FEATS}.json`);
+        console.log(`Saving Perceptron with ${PERCEPTRON_NUM_FEATS} weights to "${modelPath}".`);
+        fs.writeFileSync(modelPath, JSON.stringify({
+            featureIndices: model.featureIndices.arraySync(),
+            weights: model.weights.arraySync(),
+            bias: model.bias
+        }));
+
+        await evaluate(model);
+    }
 };
 
 main();
