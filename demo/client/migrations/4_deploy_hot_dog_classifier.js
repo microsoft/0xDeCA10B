@@ -18,7 +18,7 @@ module.exports = function (deployer) {
   const modelInfo = {
     name: "Hot Dog Classifier",
     description: "Classifies pictures as hot dog or not hot dog.",
-    accuracy: '0.64',
+    accuracy: '0.63',
     modelType: 'Classifier64',
     encoder: 'MobileNetv2',
   };
@@ -35,12 +35,17 @@ module.exports = function (deployer) {
   // Model
   // TODO Get classifications from the model file.
   const classifications = ["NOT HOT DOG", "HOT DOG"];
-  let model = fs.readFileSync('./src/ml-models/hot_dog-not/classifier-perceptron.json', 'utf8');
+  let model = fs.readFileSync('./src/ml-models/hot_dog-not/classifier-perceptron-400.json', 'utf8');
   model = JSON.parse(model);
 
-  const weights = convertData(model['weights'], web3, toFloat);
-  const intercept = convertNum(model['bias'], web3, toFloat);
+  const featureIndices = model.featureIndices;
+  const weights = convertData(model.weights, web3, toFloat);
+  const intercept = convertNum(model.bias, web3, toFloat);
   const learningRate = 1;
+
+  if (featureIndices.length !== weights.length) {
+    throw new Error("The number of features must match the number of weights.");
+  }
 
   console.log(`Deploying Hot Dog classifier.`);
   // Trick to get await to work:
@@ -63,7 +68,13 @@ module.exports = function (deployer) {
     // Add remaining weights.
     for (let i = weightChunkSize; i < weights.length; i += weightChunkSize) {
       console.log(` Deploying classifier weights [${i}, ${Math.min(i + weightChunkSize, weights.length)}).`);
-      await classifier.initializeWeights(weights.slice(i, i + weightChunkSize), { gas: 8E6 });
+      await classifier.initializeWeights(weights.slice(i, i + weightChunkSize));
+    }
+
+    // Add feature indices to use.
+    for (let i = 0; i < featureIndices.length; i += weightChunkSize) {
+      console.log(` Deploying classifier feature indices [${i}, ${Math.min(i + weightChunkSize, featureIndices.length)}).`);
+      await classifier.addFeatureIndices(featureIndices.slice(i, i + weightChunkSize));
     }
 
     console.log(`Deploying main entry point.`);
