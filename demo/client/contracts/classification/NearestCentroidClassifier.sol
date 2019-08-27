@@ -2,8 +2,6 @@ pragma solidity ^0.5.8;
 pragma experimental ABIEncoderV2;
 
 import "../libs/Math.sol";
-import "../libs/SafeMath.sol";
-import "../libs/SignedSafeMath.sol";
 
 import {Classifier64} from "./Classifier.sol";
 
@@ -11,9 +9,6 @@ import {Classifier64} from "./Classifier.sol";
  * https://en.wikipedia.org/wiki/Nearest_centroid_classifier
  */
 contract NearestCentroidClassifier is Classifier64 {
-    using SafeMath for uint256;
-    using SignedSafeMath for int256;
-
     /** A class has been added. */
     event AddClass(
         /** The name of the class. */

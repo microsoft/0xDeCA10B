@@ -2,8 +2,6 @@ pragma solidity ^0.5.8;
 pragma experimental ABIEncoderV2;
 
 import "../libs/Math.sol";
-import "../libs/SafeMath.sol";
-import "../libs/SignedSafeMath.sol";
 
 import {Classifier64} from "./Classifier.sol";
 
@@ -11,9 +9,6 @@ import {Classifier64} from "./Classifier.sol";
  * A Perceptron where the data given for updating and predicting is dense.
  */
 contract DensePerceptron is Classifier64 {
-
-    using SafeMath for uint256;
-    using SignedSafeMath for int256;
 
     int80[] public weights;
     int80 public intercept;
@@ -65,32 +60,45 @@ contract DensePerceptron is Classifier64 {
     }
 
     function update(int64[] memory data, uint64 classification) public onlyOwner {
-        uint64 prediction = predict(data);
-        if (prediction != classification) {
-            // Update model.
-            // predict checks `data.length == weights.length`.
-            uint len = data.length;
-            uint _norm = 0;
-            int128 datum;
-            if (classification > 0) {
-                // sign = 1
-                for(uint i = 0; i < len; ++i) {
-                    datum = data[i];
-                    _norm = _norm.add(uint(datum * datum));
-                    weights[i] += int80(data[i]) * learningRate;
-                }
-            } else {
-                // sign = -1
-                for(uint i = 0; i < len; ++i) {
-                    datum = data[i];
-                    _norm = _norm.add(uint(datum * datum));
-                    weights[i] -= int80(data[i]) * learningRate;
-                }
-            }
+        uint len = data.length;
+        require(len == weights.length, "The data must have the same dimension as the weights.");
 
-            uint oneSquared = uint(toFloat).mul(toFloat);
-            // Must be almost within `toFloat` of `toFloat*toFloat` because we only care about the first `toFloat` digits.
-            require(oneSquared - 100 * toFloat < _norm && _norm < oneSquared + 100 * toFloat, "The provided data does not have a norm of 1.");
+        // Compute prediction and updates at the same time to save gas.
+        int prediction = intercept;
+        int80[] memory newWeights = new int80[](data.length);
+        uint _norm = 0;
+        if (classification > 0) {
+            // sign = 1
+            for(uint i = 0; i < len; ++i) {
+                int128 datum = data[i];
+                int80 w = weights[i];
+                prediction = prediction.add(int(w).mul(datum));
+                newWeights[i] = w + int80(datum) * learningRate;
+                _norm = _norm.add(uint(datum * datum));
+            }
+        } else {
+            // sign = -1
+            for(uint i = 0; i < len; ++i) {
+                int128 datum = data[i];
+                int80 w = weights[i];
+                prediction = prediction.add(int(w).mul(datum));
+                newWeights[i] = w - int80(datum) * learningRate;
+                _norm = _norm.add(uint(datum * datum));
+            }
+        }
+
+        if (prediction <= 0) {
+            prediction = 0;
+        } else {
+            prediction = 1;
+        }
+
+        // Must be almost within `toFloat` of `toFloat*toFloat` because we only care about the first `toFloat` digits.
+        uint oneSquared = uint(toFloat).mul(toFloat);
+        require(oneSquared - 100 * toFloat < _norm && _norm < oneSquared + 100 * toFloat, "The provided data does not have a norm of 1.");
+
+        if (prediction != classification) {
+            weights = newWeights;
         }
     }
 }

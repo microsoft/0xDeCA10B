@@ -2,6 +2,8 @@ pragma solidity ^0.5.8;
 pragma experimental ABIEncoderV2;
 
 import "../libs/SafeMath.sol";
+import "../libs/SignedSafeMath.sol";
+
 import {Ownable} from "../ownership/Ownable.sol";
 
 /**
@@ -36,6 +38,9 @@ contract Classifier {
 // Use an abstract contract instead of an interface so that we can enforce internal functions
 // and not be forced to have some external.
 contract Classifier64 is Ownable, Classifier {
+    using SafeMath for uint256;
+    using SignedSafeMath for int256;
+
     // Number decimal places precision.
     uint64 constant public toFloat = 1E9;
 

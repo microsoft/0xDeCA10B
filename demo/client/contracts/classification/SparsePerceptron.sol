@@ -1,19 +1,12 @@
 pragma solidity ^0.5.8;
 pragma experimental ABIEncoderV2;
 
-import "../libs/SafeMath.sol";
-import "../libs/SignedSafeMath.sol";
-
 import {Classifier64} from "./Classifier.sol";
 
 /**
  * A Perceptron where the data given for updating and predicting is sparse and binarized (each feature is present or not).
  */
 contract SparsePerceptron is Classifier64 {
-
-    using SafeMath for uint256;
-    using SignedSafeMath for int256;
-
     mapping(uint64 => int80) public weights;
     int80 public intercept;
     uint8 public learningRate;
