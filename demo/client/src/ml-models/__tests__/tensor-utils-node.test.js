@@ -4,7 +4,7 @@ const tf = require('@tensorflow/tfjs-node');
 
 const { normalize1d, normalize2d } = require('../tensor-utils-node');
 
-describe('tensor-utils', () => {
+describe('tensor-utils-node', () => {
     it('normalize1d', () => {
         tf.tidy(() => {
             let v = tf.tensor1d([1, 0, 0]);
@@ -28,15 +28,17 @@ describe('tensor-utils', () => {
     })
 
     it('normalize2d', () => {
-        let m = tf.tensor2d([
-            [1, 0, 0, 0],
-            [1, 1, 1, 1],
-        ]);
-        let normalized = normalize2d(m);
-        let expected = tf.tensor2d([
-            [1, 0, 0, 0],
-            [1 / 2, 1 / 2, 1 / 2, 1 / 2]
-        ]);
-        assert.equal(normalized.equalStrict(expected).all().dataSync()[0], 1);
+        tf.tidy(() => {
+            let m = tf.tensor2d([
+                [1, 0, 0, 0],
+                [1, 1, 1, 1],
+            ]);
+            let normalized = normalize2d(m);
+            let expected = tf.tensor2d([
+                [1, 0, 0, 0],
+                [1 / 2, 1 / 2, 1 / 2, 1 / 2]
+            ]);
+            assert.equal(normalized.equalStrict(expected).all().dataSync()[0], 1);
+        });
     })
 });
