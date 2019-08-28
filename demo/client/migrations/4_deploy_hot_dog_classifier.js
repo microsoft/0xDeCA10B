@@ -1,7 +1,7 @@
 const axios = require('axios');
 const fs = require('fs');
 const pjson = require('../package.json');
-const { convertNum, convertData } = require('../src/float-utils.js');
+const { convertNum, convertData } = require('../src/float-utils-node.js');
 
 const CollaborativeTrainer64 = artifacts.require("./CollaborativeTrainer64");
 const DataHandler64 = artifacts.require("./data/DataHandler64");

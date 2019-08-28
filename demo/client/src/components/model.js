@@ -17,6 +17,7 @@ import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import * as mobilenet from '@tensorflow-models/mobilenet';
 import * as UniversalSentenceEncoder from '@tensorflow-models/universal-sentence-encoder';
+import * as tf from '@tensorflow/tfjs';
 import axios from 'axios';
 import loadImage from 'blueimp-load-image';
 import update from 'immutability-helper';
@@ -30,6 +31,8 @@ import CollaborativeTrainer from '../contracts/CollaborativeTrainer64.json';
 import DataHandler from '../contracts/DataHandler64.json';
 import IncentiveMechanism from '../contracts/Stakeable64.json';
 import ImdbVocab from '../data/imdb.json';
+import { convertData } from '../float-utils';
+import { normalize1d } from '../ml-models/tensor-utils';
 
 moment.relativeTimeThreshold('ss', 4);
 
@@ -157,6 +160,7 @@ class Model extends React.Component {
     this.processUploadedImageInput = this.processUploadedImageInput.bind(this);
     this.refund = this.refund.bind(this);
     this.setContractInstance = this.setContractInstance.bind(this);
+    this.setFeatureIndices = this.setFeatureIndices.bind(this);
     this.takeDeposit = this.takeDeposit.bind(this);
     this.train = this.train.bind(this);
     this.updateDynamicAccountInfo = this.updateDynamicAccountInfo.bind(this);
@@ -167,6 +171,9 @@ class Model extends React.Component {
 
   componentDidMount = async () => {
     try {
+      // Get rid of a warning about network refreshing.
+      window.ethereum.autoRefreshOnNetworkChange = false;
+
       const fallbackProvider = new Web3.providers.HttpProvider("http://127.0.0.1:7545");
       this.web3 = await getWeb3({ fallbackProvider, requestPermission: true });
 
@@ -232,19 +239,20 @@ class Model extends React.Component {
       address: incentiveMechanismAddress
     });
     await this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism });
-    const promises = await Promise.all([
+    await Promise.all([
       this.updateContractInfo(),
       this.updateDynamicInfo(),
-      this.getTransformInputMethod(),
+      this.setTransformInputMethod(),
     ]);
 
-    this.transformInput = promises[2].bind(this);
+    this.setFeatureIndices();
 
     if (this.state.tab !== 0) {
       this.handleTabChange(null, this.state.tab);
     }
 
     setInterval(this.updateDynamicInfo, 15 * 1000);
+
     if (typeof window !== "undefined" && window.ethereum) {
       window.ethereum.on('accountsChanged', accounts => {
         this.setState({ accounts, addedData: [], rewardData: [] }, _ => {
@@ -261,12 +269,11 @@ class Model extends React.Component {
     }
   }
 
-  async getTransformInputMethod() {
-    let transformInput;
+  async setTransformInputMethod() {
     if (this.state.contractInfo.encoder === 'universal sentence encoder') {
       await this.setState({ inputType: 'text' });
       const use = await UniversalSentenceEncoder.load();
-      transformInput = async (query) => {
+      this.transformInput = async (query) => {
         const toFloat = this.state.toFloat;
         const embeddings = await use.embed(query);
         const embedding = embeddings.gather(0).arraySync();
@@ -289,21 +296,18 @@ class Model extends React.Component {
           alpha: 1,
         }
       );
-      transformInput = async (imgElement) => {
-        const toFloat = this.state.toFloat;
+
+      this.transformInput = async (imgElement) => {
         let imgEmbedding = await model.infer(imgElement, { embedding: true });
-        const emb = imgEmbedding.arraySync()[0];
+        const emb = tf.tidy(_ => {
+          const emb = normalize1d(imgEmbedding.gather(0));
+          return emb.gather(this.state.featureIndices).arraySync();
+        });
         imgEmbedding.dispose();
-        const convertedEmbedding = emb.map(x => Math.round(x * toFloat));
-        const _toFloat = this.web3.utils.toBN(toFloat);
-        // TODO Test.
-        let norm = await this.state.classifier.methods.norm(convertedEmbedding.map(v => this.web3.utils.toHex(v)))
-          .call()
-          .then(parseInt);
-        console.log(`norm: ${norm}`);
-        norm = this.web3.utils.toBN(norm);
-        return convertedEmbedding.map(v => this.web3.utils.toBN(v).mul(_toFloat).div(norm))
-          .map(this.web3.utils.toHex);
+
+        const convertedData = convertData(emb, this.web3, this.state.toFloat);
+        const result = convertedData.map(v => this.web3.utils.toHex(v));
+        return result;
       }
     } else if (this.state.contractInfo.encoder === 'IMDB vocab') {
       await this.setState({ inputType: 'text' });
@@ -311,7 +315,7 @@ class Model extends React.Component {
       Object.entries(ImdbVocab).forEach(([key, value]) => {
         this.vocab[value] = key;
       });
-      transformInput = async (query) => {
+      this.transformInput = async (query) => {
         const tokens = query.toLowerCase().split(" ");
         return tokens.map(t => {
           let idx = ImdbVocab[t];
@@ -325,7 +329,20 @@ class Model extends React.Component {
     } else {
       throw new Error(`Couldn't find encoder for ${this.state.contractInfo.encoder}`);
     }
-    return transformInput;
+
+    this.transformInput = this.transformInput.bind(this);
+  }
+
+  async setFeatureIndices() {
+    return this.state.classifier.methods.getNumFeatureIndices().call()
+      .then(parseInt)
+      .then(numFeatureIndices => {
+        return Promise.all([...Array(numFeatureIndices).keys()].map(i => {
+          return this.state.classifier.methods.featureIndices(i).call().then(parseInt);
+        })).then(featureIndices => {
+          this.setState({ featureIndices });
+        });
+      });
   }
 
   addDataCost() {
@@ -683,7 +700,10 @@ class Model extends React.Component {
             this.predict(input)
               .then(prediction => {
                 this.setState({ prediction });
-              }).catch(console.err);
+              }).catch(err => {
+                this.setState({ prediction: "(Error predicting. See console for details.)" });
+                console.error(err);
+              });
           });
         }).catch((err) => {
           this.setState({ prediction: "(Error transforming input. See console for details.)" });

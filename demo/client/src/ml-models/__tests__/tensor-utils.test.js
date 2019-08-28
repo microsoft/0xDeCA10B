@@ -2,7 +2,7 @@ const assert = require('assert');
 
 const tf = require('@tensorflow/tfjs-node');
 
-const { normalize1d, normalize2d } = require('../tensor-utils');
+const { normalize1d, normalize2d } = require('../tensor-utils-node');
 
 describe('tensor-utils', () => {
     it('normalize1d', () => {

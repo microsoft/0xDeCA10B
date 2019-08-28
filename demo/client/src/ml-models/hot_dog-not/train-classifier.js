@@ -5,7 +5,7 @@ const mobilenet = require('@tensorflow-models/mobilenet');
 const tf = require('@tensorflow/tfjs-node');
 const { createCanvas, loadImage } = require('canvas');
 
-const { normalize1d } = require('../tensor-utils');
+const { normalize1d } = require('../tensor-utils-node');
 
 const dataPath = path.join(__dirname, './seefood');
 

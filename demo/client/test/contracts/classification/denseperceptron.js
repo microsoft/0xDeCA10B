@@ -1,7 +1,7 @@
 const Classifier = artifacts.require("./classification/DensePerceptron");
 
-const { normalizeArray } = require('../../../src/ml-models/tensor-utils');
-const { convertNum, convertData } = require('../../../src/float-utils');
+const { normalizeArray } = require('../../../src/ml-models/tensor-utils-node');
+const { convertNum, convertData } = require('../../../src/float-utils-node');
 
 contract('DensePerceptron', function (accounts) {
   const toFloat = 1E9;
