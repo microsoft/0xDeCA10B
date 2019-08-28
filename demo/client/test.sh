@@ -23,7 +23,7 @@ CI=true truffle test || cleanup exit
 cleanup
 
 # Add CI=true before to remove colors.
-mocha --recursive src/**/__tests__/*.test.js
+mocha --recursive src/**/__tests__/*.test.js || exit 1
 
 # Set `CI=true` to avoid watching for changes.
-CI=true react-scripts test --env=jsdom || exit 1
+CI=true react-scripts test --env=jsdom --testPathIgnorePatterns='src/.*/__tests__/[^/]*-node.test.js' || exit 1

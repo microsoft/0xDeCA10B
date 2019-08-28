@@ -11,7 +11,7 @@
     "@tensorflow-models/mobilenet": "^2.0.3",
     "@tensorflow-models/universal-sentence-encoder": "^1.0.1",
     "@tensorflow/tfjs": "^1.0.4",
-    "@tensorflow/tfjs-node": "^1.2.7",
+    "@tensorflow/tfjs-node": "^1.2.8",
     "axios": "^0.18.0",
     "blueimp-load-image": "^2.23.0",
     "canvas": "^2.6.0",
