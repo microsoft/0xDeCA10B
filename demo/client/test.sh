@@ -18,7 +18,7 @@ cleanup() {
 # The `set -e` at the top doesn't seem to help with getting these exit on failure.
 truffle compile || cleanup exit
 CI=true truffle migrate || cleanup exit
-CI=true truffle test || cleanup exit
+CI=true truffle test test/contracts/*.js test/contracts/**/*.js || cleanup exit
 
 cleanup
 
