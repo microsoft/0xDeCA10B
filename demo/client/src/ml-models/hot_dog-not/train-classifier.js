@@ -378,6 +378,7 @@ async function getPerceptronModel() {
         console.log(`Saving Perceptron to "${modelPath}".`);
         fs.writeFileSync(modelPath, JSON.stringify({
             weights: model.weights.arraySync(),
+            classifications: [NEGATIVE_CLASS, POSITIVE_CLASS],
             bias: model.bias
         }));
         resolve(model);
@@ -445,6 +446,7 @@ async function main() {
         const modelPath = path.join(__dirname, `classifier-perceptron-${PERCEPTRON_NUM_FEATS}.json`);
         console.log(`Saving Perceptron with ${PERCEPTRON_NUM_FEATS} weights to "${modelPath}".`);
         fs.writeFileSync(modelPath, JSON.stringify({
+            classifications: [NEGATIVE_CLASS, POSITIVE_CLASS],
             featureIndices: model.featureIndices.arraySync(),
             weights: model.weights.arraySync(),
             bias: model.bias

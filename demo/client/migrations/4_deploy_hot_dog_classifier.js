@@ -33,19 +33,13 @@ module.exports = function (deployer) {
   const weightChunkSize = 450;
 
   // Model
-  // TODO Get classifications from the model file.
-  const classifications = ["NOT HOT DOG", "HOT DOG"];
   let model = fs.readFileSync('./src/ml-models/hot_dog-not/classifier-perceptron-400.json', 'utf8');
   model = JSON.parse(model);
 
-  const featureIndices = model.featureIndices;
+  const { classifications, featureIndices } = model;
   const weights = convertData(model.weights, web3, toFloat);
   const intercept = convertNum(model.bias, web3, toFloat);
   const learningRate = 1;
-
-  if (featureIndices.length !== weights.length) {
-    throw new Error("The number of features must match the number of weights.");
-  }
 
   console.log(`Deploying Hot Dog classifier.`);
   // Trick to get await to work:
@@ -72,9 +66,14 @@ module.exports = function (deployer) {
     }
 
     // Add feature indices to use.
-    for (let i = 0; i < featureIndices.length; i += weightChunkSize) {
-      console.log(` Deploying classifier feature indices [${i}, ${Math.min(i + weightChunkSize, featureIndices.length)}).`);
-      await classifier.addFeatureIndices(featureIndices.slice(i, i + weightChunkSize));
+    if (featureIndices !== undefined) {
+      if (featureIndices.length !== weights.length) {
+        throw new Error("The number of features must match the number of weights.");
+      }
+      for (let i = 0; i < featureIndices.length; i += weightChunkSize) {
+        console.log(` Deploying classifier feature indices [${i}, ${Math.min(i + weightChunkSize, featureIndices.length)}).`);
+        await classifier.addFeatureIndices(featureIndices.slice(i, i + weightChunkSize));
+      }
     }
 
     console.log(`Deploying main entry point.`);
