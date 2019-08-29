@@ -25,6 +25,5 @@ cleanup
 # Add CI=true before to remove colors.
 mocha --recursive src/**/__tests__/*.test.js || exit 1
 
-# Skipping for now because it fails and I can't figure out how to correct it: https://stackoverflow.com/questions/57712235/referenceerror-textencoder-is-not-defined-when-running-react-scripts-test
 # Set `CI=true` to avoid watching for changes.
-# CI=true react-scripts test --env=jsdom --testPathIgnorePatterns='src/.*/__tests__/[^/]*-node.test.js' || exit 1
+CI=true react-scripts test --env=./test/custom-test-env.js --testPathIgnorePatterns='src/.*/__tests__/[^/]*-node.test.js' --testMatch=**/*.test.js
