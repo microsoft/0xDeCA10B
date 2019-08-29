@@ -136,7 +136,7 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
 
     function handleAddData(uint msgValue, int64[] memory data, uint64 classification) public onlyOwner returns (uint cost) {
         cost = getNextAddDataCost(data, classification);
-        require(msgValue >= cost, "Didn't pay enough.");
+        require(msgValue >= cost, "Didn't pay enough for the deposit.");
         lastUpdateTimeS = now; // solium-disable-line security/no-block-members
     }
 

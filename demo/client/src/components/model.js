@@ -155,6 +155,7 @@ class Model extends React.Component {
     this.handleInputChange = this.handleInputChange.bind(this);
     this.handleTabChange = this.handleTabChange.bind(this);
     this.hasEnoughTimePassed = this.hasEnoughTimePassed.bind(this);
+    this.normalize = this.normalize.bind(this);
     this.predict = this.predict.bind(this);
     this.predictInput = this.predictInput.bind(this);
     this.processUploadedImageInput = this.processUploadedImageInput.bind(this);
@@ -269,6 +270,20 @@ class Model extends React.Component {
     }
   }
 
+  /**
+   * @param {Array[Number]} data 
+   * @returns Normalizes `data` using the result of the norm from the classifier contract.
+   */
+  async normalize(data) {
+    const convertedData = data.map(x => Math.round(x * this.state.toFloat));
+    return this.state.classifier.methods.norm(convertedData.map(v => this.web3.utils.toHex(v))).call()
+      .then(norm => {
+        norm = this.web3.utils.toBN(norm);
+        const _toFloat = this.web3.utils.toBN(this.state.toFloat);
+        return convertedData.map(v => this.web3.utils.toBN(v).mul(_toFloat).div(norm));
+      });
+  }
+
   async setTransformInputMethod() {
     if (this.state.contractInfo.encoder === 'universal sentence encoder') {
       await this.setState({ inputType: 'text' });
@@ -299,13 +314,24 @@ class Model extends React.Component {
 
       this.transformInput = async (imgElement) => {
         let imgEmbedding = await model.infer(imgElement, { embedding: true });
-        const emb = tf.tidy(_ => {
+        // TODO Clean up
+        let needToNormalize = true;
+        let emb = tf.tidy(_ => {
           const emb = normalize1d(imgEmbedding.gather(0));
-          return emb.gather(this.state.featureIndices).arraySync();
+          if (this.state.featureIndices !== undefined && this.state.featureIndices.length > 0) {
+            return emb.gather(this.state.featureIndices).arraySync();
+          } else {
+            needToNormalize = false;
+            return convertData(emb, this.web3, this.state.toFloat).arraySync();
+          }
         });
         imgEmbedding.dispose();
+        if (needToNormalize) {
+          emb = await this.normalize(emb);
+        }
 
-        const convertedData = convertData(emb, this.web3, this.state.toFloat);
+        // const convertedData = convertData(emb, this.web3, this.state.toFloat);
+        const convertedData = emb;
         const result = convertedData.map(v => this.web3.utils.toHex(v));
         return result;
       }
@@ -340,6 +366,7 @@ class Model extends React.Component {
         return Promise.all([...Array(numFeatureIndices).keys()].map(i => {
           return this.state.classifier.methods.featureIndices(i).call().then(parseInt);
         })).then(featureIndices => {
+          console.log("Done setting feature indices");
           this.setState({ featureIndices });
         });
       });
@@ -748,8 +775,11 @@ class Model extends React.Component {
     }
     return this.transformInput(originalData)
       .then(trainData => {
+        // TODO Pass around BN's and avoid rounding issues.
+        // Add extra wei to help with rounding issues. Extra gets returned right away by the contract.
+        const value = this.state.depositCost + 1E14;
         return this.state.contractInstance.methods.addData(trainData, classification)
-          .send({ from: this.state.accounts[0], value: this.state.depositCost })
+          .send({ from: this.state.accounts[0], value })
           .on('transactionHash', (transactionHash) => {
             // TODO Pop up confirmation that data was sent.
             // console.log(`Data sent. status:${status}\nevents:`);
@@ -768,7 +798,8 @@ class Model extends React.Component {
               console.log("Saved info to DB.")
               return this.updateRefundData().then(this.updateDynamicInfo);
             }).catch(err => {
-              console.error("Error saving original data to DB.")
+              console.error("Error saving original data to DB.");
+              console.error(err);
             });
           })
           .on('receipt', (receipt) => {
@@ -852,7 +883,9 @@ class Model extends React.Component {
                             <section>
                               <div {...getRootProps()}>
                                 <input {...getInputProps()} />
-                                <p>Drag 'n' drop some files here, or click to select files</p>
+                                <Typography component="p">
+                                  Drag and drop some files here, or click to select files
+                                </Typography>
                                 <img
                                   id="input-image"
                                   width="500"
@@ -893,7 +926,9 @@ class Model extends React.Component {
                             <section>
                               <div {...getRootProps()}>
                                 <input {...getInputProps()} />
-                                <p>Drag 'n' drop some files here, or click to select files</p>
+                                <Typography component="p">
+                                  Drag and drop some files here, or click to select files
+                                </Typography>
                                 <img
                                   id="input-image"
                                   width="500"
