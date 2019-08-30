@@ -64,6 +64,7 @@ contract DensePerceptron is Classifier64 {
         require(len == weights.length, "The data must have the same dimension as the weights.");
 
         // Compute prediction and updates at the same time to save gas.
+        // TODO Handle mapped (decimal) learning rate.
         int prediction = intercept;
         int80[] memory newWeights = new int80[](data.length);
         uint _norm = 0;

@@ -7,3 +7,7 @@ export function convertNum(num, web3, toFloat = _toFloat) {
 export function convertData(data, web3, toFloat = _toFloat) {
     return data.map(num => convertNum(num, web3, toFloat));
 }
+
+export function convertToHexData(data, web3, toFloat = _toFloat) {
+    return data.map(num => web3.utils.toHex(Math.round(num * toFloat)));
+}
