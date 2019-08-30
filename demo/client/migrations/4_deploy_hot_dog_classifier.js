@@ -53,7 +53,7 @@ module.exports = function (deployer) {
       costWeight);
     console.log(`  Deployed incentive mechanism to ${incentiveMechanism.address}.`);
 
-    console.log(` Deploying classifier with first ${weightChunkSize} weights.`);
+    console.log(` Deploying classifier with first ${Math.min(weights.length, weightChunkSize)} weights.`);
     const classifier = await deployer.deploy(DensePerceptron,
       classifications, weights.slice(0, weightChunkSize), intercept, learningRate,
       // Block gasLimit by most miners as of May 2019.
