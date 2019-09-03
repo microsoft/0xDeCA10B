@@ -37,7 +37,6 @@ moment.relativeTimeThreshold('ss', 4);
 const INPUT_TYPE_IMAGE = 'image';
 const INPUT_TYPE_TEXT = 'text';
 
-
 const styles = theme => ({
   root: {
     ...theme.mixins.gutters(),

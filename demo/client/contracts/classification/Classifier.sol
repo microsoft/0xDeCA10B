@@ -42,7 +42,7 @@ contract Classifier is Ownable {
     /**
      * Add more feature indices to take from the encoded result.
      * Made to be called just after the contract is created and never again.
-     * @param _featureIndices The feature indices to append to the current array.
+     * @param _featureIndices The feature indices to append to the array held by this contract.
      */
     function addFeatureIndices(uint32[] memory _featureIndices) public onlyOwner {
         for (uint32 i = 0; i < _featureIndices.length; ++i) {
@@ -51,7 +51,7 @@ contract Classifier is Ownable {
     }
 
     /**
-     * @return The number of feature indices to use. 0 means to use all.
+     * @return The number of feature indices to use. 0 means to use all feature from the encoding.
      */
     function getNumFeatureIndices() public view returns (uint) {
         return featureIndices.length;

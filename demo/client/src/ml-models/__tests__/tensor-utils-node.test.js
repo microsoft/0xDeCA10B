@@ -2,7 +2,7 @@ const assert = require('assert');
 
 const tf = require('@tensorflow/tfjs-node');
 
-const { normalize1d, normalize2d } = require('../tensor-utils-node');
+const { normalize1d, normalize2d, normalizeArray } = require('../tensor-utils-node');
 
 describe('tensor-utils-node', () => {
     it('normalize1d', () => {
@@ -39,6 +39,19 @@ describe('tensor-utils-node', () => {
                 [1 / 2, 1 / 2, 1 / 2, 1 / 2]
             ]);
             assert.equal(normalized.equalStrict(expected).all().dataSync()[0], 1);
+        });
+    })
+
+    it('normalizeArray', () => {
+        tf.tidy(() => {
+            let v = [1, 0, 0];
+            let normalized = normalizeArray(v);
+            let expected = v;
+            assert.deepStrictEqual(normalized, expected);
+
+            normalized = normalizeArray([1, 1, 1, 1]);
+            expected = [1 / 2, 1 / 2, 1 / 2, 1 / 2];
+            assert.deepStrictEqual(normalized, expected);
         });
     })
 });
