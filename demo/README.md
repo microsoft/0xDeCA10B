@@ -32,12 +32,24 @@ docker run --rm -it -p 3000:3000 -p 5387:5387 -p 7545:7545 -v ${PWD}:/root/works
 byobu
 ```
 
-You can find the available tags for the Docker image [here](https://mcr.microsoft.com/v2/samples/blockchain-ai/0xdeca10b-demo/tags/list).
+You can find the available tags for the Docker image [here](https://mcr.microsoft.com/v2/samples/blockchain-ai/0xdeca10b-demo/tags/list) and check the details for the latest tag [here](https://mcr.microsoft.com/v2/samples/blockchain-ai/0xdeca10b-demo/manifests/latest).
 
 ### Building the Docker Image
 If you want to build your own fresh image:
 ```bash
 docker build -t decai-demo .
+```
+
+#### (Microsoft Devs) Updating the Public Image
+First get permission to push 0xdeca10bcontainerreg.azurecr.io.
+
+Then
+```bash
+newVersion=<Set the new version. E.g. 1.2.0>
+docker tag decai-demo 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-demo:${newVersion}
+docker tag decai-demo 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-demo:latest
+docker push 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-demo:${newVersion}
+docker push 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-demo:latest
 ```
 
 ## Troubleshooting Setup
@@ -46,7 +58,7 @@ If you have problems running the setup steps related to node-gyp, then you might
 ## Update
 To update dependencies after already setting up:
 ```bash
-yarn global upgrade yarn && yarn upgrade && (cd client && yarn upgrade)
+yarn global add yarn && yarn install && (cd client && yarn install)
 ```
 
 # Deploy

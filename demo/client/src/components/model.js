@@ -15,11 +15,16 @@ import TableRow from '@material-ui/core/TableRow';
 import Tabs from '@material-ui/core/Tabs';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
+import * as mobilenet from '@tensorflow-models/mobilenet';
 import * as UniversalSentenceEncoder from '@tensorflow-models/universal-sentence-encoder';
+import * as tf from '@tensorflow/tfjs';
 import axios from 'axios';
+import loadImage from 'blueimp-load-image';
 import update from 'immutability-helper';
+import moment from 'moment';
 import PropTypes from 'prop-types';
 import React from 'react';
+import Dropzone from 'react-dropzone';
 import Web3 from "web3"; // Only required for custom/fallback provider option.
 import Classifier from "../contracts/Classifier64.json";
 import CollaborativeTrainer from '../contracts/CollaborativeTrainer64.json';
@@ -27,7 +32,10 @@ import DataHandler from '../contracts/DataHandler64.json';
 import IncentiveMechanism from '../contracts/Stakeable64.json';
 import ImdbVocab from '../data/imdb.json';
 
-const moment = require('moment');
+moment.relativeTimeThreshold('ss', 4);
+
+const INPUT_TYPE_IMAGE = 'image';
+const INPUT_TYPE_TEXT = 'text';
 
 const styles = theme => ({
   root: {
@@ -80,6 +88,13 @@ function getDisplayableOriginalData(data) {
   if (typeof data === 'string') {
     return `"${data}"`;
   }
+  if (Array.isArray(data)) {
+    let result = JSON.stringify(data, null, 2);
+    if (result.length > 110) {
+      result = result.slice(0, 100) + "...";
+    }
+    return result;
+  }
   return data;
 }
 
@@ -118,9 +133,12 @@ class Model extends React.Component {
       rewardData: [],
       contractInstance: undefined,
       depositCost: undefined,
+      featureIndices: undefined,
       trainData: undefined,
       trainClassIndex: 0,
       input: "[]",
+      inputType: undefined,
+      inputImageUrl: require("../images/hot_dog.jpg"),
       accounts: undefined,
       prediction: "",
       accountScore: undefined,
@@ -133,14 +151,17 @@ class Model extends React.Component {
     this.canAttemptRefund = this.canAttemptRefund.bind(this);
     this.getContractInstance = this.getContractInstance.bind(this);
     this.getHumanReadableEth = this.getHumanReadableEth.bind(this);
-    this.getSentiment = this.getSentiment.bind(this);
+    this.getSentiment = this.getClassificationName.bind(this);
     this.handleInputChange = this.handleInputChange.bind(this);
     this.handleTabChange = this.handleTabChange.bind(this);
     this.hasEnoughTimePassed = this.hasEnoughTimePassed.bind(this);
+    this.normalize = this.normalize.bind(this);
     this.predict = this.predict.bind(this);
     this.predictInput = this.predictInput.bind(this);
+    this.processUploadedImageInput = this.processUploadedImageInput.bind(this);
     this.refund = this.refund.bind(this);
     this.setContractInstance = this.setContractInstance.bind(this);
+    this.setFeatureIndices = this.setFeatureIndices.bind(this);
     this.takeDeposit = this.takeDeposit.bind(this);
     this.train = this.train.bind(this);
     this.updateDynamicAccountInfo = this.updateDynamicAccountInfo.bind(this);
@@ -151,14 +172,18 @@ class Model extends React.Component {
 
   componentDidMount = async () => {
     try {
+      // Get rid of a warning about network refreshing.
+      window.ethereum.autoRefreshOnNetworkChange = false;
+
       const fallbackProvider = new Web3.providers.HttpProvider("http://127.0.0.1:7545");
-      this.web3 = await getWeb3({ fallbackProvider });
-      // Get permission and sets access to accounts.
-      await window.ethereum.enable();
+      this.web3 = await getWeb3({ fallbackProvider, requestPermission: true });
 
       axios.get(`/api/models/${this.state.modelId}`).then(r => {
         this.setState({ contractInfo: r.data.model },
-          this.setContractInstance);
+          async _ => {
+            await this.setContractInstance();
+            // TODO Add a toast and enable buttons.
+          });
       });
     } catch (error) {
       alert(`Failed to load web3, accounts, or contract. Check console for details.`);
@@ -181,9 +206,6 @@ class Model extends React.Component {
       // Use the contract address from the database and assume it conforms to the known interfaces.
       // TODO Get abi from https://etherscan.io/apis#contracts
     }
-
-    const transformInput = await this.getTransformInputMethod();
-    this.transformInput = transformInput.bind(this);
 
     const contractInstance = await this.getContractInstance({
       web3: this.web3,
@@ -216,56 +238,107 @@ class Model extends React.Component {
       abi: IncentiveMechanism.abi,
       address: incentiveMechanismAddress
     });
-    this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism }, _ => {
-      this.updateContractInfo()
-        .then(this.updateDynamicInfo)
-        .then(() => {
-          if (this.state.tab !== 0) {
-            this.handleTabChange(null, this.state.tab);
-          }
-        });
-      setInterval(this.updateDynamicInfo, 15 * 1000);
-      if (typeof window !== "undefined" && window.ethereum) {
-        window.ethereum.on('accountsChanged', accounts => {
-          this.setState({ accounts, addedData: [], rewardData: [] }, _ => {
-            this.updateDynamicAccountInfo().then(() => {
-              if (this.state.tab !== 0) {
-                this.handleTabChange(null, this.state.tab);
-              }
-            });
+    await this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism });
+    await Promise.all([
+      this.updateContractInfo(),
+      this.updateDynamicInfo(),
+      this.setTransformInputMethod(),
+      this.setFeatureIndices(),
+    ]);
+
+    if (this.state.tab !== 0) {
+      this.handleTabChange(null, this.state.tab);
+    }
+
+    setInterval(this.updateDynamicInfo, 15 * 1000);
+
+    if (typeof window !== "undefined" && window.ethereum) {
+      window.ethereum.on('accountsChanged', accounts => {
+        this.setState({ accounts, addedData: [], rewardData: [] }, _ => {
+          this.updateDynamicAccountInfo().then(() => {
+            if (this.state.tab !== 0) {
+              this.handleTabChange(null, this.state.tab);
+            }
           });
         });
-        window.ethereum.on('networkChanged', netId => {
-          this.setContractInstance();
-        });
-      }
-    });
+      });
+      window.ethereum.on('networkChanged', netId => {
+        this.setContractInstance();
+      });
+    }
   }
 
-  async getTransformInputMethod() {
-    let transformInput;
+  /**
+   * @param {Array[Number]} data 
+   * @returns Normalized `data` using the result of the norm from the classifier contract.
+   * The result is in the mapped space (multiplied by `this.state.toFloat`.
+   */
+  async normalize(data) {
+    const convertedData = data.map(x => Math.round(x * this.state.toFloat));
+    return this.state.classifier.methods.norm(convertedData.map(v => this.web3.utils.toHex(v))).call()
+      .then(norm => {
+        norm = this.web3.utils.toBN(norm);
+        const _toFloat = this.web3.utils.toBN(this.state.toFloat);
+        return convertedData.map(v => this.web3.utils.toBN(v).mul(_toFloat).div(norm));
+      });
+  }
+
+  async setTransformInputMethod() {
     if (this.state.contractInfo.encoder === 'universal sentence encoder') {
-      const use = await UniversalSentenceEncoder.load();
-      transformInput = async (query) => {
-        const toFloat = this.state.toFloat;
-        const embeddings = await use.embed(query);
-        const embedding = embeddings.gather(0).arraySync();
-        const convertedEmbedding = embedding.map(x => Math.round(x * toFloat));
-        return this.state.classifier.methods.norm(convertedEmbedding.map(v => this.web3.utils.toHex(v))).call()
-          .then(parseInt)
-          .then(norm => {
-            norm = this.web3.utils.toBN(norm);
-            const _toFloat = this.web3.utils.toBN(toFloat);
-            return convertedEmbedding.map(v => this.web3.utils.toBN(v).mul(_toFloat).div(norm))
-              .map(x => this.web3.utils.toHex(x.toNumber()));
+      this.setState({ inputType: INPUT_TYPE_TEXT });
+      UniversalSentenceEncoder.load().then(use => {
+        this.transformInput = async (query) => {
+          const embeddings = await use.embed(query);
+          let embedding = tf.tidy(_ => {
+            const emb = embeddings.gather(0);
+            if (this.state.featureIndices !== undefined && this.state.featureIndices.length > 0) {
+              return emb.gather(this.state.featureIndices).arraySync();
+            }
+            return emb.arraySync();
           });
-      };
+          embeddings.dispose();
+          embedding = await this.normalize(embedding);
+
+          const result = embedding.map(v => this.web3.utils.toHex(v));
+          return result;
+        };
+        this.transformInput = this.transformInput.bind(this);
+      });
+    } else if (this.state.contractInfo.encoder === 'MobileNetv2') {
+      this.setState({ inputType: INPUT_TYPE_IMAGE });
+      // https://github.com/tensorflow/tfjs-models/tree/master/mobilenet
+      mobilenet.load({
+        version: 2,
+        alpha: 1,
+      }).then(model => {
+        this.transformInput = async (imgElement) => {
+          if (Array.isArray(imgElement)) {
+            // Assume this is from given data and this method is being called from data already in the database.
+            return imgElement;
+          }
+          const imgEmbedding = await model.infer(imgElement, { embedding: true });
+          let emb = tf.tidy(_ => {
+            const emb = imgEmbedding.gather(0);
+            if (this.state.featureIndices !== undefined && this.state.featureIndices.length > 0) {
+              return emb.gather(this.state.featureIndices).arraySync();
+            }
+            return emb.arraySync();
+          });
+          imgEmbedding.dispose();
+          emb = await this.normalize(emb);
+
+          const result = emb.map(v => this.web3.utils.toHex(v));
+          return result;
+        }
+        this.transformInput = this.transformInput.bind(this);
+      });
     } else if (this.state.contractInfo.encoder === 'IMDB vocab') {
+      this.setState({ inputType: INPUT_TYPE_TEXT });
       this.vocab = [];
       Object.entries(ImdbVocab).forEach(([key, value]) => {
         this.vocab[value] = key;
       });
-      transformInput = async (query) => {
+      this.transformInput = async (query) => {
         const tokens = query.toLowerCase().split(" ");
         return tokens.map(t => {
           let idx = ImdbVocab[t];
@@ -276,10 +349,24 @@ class Model extends React.Component {
           return idx;
         }).map(v => this.web3.utils.toHex(v));
       };
+      this.transformInput = this.transformInput.bind(this);
     } else {
       throw new Error(`Couldn't find encoder for ${this.state.contractInfo.encoder}`);
     }
-    return transformInput;
+  }
+
+  async setFeatureIndices() {
+    return this.state.classifier.methods.getNumFeatureIndices().call()
+      .then(parseInt)
+      .then(numFeatureIndices => {
+        return Promise.all([...Array(numFeatureIndices).keys()].map(i => {
+          return this.state.classifier.methods.featureIndices(i).call().then(parseInt);
+        })).then(featureIndices => {
+          // TODO Toast or somehow indicate that now we're really ready to process inputs.
+          // Needs to work with other signal that we're ready to process data.
+          this.setState({ featureIndices });
+        });
+      });
   }
 
   addDataCost() {
@@ -348,11 +435,16 @@ class Model extends React.Component {
 
   getDisplayableEncodedData(data) {
     let d = data.map(v => this.web3.utils.toBN(v).toNumber());
-    if (this.state.contractInfo.encoder === 'universal sentence encoder') {
+    const divideFloatList = ['MobileNetv2', 'universal sentence encoder'];
+    if (divideFloatList.indexOf(this.state.contractInfo.encoder) > -1) {
       const _toFloat = this.state.toFloat;
       d = d.map(v => v / _toFloat);
     }
-    return JSON.stringify(d);
+    let result = JSON.stringify(d, null, 2);
+    if (result.length > 110) {
+      result = result.slice(0, 100) + "...";
+    }
+    return result;
   }
 
   getHumanReadableEth(amount) {
@@ -361,13 +453,18 @@ class Model extends React.Component {
   }
 
   // Returns a Promise.
-  getOriginalData(transactionHash) {
+  async getOriginalData(transactionHash) {
     return axios.get(`/api/data/${transactionHash}`).then(r => {
-      return r.data.originalData;
+      let result = r.data.originalData;
+      if (this.state.inputType === INPUT_TYPE_IMAGE) {
+        // Return the encoding.
+        result = JSON.parse(result);
+      }
+      return result;
     });
   }
 
-  getSentiment(val) {
+  getClassificationName(val) {
     if (typeof val !== 'number' || val < 0 || val >= this.state.classifications.length) {
       return val;
     }
@@ -450,6 +547,9 @@ class Model extends React.Component {
         .then(parseInt)
         .then(ownerClaimWaitTimeS => {
           this.setState({ ownerClaimWaitTimeS });
+        }).catch(err => {
+          console.error("Couldn't get ownerClaimWaitTimeS value from IM.");
+          console.error(err);
         }),
       this.state.incentiveMechanism.methods.costWeight().call()
         .then(parseInt)
@@ -465,11 +565,13 @@ class Model extends React.Component {
   }
 
   updateDynamicInfo() {
-    this.addDataCost()
-      .then((depositCost) => {
-        this.setState({ depositCost });
-      });
-    return this.updateDynamicAccountInfo();
+    return Promise.all([
+      this.addDataCost()
+        .then((depositCost) => {
+          this.setState({ depositCost });
+        }),
+      this.updateDynamicAccountInfo()
+    ]);
   }
 
   updateDynamicAccountInfo() {
@@ -586,6 +688,27 @@ class Model extends React.Component {
     });
   }
 
+  processUploadedImageInput(acceptedFiles) {
+    const reader = new FileReader();
+    const file = acceptedFiles[0];
+
+    // Examples of extra error processing.
+    // reader.onabort = (err) => {console.error("File reading was aborted."); console.error(err);};
+    // reader.onerror = (err) => {console.error("File reading has failed."); console.error(err);};
+    reader.onload = () => {
+      const binaryStr = reader.result;
+      // Correct the orientation.
+      loadImage(`data:${file.type};base64,${btoa(binaryStr)}`, (canvas) => {
+        const imgElement = document.getElementById('input-image');
+        imgElement.src = canvas.toDataURL();
+      }, { orientation: true });
+    }
+    if (acceptedFiles.length > 1) {
+      // TODO Report that extra files are ignored.
+    }
+    reader.readAsBinaryString(file);
+  }
+
   /* MAIN CONTRACT FUNCTIONS */
   predict(data) {
     return this.state.classifier.methods.predict(data).call().then(parseInt);
@@ -593,15 +716,23 @@ class Model extends React.Component {
 
   predictInput() {
     this.setState({ encodedPredictionData: null });
-    this.setState({ prediction: "(Transforming Input)" }, () => {
-      this.transformInput(this.state.input)
+    this.setState({ prediction: "(Transforming Input)" }, _ => {
+      let input = this.state.input;
+      if (this.state.inputType === INPUT_TYPE_IMAGE) {
+        input = document.getElementById('input-image');
+      }
+
+      this.transformInput(input)
         .then(input => {
           this.setState({ encodedPredictionData: `Encoded data: ${this.getDisplayableEncodedData(input)}` });
-          this.setState({ prediction: "(Predicting)" }, () => {
+          this.setState({ prediction: "(Predicting)" }, _ => {
             this.predict(input)
               .then(prediction => {
                 this.setState({ prediction });
-              }).catch(console.err);
+              }).catch(err => {
+                this.setState({ prediction: "(Error predicting. See console for details.)" });
+                console.error(err);
+              });
           });
         }).catch((err) => {
           this.setState({ prediction: "(Error transforming input. See console for details.)" });
@@ -640,11 +771,17 @@ class Model extends React.Component {
 
   train() {
     const classification = this.state.trainClassIndex;
-    const originalData = this.state.trainData;
+    let originalData = this.state.trainData;
+    if (this.state.inputType === INPUT_TYPE_IMAGE) {
+      originalData = document.getElementById('input-image');
+    }
     return this.transformInput(originalData)
       .then(trainData => {
+        // TODO Pass around BN's and avoid rounding issues.
+        // Add extra wei to help with rounding issues. Extra gets returned right away by the contract.
+        const value = this.state.depositCost + 1E14;
         return this.state.contractInstance.methods.addData(trainData, classification)
-          .send({ from: this.state.accounts[0], value: this.state.depositCost })
+          .send({ from: this.state.accounts[0], value })
           .on('transactionHash', (transactionHash) => {
             // TODO Pop up confirmation that data was sent.
             // console.log(`Data sent. status:${status}\nevents:`);
@@ -654,21 +791,29 @@ class Model extends React.Component {
             // because there would be no way to enforce that it matches the data.
             // A malicious person could submit different data and encoded data
             // or just save funds by submitting no unencoded data.
+
+            if (this.state.inputType === INPUT_TYPE_IMAGE) {
+              // Just store the encoding.
+              originalData = JSON.stringify(trainData);
+            }
             return axios.post('/api/data', {
               originalData,
               transactionHash,
             }).then(() => {
               console.log("Saved info to DB.")
               return this.updateRefundData().then(this.updateDynamicInfo);
+            }).catch(err => {
+              console.error("Error saving original data to DB.");
+              console.error(err);
             });
           })
           .on('receipt', (receipt) => {
             // Doesn't get triggered through promise after updating to `web3 1.0.0-beta.52`.
-            // This event trigger doesn't seem to get triggered either.
             // const { events, /* status */ } = receipt;
             // console.log(events);
             // const vals = events.AddData.returnValues;
-            console.log(`receipt: ${receipt}`);
+            const { transactionHash } = receipt;
+            console.log(`transactionHash: ${transactionHash}`);
           })
           .on('error', err => {
             console.error(err);
@@ -697,12 +842,16 @@ class Model extends React.Component {
             </Typography>
           }
           <Typography component="p">
-            <b>Refund Time: </b>
-            {moment.duration(this.state.refundWaitTimeS, 's').humanize()}
+            <b>Time to wait before requesting a refund: </b>
+            {this.state.refundWaitTimeS ?
+              moment.duration(this.state.refundWaitTimeS, 's').humanize() :
+              "(loading)"}
           </Typography>
           <Typography component="p">
-            <b>Claim Time: </b>
-            {moment.duration(this.state.ownerClaimWaitTimeS, 's').humanize()}
+            <b>Time to wait before taking another's deposit: </b>
+            {this.state.ownerClaimWaitTimeS ?
+              moment.duration(this.state.ownerClaimWaitTimeS, 's').humanize() :
+              "(loading)"}
           </Typography>
           <Typography component="p" title={`${this.state.depositCost} wei`}>
             <b>Current Required Deposit: </b>
@@ -726,17 +875,39 @@ class Model extends React.Component {
               <TabContainer>
                 <form id="predict-form" onSubmit={(e) => { e.preventDefault(); this.predictInput(); }}>
                   <div className={this.classes.tabContainer}>
-                    <TextField
-                      name="input"
-                      label="Input"
-                      onChange={this.handleInputChange}
-                      margin="normal" />
+                    {this.state.inputType === undefined ?
+                      <div></div>
+                      : this.state.inputType === INPUT_TYPE_TEXT ?
+                        <TextField
+                          name="input"
+                          label="Input"
+                          onChange={this.handleInputChange}
+                          margin="normal" />
+                        : <Dropzone onDrop={this.processUploadedImageInput}>
+                          {({ getRootProps, getInputProps }) => (
+                            <section>
+                              <div {...getRootProps()}>
+                                <input {...getInputProps()} />
+                                <Typography component="p">
+                                  Drag and drop some files here, or click to select files
+                                </Typography>
+                                <img
+                                  id="input-image"
+                                  width="500"
+                                  crossOrigin="anonymous"
+                                  src={this.state.inputImageUrl}
+                                  alt="The item to classify."
+                                />
+                              </div>
+                            </section>
+                          )}
+                        </Dropzone>}
                     <Button type="submit" className={this.classes.button} variant="outlined"> Get Prediction </Button>
                     <br />
                     <br />
                     <Typography component="p" title={this.state.encodedPredictionData}>
                       <b>Prediction: </b>
-                      {this.getSentiment(this.state.prediction)}
+                      {this.getClassificationName(this.state.prediction)}
                     </Typography>
                   </div>
                 </form>
@@ -746,12 +917,35 @@ class Model extends React.Component {
               <TabContainer>
                 <form id="train-form" onSubmit={(e) => { e.preventDefault(); this.train(); }}>
                   <div className={this.classes.tabContainer}>
-                    <TextField
-                      name="trainData"
-                      label="Data Sample"
-                      margin="normal"
-                      onChange={this.handleInputChange}
-                    />
+                    {this.state.inputType === undefined ?
+                      <div></div>
+                      : this.state.inputType === INPUT_TYPE_TEXT ?
+                        <TextField
+                          name="trainData"
+                          label="Data Sample"
+                          margin="normal"
+                          onChange={this.handleInputChange}
+                        />
+                        : <Dropzone onDrop={this.processUploadedImageInput}>
+                          {({ getRootProps, getInputProps }) => (
+                            <section>
+                              <div {...getRootProps()}>
+                                <input {...getInputProps()} />
+                                <Typography component="p">
+                                  Drag and drop some files here, or click to select files
+                                </Typography>
+                                <img
+                                  id="input-image"
+                                  width="500"
+                                  crossOrigin="anonymous"
+                                  src={this.state.inputImageUrl}
+                                  alt="The item to classify."
+                                />
+                              </div>
+                            </section>
+                          )}
+                        </Dropzone>}
+
                     <InputLabel htmlFor="classification-selector">Classification</InputLabel>
                     <Select
                       value={this.state.trainClassIndex}
@@ -796,7 +990,7 @@ class Model extends React.Component {
                         <TableCell title={`Encoded data: ${this.getDisplayableEncodedData(d.data)}`}>
                           {d.originalData}{!d.dataMatches && " ⚠ The actual data doesn't match this!"}
                         </TableCell>
-                        <TableCell>{this.getSentiment(d.classification)}</TableCell>
+                        <TableCell>{this.getClassificationName(d.classification)}</TableCell>
                         <TableCell title={`${d.initialDeposit} wei`}>
                           {this.getHumanReadableEth(d.initialDeposit)}
                         </TableCell>
@@ -812,7 +1006,7 @@ class Model extends React.Component {
                                 : d.claimableAmount === 0 || d.claimableAmount === null ?
                                   `Already refunded or completely claimed.`
                                   : d.classification !== d.prediction ?
-                                    `Classification doesn't match. Got "${this.getSentiment(d.prediction)}".`
+                                    `Classification doesn't match. Got "${this.getClassificationName(d.prediction)}".`
                                     : `Can't happen?`
                           }
                         </TableCell>
@@ -849,7 +1043,7 @@ class Model extends React.Component {
                         <TableCell title={`Encoded data: ${this.getDisplayableEncodedData(d.data)}`}>
                           {d.originalData}{!d.dataMatches && " ⚠ The actual data doesn't match this!"}
                         </TableCell>
-                        <TableCell>{this.getSentiment(d.classification)}</TableCell>
+                        <TableCell>{this.getClassificationName(d.classification)}</TableCell>
                         <TableCell title={`${d.initialDeposit} wei`}>
                           {this.getHumanReadableEth(d.initialDeposit)}
                         </TableCell>
@@ -864,7 +1058,7 @@ class Model extends React.Component {
                                 : this.state.numGood === 0 || this.state.numGood === undefined ?
                                   "Validate your own contributions first."
                                   : d.classification === d.prediction ?
-                                    `Classification must be wrong for you to claim this. Got "${this.getSentiment(d.prediction)}".`
+                                    `Classification must be wrong for you to claim this. Got "${this.getClassificationName(d.prediction)}".`
                                     : "Already refunded or completely claimed."
                               : `Wait ${moment.duration(d.time + this.state.refundWaitTimeS - (new Date().getTime() / 1000), 's').humanize()} to claim.`
                           }

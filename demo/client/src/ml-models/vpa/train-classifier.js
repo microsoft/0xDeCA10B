@@ -18,7 +18,7 @@ const normalizeEachEmbedding = true;
 const normalizeCentroid = false;
 
 let embeddingCache;
-const embeddingCachePath = 'embedding_cache.json';
+const embeddingCachePath = path.join(__dirname, 'embedding_cache.json');
 if (fs.existsSync(embeddingCachePath)) {
     embeddingCache = fs.readFileSync(embeddingCachePath, 'utf8');
     embeddingCache = JSON.parse(embeddingCache);
@@ -86,7 +86,7 @@ async function evaluate(intents, model) {
         console.log(`${expectedIntent}: Evaluating with ${queries.length} samples.`);
         const stats = {
             intent: expectedIntent,
-            precision: undefined,
+            recall: undefined,
             numCorrect: 0,
             confusion: {},
         };
@@ -102,7 +102,7 @@ async function evaluate(intents, model) {
                 stats.confusion[prediction] += 1;
             }
         }
-        stats.precision = stats.numCorrect / queries.length;
+        stats.recall = stats.numCorrect / queries.length;
         evalStats.push(stats);
     }
     console.log(`normalizeEachEmbedding: ${normalizeEachEmbedding}`);

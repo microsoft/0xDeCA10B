@@ -51,9 +51,7 @@ class CreateModel extends React.Component {
   componentDidMount = async () => {
     try {
       const fallbackProvider = new Web3.providers.HttpProvider("http://127.0.0.1:7545");
-      this.web3 = await getWeb3({ fallbackProvider });
-      // Get permission and sets access to accounts.
-      await window.ethereum.enable();
+      this.web3 = await getWeb3({ fallbackProvider, requestPermission: true });
     } catch (error) {
       alert(`Failed to load web3, accounts, or contract. Check console for details.`);
       console.error(error);

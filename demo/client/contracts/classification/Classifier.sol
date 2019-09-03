@@ -1,23 +1,34 @@
-pragma solidity ^0.5.0;
+pragma solidity ^0.5.8;
 pragma experimental ABIEncoderV2;
 
 import "../libs/SafeMath.sol";
+import "../libs/SignedSafeMath.sol";
+
 import {Ownable} from "../ownership/Ownable.sol";
 
 /**
  * A classifier that can take a data sample as input and return a predict classification/label for the data.
  */
-contract Classifier {
+contract Classifier is Ownable {
     /**
-     * The indices to the possible classifications that can be predicted.
+     * The possible classifications that can be predicted.
+     * Prediction results are indices to values in this array.
      */
     string[] public classifications;
+
+    /**
+     * The indices of the features to use from some well-known shared encoder.
+     * If it is empty, then all features are used.
+     */
+    uint32[] public featureIndices;
 
     /**
      * Initialize a classifier.
      * @param _classifications The possible classifications that can be predicted.
      */
-    constructor(string[] memory _classifications) public {
+    constructor(string[] memory _classifications)
+    Ownable()
+    public {
         classifications = _classifications;
     }
 
@@ -27,20 +38,39 @@ contract Classifier {
     function getNumClassifications() public view returns (uint) {
         return classifications.length;
     }
-}
 
+    /**
+     * Add more feature indices to take from the encoded result.
+     * Made to be called just after the contract is created and never again.
+     * @param _featureIndices The feature indices to append to the array held by this contract.
+     */
+    function addFeatureIndices(uint32[] memory _featureIndices) public onlyOwner {
+        for (uint32 i = 0; i < _featureIndices.length; ++i) {
+            featureIndices.push(_featureIndices[i]);
+        }
+    }
+
+    /**
+     * @return The number of feature indices to use. 0 means to use all feature from the encoding.
+     */
+    function getNumFeatureIndices() public view returns (uint) {
+        return featureIndices.length;
+    }
+}
 
 /**
  * A `Classifier` for data with 64-bit values.
  */
 // Use an abstract contract instead of an interface so that we can enforce internal functions
 // and not be forced to have some external.
-contract Classifier64 is Ownable, Classifier {
+contract Classifier64 is Classifier {
+    using SafeMath for uint256;
+    using SignedSafeMath for int256;
+
     // Number decimal places precision.
     uint64 constant public toFloat = 1E9;
 
     constructor(string[] memory _classifications)
-    Ownable()
     Classifier(_classifications)
     internal {
         // solium-disable-previous-line no-empty-blocks

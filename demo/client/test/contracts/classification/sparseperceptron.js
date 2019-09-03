@@ -1,6 +1,6 @@
 const CollaborativeTrainer64 = artifacts.require("./CollaborativeTrainer64");
 const DataHandler64 = artifacts.require("./data/DataHandler64");
-const Classifier = artifacts.require("./classification/Perceptron");
+const Classifier = artifacts.require("./classification/SparsePerceptron");
 const Stakeable64 = artifacts.require("./incentive/Stakeable64");
 
 contract('CollaborativeTrainer with Perceptron', function (accounts) {

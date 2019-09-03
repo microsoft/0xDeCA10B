@@ -47,6 +47,18 @@ If you want to build your own fresh image:
 docker build -t decai-simulation .
 ```
 
+#### (Microsoft Devs) Updating the Public Image
+First get permission to push 0xdeca10bcontainerreg.azurecr.io.
+
+Then
+```bash
+newVersion=<Set the new version. E.g. 1.2.0>
+docker tag decai-simulation 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-simulation:${newVersion}
+docker tag decai-simulation 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-simulation:latest
+docker push 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-simulation:${newVersion}
+docker push 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-simulation:latest
+```
+
 # Running Simulations
 Run:
 ```bash

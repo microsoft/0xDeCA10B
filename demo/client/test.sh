@@ -18,9 +18,12 @@ cleanup() {
 # The `set -e` at the top doesn't seem to help with getting these exit on failure.
 truffle compile || cleanup exit
 CI=true truffle migrate || cleanup exit
-CI=true truffle test || cleanup exit
+CI=true truffle test test/contracts/*.js test/contracts/**/*.js || cleanup exit
 
 cleanup
 
+# Add CI=true before to remove colors.
+mocha --recursive src/**/__tests__/*.test.js || exit 1
+
 # Set `CI=true` to avoid watching for changes.
-CI=true react-scripts test --env=jsdom || exit 1
+CI=true react-scripts test --env=./test/custom-test-env.js --testPathIgnorePatterns='src/.*/__tests__/[^/]*-node.test.js' --testMatch=**/*.test.js || exit 1

@@ -1,9 +1,7 @@
-pragma solidity ^0.5.0;
+pragma solidity ^0.5.8;
 pragma experimental ABIEncoderV2;
 
 import "../libs/Math.sol";
-import "../libs/SafeMath.sol";
-import "../libs/SignedSafeMath.sol";
 
 import {Classifier64} from "./Classifier.sol";
 
@@ -11,9 +9,6 @@ import {Classifier64} from "./Classifier.sol";
  * https://en.wikipedia.org/wiki/Nearest_centroid_classifier
  */
 contract NearestCentroidClassifier is Classifier64 {
-    using SafeMath for uint256;
-    using SignedSafeMath for int256;
-
     /** A class has been added. */
     event AddClass(
         /** The name of the class. */
@@ -107,7 +102,7 @@ contract NearestCentroidClassifier is Classifier64 {
         uint _norm = 0;
         for (uint j = 0; j < data.length; ++j) {
             int128 datum = int128(data[j]);
-            _norm += uint(datum * datum);
+            _norm = _norm.add(uint(datum * datum));
             c[j] = int64((int(centroid[j]) * int(n) + datum) / int(newN));
         }
         centroids[classification] = c;
