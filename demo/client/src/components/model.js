@@ -25,6 +25,8 @@ import moment from 'moment';
 import PropTypes from 'prop-types';
 import React from 'react';
 import Dropzone from 'react-dropzone';
+import ClipLoader from 'react-spinners/ClipLoader';
+import GridLoader from 'react-spinners/GridLoader';
 import Web3 from "web3"; // Only required for custom/fallback provider option.
 import Classifier from "../contracts/Classifier64.json";
 import CollaborativeTrainer from '../contracts/CollaborativeTrainer64.json';
@@ -125,6 +127,7 @@ class Model extends React.Component {
     }
 
     this.state = {
+      readyForInput: false,
       contractInfo: {},
       modelId: currentUrlParams.get('modelId'),
       classifications: [],
@@ -137,6 +140,7 @@ class Model extends React.Component {
       trainData: undefined,
       trainClassIndex: 0,
       input: "[]",
+      predicting: false,
       inputType: undefined,
       inputImageUrl: require("../images/hot_dog.jpg"),
       accounts: undefined,
@@ -182,7 +186,6 @@ class Model extends React.Component {
         this.setState({ contractInfo: r.data.model },
           async _ => {
             await this.setContractInstance();
-            // TODO Add a toast and enable buttons.
           });
       });
     } catch (error) {
@@ -212,60 +215,72 @@ class Model extends React.Component {
       abi: CollaborativeTrainer.abi,
       address: contractAddress
     });
-    const dataHandlerAddress = await contractInstance.methods.dataHandler().call();
-    const dataHandler = await this.getContractInstance({
-      web3: this.web3,
-      abi: DataHandler.abi,
-      address: dataHandlerAddress
-    });
-    const classifierAddress = await contractInstance.methods.classifier().call();
-
-    let modelAbi;
-    if (this.state.contractInfo.modelType === "Classifier64") {
-      modelAbi = Classifier.abi;
-    } else {
-      // TODO Get abi from https://etherscan.io/apis#contracts
-      alert("Couldn't determine model ABI.");
-    }
-    const classifier = await this.getContractInstance({
-      web3: this.web3,
-      abi: modelAbi,
-      address: classifierAddress
-    });
-    const incentiveMechanismAddress = await contractInstance.methods.incentiveMechanism().call();
-    const incentiveMechanism = await this.getContractInstance({
-      web3: this.web3,
-      abi: IncentiveMechanism.abi,
-      address: incentiveMechanismAddress
-    });
-    await this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism });
-    await Promise.all([
-      this.updateContractInfo(),
-      this.updateDynamicInfo(),
-      this.setTransformInputMethod(),
-      this.setFeatureIndices(),
+    const [
+      dataHandler,
+      classifier,
+      incentiveMechanism,
+    ] = await Promise.all([
+      contractInstance.methods.dataHandler().call().then(dataHandlerAddress => {
+        return this.getContractInstance({
+          web3: this.web3,
+          abi: DataHandler.abi,
+          address: dataHandlerAddress
+        })
+      }),
+      contractInstance.methods.classifier().call().then(classifierAddress => {
+        let modelAbi;
+        if (this.state.contractInfo.modelType === "Classifier64") {
+          modelAbi = Classifier.abi;
+        } else {
+          // TODO Get abi from https://etherscan.io/apis#contracts
+          alert("Couldn't determine model ABI.");
+        }
+        return this.getContractInstance({
+          web3: this.web3,
+          abi: modelAbi,
+          address: classifierAddress
+        });
+      }),
+      contractInstance.methods.incentiveMechanism().call().then(incentiveMechanismAddress => {
+        return this.getContractInstance({
+          web3: this.web3,
+          abi: IncentiveMechanism.abi,
+          address: incentiveMechanismAddress
+        });
+      })
     ]);
 
-    if (this.state.tab !== 0) {
-      this.handleTabChange(null, this.state.tab);
-    }
+    this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism }, async _ => {
+      await Promise.all([
+        this.updateContractInfo(),
+        this.updateDynamicInfo(),
+        this.setTransformInputMethod(),
+        this.setFeatureIndices(),
+      ]).then(_ => {
+        this.setState({ readyForInput: true });
+      });
 
-    setInterval(this.updateDynamicInfo, 15 * 1000);
+      if (this.state.tab !== 0) {
+        this.handleTabChange(null, this.state.tab);
+      }
 
-    if (typeof window !== "undefined" && window.ethereum) {
-      window.ethereum.on('accountsChanged', accounts => {
-        this.setState({ accounts, addedData: [], rewardData: [] }, _ => {
-          this.updateDynamicAccountInfo().then(() => {
-            if (this.state.tab !== 0) {
-              this.handleTabChange(null, this.state.tab);
-            }
+      setInterval(this.updateDynamicInfo, 15 * 1000);
+
+      if (typeof window !== "undefined" && window.ethereum) {
+        window.ethereum.on('accountsChanged', accounts => {
+          this.setState({ accounts, addedData: [], rewardData: [] }, _ => {
+            this.updateDynamicAccountInfo().then(() => {
+              if (this.state.tab !== 0) {
+                this.handleTabChange(null, this.state.tab);
+              }
+            });
           });
         });
-      });
-      window.ethereum.on('networkChanged', netId => {
-        this.setContractInstance();
-      });
-    }
+        window.ethereum.on('networkChanged', netId => {
+          this.setContractInstance();
+        });
+      }
+    });
   }
 
   /**
@@ -297,10 +312,9 @@ class Model extends React.Component {
             return emb.arraySync();
           });
           embeddings.dispose();
-          embedding = await this.normalize(embedding);
-
-          const result = embedding.map(v => this.web3.utils.toHex(v));
-          return result;
+          return this.normalize(embedding).then(normalizedEmbedding => {
+            return normalizedEmbedding.map(v => this.web3.utils.toHex(v));
+          });
         };
         this.transformInput = this.transformInput.bind(this);
       });
@@ -317,18 +331,17 @@ class Model extends React.Component {
             return imgElement;
           }
           const imgEmbedding = await model.infer(imgElement, { embedding: true });
-          let emb = tf.tidy(_ => {
-            const emb = imgEmbedding.gather(0);
+          let embedding = tf.tidy(_ => {
+            const embedding = imgEmbedding.gather(0);
             if (this.state.featureIndices !== undefined && this.state.featureIndices.length > 0) {
-              return emb.gather(this.state.featureIndices).arraySync();
+              return embedding.gather(this.state.featureIndices).arraySync();
             }
-            return emb.arraySync();
+            return embedding.arraySync();
           });
           imgEmbedding.dispose();
-          emb = await this.normalize(emb);
-
-          const result = emb.map(v => this.web3.utils.toHex(v));
-          return result;
+          return this.normalize(embedding).then(normalizedEmbedding => {
+            return normalizedEmbedding.map(v => this.web3.utils.toHex(v));
+          });
         }
         this.transformInput = this.transformInput.bind(this);
       });
@@ -362,8 +375,6 @@ class Model extends React.Component {
         return Promise.all([...Array(numFeatureIndices).keys()].map(i => {
           return this.state.classifier.methods.featureIndices(i).call().then(parseInt);
         })).then(featureIndices => {
-          // TODO Toast or somehow indicate that now we're really ready to process inputs.
-          // Needs to work with other signal that we're ready to process data.
           this.setState({ featureIndices });
         });
       });
@@ -715,8 +726,10 @@ class Model extends React.Component {
   }
 
   predictInput() {
-    this.setState({ encodedPredictionData: null });
-    this.setState({ prediction: "(Transforming Input)" }, _ => {
+    this.setState({
+      encodedPredictionData: null, predicting: true,
+      prediction: "(Transforming Input)"
+    }, _ => {
       let input = this.state.input;
       if (this.state.inputType === INPUT_TYPE_IMAGE) {
         input = document.getElementById('input-image');
@@ -728,14 +741,14 @@ class Model extends React.Component {
           this.setState({ prediction: "(Predicting)" }, _ => {
             this.predict(input)
               .then(prediction => {
-                this.setState({ prediction });
+                this.setState({ prediction, predicting: false });
               }).catch(err => {
-                this.setState({ prediction: "(Error predicting. See console for details.)" });
+                this.setState({ prediction: "(Error predicting. See console for details.)", predicting: false });
                 console.error(err);
               });
           });
         }).catch((err) => {
-          this.setState({ prediction: "(Error transforming input. See console for details.)" });
+          this.setState({ prediction: "(Error transforming input. See console for details.)", predicting: false });
           console.error("Error transforming input.");
           console.error(err);
         });
@@ -823,6 +836,12 @@ class Model extends React.Component {
   }
   /* END MAIN CONTRACT FUNCTIONS */
 
+  renderLoadingContract() {
+    return this.state.readyForInput || <div>
+      <ClipLoader loading={!this.state.readyForInput} size="16" color="#2196f3" /> Loading contract and model information.
+    </div>;
+  }
+
   render() {
     return (
       <div>
@@ -902,13 +921,21 @@ class Model extends React.Component {
                             </section>
                           )}
                         </Dropzone>}
-                    <Button type="submit" className={this.classes.button} variant="outlined"> Get Prediction </Button>
                     <br />
+                    {this.renderLoadingContract()}
+                    <Button type="submit" className={this.classes.button} variant="outlined"
+                      disabled={!this.state.readyForInput}>
+                      Get Prediction
+                    </Button>
                     <br />
                     <Typography component="p" title={this.state.encodedPredictionData}>
                       <b>Prediction: </b>
                       {this.getClassificationName(this.state.prediction)}
                     </Typography>
+                    <GridLoader loading={this.state.predicting}
+                      size="15"
+                      color="#2196f3"
+                    />
                   </div>
                 </form>
               </TabContainer>
@@ -962,7 +989,11 @@ class Model extends React.Component {
                       })}
 
                     </Select>
-                    <Button type="submit" className={this.classes.button} variant="outlined" > Train </Button>
+                    {this.renderLoadingContract()}
+                    <Button type="submit" className={this.classes.button} variant="outlined"
+                      disabled={!this.state.readyForInput}>
+                      Train
+                    </Button>
                   </div>
                 </form>
               </TabContainer>
