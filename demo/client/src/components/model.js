@@ -26,6 +26,7 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import Dropzone from 'react-dropzone';
 import ClipLoader from 'react-spinners/ClipLoader';
+import GridLoader from 'react-spinners/GridLoader';
 import Web3 from "web3"; // Only required for custom/fallback provider option.
 import Classifier from "../contracts/Classifier64.json";
 import CollaborativeTrainer from '../contracts/CollaborativeTrainer64.json';
@@ -139,6 +140,7 @@ class Model extends React.Component {
       trainData: undefined,
       trainClassIndex: 0,
       input: "[]",
+      predicting: false,
       inputType: undefined,
       inputImageUrl: require("../images/hot_dog.jpg"),
       accounts: undefined,
@@ -724,8 +726,10 @@ class Model extends React.Component {
   }
 
   predictInput() {
-    this.setState({ encodedPredictionData: null });
-    this.setState({ prediction: "(Transforming Input)" }, _ => {
+    this.setState({
+      encodedPredictionData: null, predicting: true,
+      prediction: "(Transforming Input)"
+    }, _ => {
       let input = this.state.input;
       if (this.state.inputType === INPUT_TYPE_IMAGE) {
         input = document.getElementById('input-image');
@@ -737,14 +741,14 @@ class Model extends React.Component {
           this.setState({ prediction: "(Predicting)" }, _ => {
             this.predict(input)
               .then(prediction => {
-                this.setState({ prediction });
+                this.setState({ prediction, predicting: false });
               }).catch(err => {
-                this.setState({ prediction: "(Error predicting. See console for details.)" });
+                this.setState({ prediction: "(Error predicting. See console for details.)", predicting: false });
                 console.error(err);
               });
           });
         }).catch((err) => {
-          this.setState({ prediction: "(Error transforming input. See console for details.)" });
+          this.setState({ prediction: "(Error transforming input. See console for details.)", predicting: false });
           console.error("Error transforming input.");
           console.error(err);
         });
@@ -928,6 +932,10 @@ class Model extends React.Component {
                       <b>Prediction: </b>
                       {this.getClassificationName(this.state.prediction)}
                     </Typography>
+                    <GridLoader loading={this.state.predicting}
+                      size="15"
+                      color="#2196f3"
+                    />
                   </div>
                 </form>
               </TabContainer>
