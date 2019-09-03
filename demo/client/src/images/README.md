@@ -1,1 +1,2 @@
-hot_dog.jpg is from https://visuals.nci.nih.gov/details.cfm?imageid=2669
+hot_dog.jpg
+from Bing via many sites such as https://www.shutterstock.com/image-photo/hot-dog-ketchup-mustard-on-white-1050709127
