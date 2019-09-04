@@ -2,6 +2,8 @@ const axios = require('axios');
 const fs = require('fs');
 const pjson = require('../package.json');
 
+const { convertData } = require('../src/float-utils-node.js');
+
 const CollaborativeTrainer64 = artifacts.require("./CollaborativeTrainer64");
 const DataHandler64 = artifacts.require("./data/DataHandler64");
 const NearestCentroidClassifier = artifacts.require("./classification/NearestCentroidClassifier");
@@ -21,9 +23,6 @@ module.exports = function (deployer) {
   };
 
   const toFloat = 1E9;
-  function convertData(data) {
-    return data.map(x => Math.round(x * toFloat)).map(web3.utils.toBN);
-  }
 
   // Low default times for testing.
   const refundTimeS = 15;
@@ -40,7 +39,7 @@ module.exports = function (deployer) {
   model = JSON.parse(model);
   for (let [classification, centroidInfo] of Object.entries(model)) {
     classifications.push(classification);
-    centroids.push(convertData(centroidInfo.centroid));
+    centroids.push(convertData(centroidInfo.centroid, web3, toFloat));
     dataCounts.push(centroidInfo.dataCount);
   }
 

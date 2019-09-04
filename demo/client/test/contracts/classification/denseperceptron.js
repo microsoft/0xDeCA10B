@@ -1,7 +1,7 @@
 const Classifier = artifacts.require("./classification/DensePerceptron");
 
 const { normalizeArray } = require('../../../src/ml-models/tensor-utils-node');
-const { convertNum, convertData } = require('../../../src/float-utils-node');
+const { convertData, convertNum } = require('../../../src/float-utils-node');
 
 contract('DensePerceptron', function (accounts) {
   const toFloat = 1E9;
@@ -9,7 +9,7 @@ contract('DensePerceptron', function (accounts) {
   const classifications = ["NEGATIVE", "POSITIVE"];
   const weights = [0, 1, -1, 0, 0, 0, 0, 1];
   const intercept = _convertNum(0);
-  const learningRate = 1;
+  const learningRate = _convertNum(1);
 
   let classifier;
 
@@ -63,7 +63,7 @@ contract('DensePerceptron', function (accounts) {
 
     const weightChunkSize = 450;
     const bias = 0;
-    const _learningRate = 1;
+    const _learningRate = _convertNum(1);
     const w = [...Array(dimensions).keys()];
     const c = await Classifier.new(classifications, _convertData(w.slice(0, weightChunkSize)), _convertNum(bias), _learningRate);
 
@@ -109,7 +109,7 @@ contract('DensePerceptron', function (accounts) {
 
 
     const newClassification = 1 - classification;
-    updateResponse = await classifier.update(await normalize(data), newClassification);
+    updateResponse = await classifier.update(normalizedData, newClassification);
     assert.isBelow(updateResponse.receipt.gasUsed, 1E5, "Too much gas used.");
     // console.log(`  update (different class) gasUsed: ${updateResponse.receipt.gasUsed}`);
 
@@ -119,7 +119,7 @@ contract('DensePerceptron', function (accounts) {
       if (newClassification > 0) {
         sign = +1;
       }
-      _weights[i] += sign * learningRate * mapBackBN(normalizedData[i]);
+      _weights[i] += sign * mapBackBN(learningRate) * mapBackBN(normalizedData[i]);
     }
     for (let i = 0; i < _weights.length; ++i) {
       assert.closeTo(updatedWeights[i], _weights[i], 1 / toFloat);

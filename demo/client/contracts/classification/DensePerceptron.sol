@@ -10,15 +10,29 @@ import {Classifier64} from "./Classifier.sol";
  */
 contract DensePerceptron is Classifier64 {
 
+    /**
+     * The weights for the model.
+     * Multiplied by `toFloat`.
+     */
     int80[] public weights;
+
+    /**
+     * The bias to add to the multiplication of the weights and the data.
+     * Multiplied by `toFloat`.
+     */
     int80 public intercept;
-    uint8 public learningRate;
+
+    /**
+     * The amount of impact that new training data has to the weights.
+     * Multiplied by `toFloat`.
+     */
+    uint32 public learningRate;
 
     constructor(
         string[] memory _classifications,
         int80[] memory _weights,
         int80 _intercept,
-        uint8 _learningRate
+        uint32 _learningRate
     ) Classifier64(_classifications) public {
         intercept = _intercept;
         learningRate = _learningRate;
@@ -64,7 +78,6 @@ contract DensePerceptron is Classifier64 {
         require(len == weights.length, "The data must have the same dimension as the weights.");
 
         // Compute prediction and updates at the same time to save gas.
-        // TODO Handle mapped (decimal) learning rate.
         int prediction = intercept;
         int80[] memory newWeights = new int80[](data.length);
         uint _norm = 0;
@@ -74,7 +87,7 @@ contract DensePerceptron is Classifier64 {
                 int128 datum = data[i];
                 int80 w = weights[i];
                 prediction = prediction.add(int(w).mul(datum));
-                newWeights[i] = w + int80(datum) * learningRate;
+                newWeights[i] = w + int80(datum * learningRate / toFloat);
                 _norm = _norm.add(uint(datum * datum));
             }
         } else {
@@ -83,7 +96,7 @@ contract DensePerceptron is Classifier64 {
                 int128 datum = data[i];
                 int80 w = weights[i];
                 prediction = prediction.add(int(w).mul(datum));
-                newWeights[i] = w - int80(datum) * learningRate;
+                newWeights[i] = w - int80(datum * learningRate / toFloat);
                 _norm = _norm.add(uint(datum * datum));
             }
         }
@@ -96,7 +109,8 @@ contract DensePerceptron is Classifier64 {
 
         // Must be almost within `toFloat` of `toFloat*toFloat` because we only care about the first `toFloat` digits.
         uint oneSquared = uint(toFloat).mul(toFloat);
-        require(oneSquared - 100 * toFloat < _norm && _norm < oneSquared + 100 * toFloat, "The provided data does not have a norm of 1.");
+        uint offset = uint(toFloat) * 100;
+        require(oneSquared - offset < _norm && _norm < oneSquared + offset, "The provided data does not have a norm of 1.");
 
         if (prediction != classification) {
             weights = newWeights;

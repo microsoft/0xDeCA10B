@@ -107,8 +107,9 @@ contract NearestCentroidClassifier is Classifier64 {
         }
         centroids[classification] = c;
 
-        uint oneSquared = uint(toFloat).mul(toFloat);
         // Must be almost within `toFloat` of `toFloat*toFloat` because we only care about the first `toFloat` digits.
-        require(oneSquared - 100 * toFloat < _norm && _norm < oneSquared + 100 * toFloat, "The provided data does not have a norm of 1.");
+        uint oneSquared = uint(toFloat).mul(toFloat);
+        uint offset = uint(toFloat) * 100;
+        require(oneSquared - offset < _norm && _norm < oneSquared + offset, "The provided data does not have a norm of 1.");
     }
 }

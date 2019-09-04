@@ -5,6 +5,8 @@ const DataHandler64 = artifacts.require("./data/DataHandler64");
 const NearestCentroidClassifier = artifacts.require("./classification/NearestCentroidClassifier");
 const Stakeable64 = artifacts.require("./incentive/Stakeable64");
 
+const { convertData } = require('../../src/float-utils-node');
+
 /**
  * This test was mainly created to test gas usage.
  */
@@ -14,14 +16,10 @@ contract('VpaClassifier', function (accounts) {
   let dataHandler, incentiveMechanism, classifier, instance;
 
   async function normalize(data) {
-    data = convertData(data);
+    data = convertData(data, web3, toFloat);
     return classifier.norm(data).then(norm => {
       return data.map(x => x.mul(web3.utils.toBN(toFloat)).div(norm));
     });
-  }
-
-  function convertData(data) {
-    return data.map(x => Math.round(x * toFloat)).map(web3.utils.toBN);
   }
 
   function parseBN(num) {
@@ -41,11 +39,6 @@ contract('VpaClassifier', function (accounts) {
 
   before("deploy contracts", async () => {
     console.log(`Deploying VPA classifier for tests.`);
-    const toFloat = 1E9;
-    function convertData(data) {
-      return data.map(x => Math.round(x * toFloat)).map(web3.utils.toBN);
-    }
-
     // Low default times for testing.
     const refundTimeS = 15;
     const ownerClaimWaitTimeS = 20;
@@ -63,7 +56,7 @@ contract('VpaClassifier', function (accounts) {
       classifications.push(classification);
       // To test gas usage faster, use less dimensions:
       // centroidInfo.centroid = centroidInfo.centroid.slice(0, 64);
-      centroids.push(convertData(centroidInfo.centroid));
+      centroids.push(convertData(centroidInfo.centroid, web3, toFloat));
       dataCounts.push(centroidInfo.dataCount);
       if (numDimensions === null) {
         numDimensions = centroidInfo.centroid.length;
