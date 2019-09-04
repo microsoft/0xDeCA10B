@@ -70,7 +70,7 @@ contract Classifier64 is Classifier {
     /**
      * Number of decimal places precision.
      * Since Solidity does not support floating point numbers,
-     * we assume numbers have been multiplied by this value.
+     * we assume certain numbers have been multiplied by this value.
      */
     uint32 constant public toFloat = 1E9;
 
