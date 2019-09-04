@@ -67,8 +67,12 @@ contract Classifier64 is Classifier {
     using SafeMath for uint256;
     using SignedSafeMath for int256;
 
-    // Number decimal places precision.
-    uint64 constant public toFloat = 1E9;
+    /**
+     * Number of decimal places precision.
+     * Since Solidity does not support floating point numbers,
+     * we assume numbers have been multiplied by this value.
+     */
+    uint32 constant public toFloat = 1E9;
 
     constructor(string[] memory _classifications)
     Classifier(_classifications)

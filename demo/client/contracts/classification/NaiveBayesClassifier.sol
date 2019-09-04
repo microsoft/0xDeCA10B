@@ -117,7 +117,8 @@ contract NaiveBayesClassifier is Classifier64 {
             ClassInfo storage info = classInfos[classIndex];
             for (uint featureIndex = 0; featureIndex < data.length; ++featureIndex) {
                 uint32 featureCount = info.featureCounts[uint32(data[featureIndex])];
-                prob = prob.mul(toFloat * featureCount + smoothingFactor).div(toFloat * info.totalFeatureCount + denominatorSmoothFactor);
+                prob = prob.mul(uint(toFloat) * featureCount + smoothingFactor)
+                    .div(uint(toFloat) * info.totalFeatureCount + denominatorSmoothFactor);
             }
             if (prob > maxProb) {
                 maxProb = prob;
