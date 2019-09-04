@@ -146,6 +146,8 @@ To run specific smart contract tests and save time by not waiting for Truffle mi
 ```bash
 cd client
 npx truffle test [<test file paths>] --network skipMigrations
+# For example:
+npx truffle test test/contracts/*.js test/contracts/**/*.js --network skipMigrations
 ```
 
 # Linting

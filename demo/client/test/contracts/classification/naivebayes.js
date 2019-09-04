@@ -1,17 +1,15 @@
 const NaiveBayesClassifier = artifacts.require("./classification/NaiveBayesClassifier");
 
+const { convertNum } = require('../../../src/float-utils-node');
+
 contract('NaiveBayesClassifier', function (accounts) {
   const toFloat = 1E9;
 
-  const smoothingFactor = convertNum(1);
+  const smoothingFactor = convertNum(1, web3, toFloat);
   const classifications = ["ALARM", "WEATHER"];
   const vocab = {};
   let vocabLength = 0;
   let classifier;
-
-  function convertNum(num) {
-    return web3.utils.toBN(Math.round(num * toFloat));
-  }
 
   function parseBN(num) {
     if (web3.utils.isBN(num)) {

@@ -7,15 +7,30 @@ import {Classifier64} from "./Classifier.sol";
  * A Perceptron where the data given for updating and predicting is sparse and binarized (each feature is present or not).
  */
 contract SparsePerceptron is Classifier64 {
+
+    /**
+     * The weights for the model.
+     * Multiplied by `toFloat`.
+     */
     mapping(uint64 => int80) public weights;
+
+    /**
+     * The bias to add to the multiplication of the weights and the data.
+     * Multiplied by `toFloat`.
+     */
     int80 public intercept;
-    uint8 public learningRate;
+
+    /**
+     * The amount of impact that new training data has to the weights.
+     * Multiplied by `toFloat`.
+     */
+    uint32 public learningRate;
 
     constructor(
         string[] memory _classifications,
         int80[] memory _weights,
         int80 _intercept,
-        uint8 _learningRate
+        uint32 _learningRate
     ) Classifier64(_classifications) public {
         intercept = _intercept;
         learningRate = _learningRate;
@@ -64,16 +79,15 @@ contract SparsePerceptron is Classifier64 {
             // predict checks each data[i] >= 0.
             uint i;
             uint len = data.length;
-            int80 change = int80(toFloat) * learningRate;
             if (classification > 0) {
                 // sign = 1
                 for(i = 0; i < len; ++i) {
-                    weights[uint64(data[i])] += change;
+                    weights[uint64(data[i])] += learningRate;
                 }
             } else {
                 // sign = -1
                 for(i = 0; i < len; ++i) {
-                    weights[uint64(data[i])] -= change;
+                    weights[uint64(data[i])] -= learningRate;
                 }
             }
         }

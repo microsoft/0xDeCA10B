@@ -2,6 +2,8 @@ const axios = require('axios');
 const fs = require('fs');
 const pjson = require('../package.json');
 
+const { convertData, convertNum } = require('../src/float-utils-node.js');
+
 const CollaborativeTrainer64 = artifacts.require("./CollaborativeTrainer64");
 const DataHandler64 = artifacts.require("./data/DataHandler64");
 const Classifier = artifacts.require("./classification/SparsePerceptron");
@@ -21,9 +23,6 @@ module.exports = async function (deployer) {
   };
 
   const toFloat = 1E9;
-  function convertData(data) {
-    return data.map(x => Math.round(x * toFloat)).map(web3.utils.toBN);
-  }
 
   // Low default times for testing.
   const refundTimeS = 15;
@@ -34,16 +33,16 @@ module.exports = async function (deployer) {
 
   const classifications = ["Negative", "Positive"];
 
-  var data = fs.readFileSync('./src/ml-models/imdb-sentiment-model.json', 'utf8');
-  var model = JSON.parse(data);
+  const data = fs.readFileSync('./src/ml-models/imdb-sentiment-model.json', 'utf8');
+  const model = JSON.parse(data);
 
-  const weights = convertData(model['coef']);
+  const weights = convertData(model['coef'], web3, toFloat);
   const initNumWords = 250;
   const numWordsPerUpdate = 250;
 
   console.log(`Deploying IMDB model with ${weights.length} weights.`);
-  var intercept = web3.utils.toBN(model['intercept'] * toFloat);
-  var learningRate = 1;
+  const intercept = convertNum(model['intercept'], web3, toFloat);
+  const learningRate = convertNum(0.5, web3, toFloat);
 
   console.log(`Deploying DataHandler.`);
   return deployer.deploy(DataHandler64).then(dataHandler => {

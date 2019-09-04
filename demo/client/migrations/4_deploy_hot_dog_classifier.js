@@ -1,7 +1,8 @@
 const axios = require('axios');
 const fs = require('fs');
 const pjson = require('../package.json');
-const { convertNum, convertData } = require('../src/float-utils-node.js');
+
+const { convertData, convertNum } = require('../src/float-utils-node.js');
 
 const CollaborativeTrainer64 = artifacts.require("./CollaborativeTrainer64");
 const DataHandler64 = artifacts.require("./data/DataHandler64");
@@ -39,7 +40,7 @@ module.exports = function (deployer) {
   const { classifications, featureIndices } = model;
   const weights = convertData(model.weights, web3, toFloat);
   const intercept = convertNum(model.bias, web3, toFloat);
-  const learningRate = 1;
+  const learningRate = convertNum(0.5, web3, toFloat);
 
   console.log(`Deploying Hot Dog classifier.`);
   // Trick to get await to work:

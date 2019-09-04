@@ -3,6 +3,8 @@ const DataHandler64 = artifacts.require("./data/DataHandler64");
 const Classifier = artifacts.require("./classification/SparsePerceptron");
 const Stakeable64 = artifacts.require("./incentive/Stakeable64");
 
+const { convertData, convertNum } = require('../../../src/float-utils-node');
+
 contract('CollaborativeTrainer with Perceptron', function (accounts) {
   const toFloat = 1E9;
 
@@ -11,15 +13,11 @@ contract('CollaborativeTrainer with Perceptron', function (accounts) {
   const anyAddressClaimWaitTimeS = 3;
 
   const classifications = ["Negative", "Positive"];
-  const weights = convertData([0, 5, -1]);
-  const intercept = web3.utils.toBN(0 * toFloat);
-  const learningRate = 1;
+  const weights = convertData([0, 5, -1], web3, toFloat);
+  const intercept = convertNum(0, web3, toFloat);
+  const learningRate = convertNum(1, web3, toFloat);
 
   let dataHandler, incentiveMechanism, classifier, instance;
-
-  function convertData(data) {
-    return data.map(x => Math.round(x * toFloat)).map(web3.utils.toBN);
-  }
 
   function parseBN(num) {
     if (web3.utils.isBN(num)) {
@@ -135,11 +133,11 @@ contract('CollaborativeTrainer with Perceptron', function (accounts) {
         assert(cost.gtn(0), "Cost should be positive.");
         return instance.addData([0, 1], 0, { from: accounts[0], value: cost }).then((result) => {
           return classifier.weights(0).then(parseFloatBN).then(result => {
-            assert.equal(result, parseFloatBN(weights[0]) - learningRate, "First weight is wrong.");
+            assert.equal(result, parseFloatBN(weights[0]) - parseFloatBN(learningRate), "First weight is wrong.");
             assert.equal(result, -1, "First weight is wrong.");
           }).then(() => {
             return classifier.weights(1).then(parseFloatBN).then(result => {
-              assert.equal(result, parseFloatBN(weights[1]) - learningRate, "Second weight is wrong.");
+              assert.equal(result, parseFloatBN(weights[1]) - parseFloatBN(learningRate), "Second weight is wrong.");
               assert.equal(result, 4, "Second weight is wrong.");
             });
           }).then(() => {

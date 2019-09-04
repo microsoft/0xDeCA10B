@@ -1,18 +1,16 @@
 const NearestCentroidClassifier = artifacts.require("./classification/NearestCentroidClassifier");
 
+const { convertData } = require('../../../src/float-utils-node');
+
 contract('NearestCentroidClassifier', function (accounts) {
   const toFloat = 1E9;
   let classifier;
 
   function normalize(data) {
-    data = convertData(data);
+    data = convertData(data, web3, toFloat);
     return classifier.norm(data).then(norm => {
       return data.map(x => x.mul(web3.utils.toBN(toFloat)).div(norm));
     });
-  }
-
-  function convertData(data) {
-    return data.map(x => Math.round(x * toFloat)).map(web3.utils.toBN);
   }
 
   function parseBN(num) {
@@ -33,9 +31,9 @@ contract('NearestCentroidClassifier', function (accounts) {
   before("deploy classifier", function () {
     const classifications = ["ALARM", "WEATHER"];
     const centroids = [
-      [-1, -1],
-      [+1, +1],
-    ].map(convertData);
+      convertData([-1, -1], web3, toFloat),
+      convertData([+1, +1], web3, toFloat),
+    ];
     const dataCounts = [2, 2];
     return NearestCentroidClassifier.new(classifications, centroids, dataCounts).then(c => {
       classifier = c;
@@ -130,7 +128,7 @@ contract('NearestCentroidClassifier', function (accounts) {
     const dataCount = 2;
 
     return classifier.getNumClassifications().then(parseBN).then(originalNumClassifications => {
-      return classifier.addClass(convertData(centroid), newClassificationName, dataCount).then(info => {
+      return classifier.addClass(convertData(centroid, web3, toFloat), newClassificationName, dataCount).then(info => {
         const events = info.logs.filter(l => l.event == 'AddClass');
         assert.lengthOf(events, 1);
         const event = events[0];
