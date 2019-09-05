@@ -101,6 +101,8 @@ function getDisplayableOriginalData(data) {
 }
 
 class Model extends React.Component {
+  PREDICT_TAB = 0;
+  TRAIN_TAB = 1;
   REFUND_TAB = 2;
   REWARD_TAB = 3;
 
@@ -137,12 +139,12 @@ class Model extends React.Component {
       contractInstance: undefined,
       depositCost: undefined,
       featureIndices: undefined,
-      trainData: undefined,
       trainClassIndex: 0,
-      input: "[]",
-      predicting: false,
       inputType: undefined,
+      input: "",
       inputImageUrl: require("../images/hot_dog.jpg"),
+      acceptedFiles: undefined,
+      predicting: false,
       accounts: undefined,
       prediction: "",
       accountScore: undefined,
@@ -210,76 +212,74 @@ class Model extends React.Component {
       // TODO Get abi from https://etherscan.io/apis#contracts
     }
 
-    const contractInstance = await this.getContractInstance({
+    // Using one `.then` and then awaiting helps with making the page more responsive.
+    this.getContractInstance({
       web3: this.web3,
       abi: CollaborativeTrainer.abi,
       address: contractAddress
-    });
-    const [
-      dataHandler,
-      classifier,
-      incentiveMechanism,
-    ] = await Promise.all([
-      contractInstance.methods.dataHandler().call().then(dataHandlerAddress => {
-        return this.getContractInstance({
-          web3: this.web3,
-          abi: DataHandler.abi,
-          address: dataHandlerAddress
+    }).then(async contractInstance => {
+      const [
+        dataHandler,
+        classifier,
+        incentiveMechanism,
+      ] = await Promise.all([
+        contractInstance.methods.dataHandler().call().then(dataHandlerAddress => {
+          return this.getContractInstance({
+            web3: this.web3,
+            abi: DataHandler.abi,
+            address: dataHandlerAddress
+          })
+        }),
+        contractInstance.methods.classifier().call().then(classifierAddress => {
+          let modelAbi;
+          if (this.state.contractInfo.modelType === "Classifier64") {
+            modelAbi = Classifier.abi;
+          } else {
+            // TODO Get abi from https://etherscan.io/apis#contracts
+            alert("Couldn't determine model ABI.");
+          }
+          return this.getContractInstance({
+            web3: this.web3,
+            abi: modelAbi,
+            address: classifierAddress
+          });
+        }),
+        contractInstance.methods.incentiveMechanism().call().then(incentiveMechanismAddress => {
+          return this.getContractInstance({
+            web3: this.web3,
+            abi: IncentiveMechanism.abi,
+            address: incentiveMechanismAddress
+          });
         })
-      }),
-      contractInstance.methods.classifier().call().then(classifierAddress => {
-        let modelAbi;
-        if (this.state.contractInfo.modelType === "Classifier64") {
-          modelAbi = Classifier.abi;
-        } else {
-          // TODO Get abi from https://etherscan.io/apis#contracts
-          alert("Couldn't determine model ABI.");
-        }
-        return this.getContractInstance({
-          web3: this.web3,
-          abi: modelAbi,
-          address: classifierAddress
-        });
-      }),
-      contractInstance.methods.incentiveMechanism().call().then(incentiveMechanismAddress => {
-        return this.getContractInstance({
-          web3: this.web3,
-          abi: IncentiveMechanism.abi,
-          address: incentiveMechanismAddress
-        });
-      })
-    ]);
+      ]);
 
-    this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism }, async _ => {
-      await Promise.all([
-        this.updateContractInfo(),
-        this.updateDynamicInfo(),
-        this.setTransformInputMethod(),
-        this.setFeatureIndices(),
-      ]).then(_ => {
-        this.setState({ readyForInput: true });
-      });
+      this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism }, async _ => {
+        await Promise.all([
+          this.updateContractInfo(),
+          this.updateDynamicInfo(),
+          this.setTransformInputMethod(),
+          this.setFeatureIndices(),
+        ]).then(_ => {
+          this.setState({ readyForInput: true });
+        });
 
-      if (this.state.tab !== 0) {
         this.handleTabChange(null, this.state.tab);
-      }
 
-      setInterval(this.updateDynamicInfo, 15 * 1000);
+        setInterval(this.updateDynamicInfo, 15 * 1000);
 
-      if (typeof window !== "undefined" && window.ethereum) {
-        window.ethereum.on('accountsChanged', accounts => {
-          this.setState({ accounts, addedData: [], rewardData: [] }, _ => {
-            this.updateDynamicAccountInfo().then(() => {
-              if (this.state.tab !== 0) {
+        if (typeof window !== "undefined" && window.ethereum) {
+          window.ethereum.on('accountsChanged', accounts => {
+            this.setState({ accounts, addedData: [], rewardData: [] }, _ => {
+              this.updateDynamicAccountInfo().then(() => {
                 this.handleTabChange(null, this.state.tab);
-              }
+              });
             });
           });
-        });
-        window.ethereum.on('networkChanged', netId => {
-          this.setContractInstance();
-        });
-      }
+          window.ethereum.on('networkChanged', netId => {
+            this.setContractInstance();
+          });
+        }
+      });
     });
   }
 
@@ -516,7 +516,12 @@ class Model extends React.Component {
     currentUrlParams.set('tab', tab);
     this.props.history.push(window.location.pathname + "?" + currentUrlParams.toString())
     this.setState({ tab: value });
-    if (this.REFUND_TAB === value) {
+
+    if (this.PREDICT_TAB === value || this.TRAIN_TAB === value) {
+      if (this.state.acceptedFiles) {
+        this.loadImageToElement(this.state.acceptedFiles[0]);
+      }
+    } else if (this.REFUND_TAB === value) {
       if (this.state.addedData.length === 0) {
         this.updateRefundData();
       }
@@ -700,9 +705,16 @@ class Model extends React.Component {
   }
 
   processUploadedImageInput(acceptedFiles) {
-    const reader = new FileReader();
+    if (acceptedFiles.length === 0 || acceptedFiles.length > 1) {
+      alert("Please only provide one image.");
+    }
     const file = acceptedFiles[0];
+    this.setState({ acceptedFiles: [file] });
+    this.loadImageToElement(file);
+  }
 
+  loadImageToElement(file) {
+    const reader = new FileReader();
     // Examples of extra error processing.
     // reader.onabort = (err) => {console.error("File reading was aborted."); console.error(err);};
     // reader.onerror = (err) => {console.error("File reading has failed."); console.error(err);};
@@ -713,10 +725,7 @@ class Model extends React.Component {
         const imgElement = document.getElementById('input-image');
         imgElement.src = canvas.toDataURL();
       }, { orientation: true });
-    }
-    if (acceptedFiles.length > 1) {
-      // TODO Report that extra files are ignored.
-    }
+    };
     reader.readAsBinaryString(file);
   }
 
@@ -784,7 +793,7 @@ class Model extends React.Component {
 
   train() {
     const classification = this.state.trainClassIndex;
-    let originalData = this.state.trainData;
+    let originalData = this.state.input;
     if (this.state.inputType === INPUT_TYPE_IMAGE) {
       originalData = document.getElementById('input-image');
     }
@@ -890,37 +899,11 @@ class Model extends React.Component {
                 <Tab label="Reward" />
               </Tabs>
             </AppBar>
-            {this.state.tab === 0 &&
+            {this.state.tab === this.PREDICT_TAB &&
               <TabContainer>
                 <form id="predict-form" onSubmit={(e) => { e.preventDefault(); this.predictInput(); }}>
                   <div className={this.classes.tabContainer}>
-                    {this.state.inputType === undefined ?
-                      <div></div>
-                      : this.state.inputType === INPUT_TYPE_TEXT ?
-                        <TextField
-                          name="input"
-                          label="Input"
-                          onChange={this.handleInputChange}
-                          margin="normal" />
-                        : <Dropzone onDrop={this.processUploadedImageInput}>
-                          {({ getRootProps, getInputProps }) => (
-                            <section>
-                              <div {...getRootProps()}>
-                                <input {...getInputProps()} />
-                                <Typography component="p">
-                                  Drag and drop some files here, or click to select files
-                                </Typography>
-                                <img
-                                  id="input-image"
-                                  width="500"
-                                  crossOrigin="anonymous"
-                                  src={this.state.inputImageUrl}
-                                  alt="The item to classify."
-                                />
-                              </div>
-                            </section>
-                          )}
-                        </Dropzone>}
+                    {this.renderInputBox()}
                     <br />
                     {this.renderLoadingContract()}
                     <Button type="submit" className={this.classes.button} variant="outlined"
@@ -940,39 +923,11 @@ class Model extends React.Component {
                 </form>
               </TabContainer>
             }
-            {this.state.tab === 1 &&
+            {this.state.tab === this.TRAIN_TAB &&
               <TabContainer>
                 <form id="train-form" onSubmit={(e) => { e.preventDefault(); this.train(); }}>
                   <div className={this.classes.tabContainer}>
-                    {this.state.inputType === undefined ?
-                      <div></div>
-                      : this.state.inputType === INPUT_TYPE_TEXT ?
-                        <TextField
-                          name="trainData"
-                          label="Data Sample"
-                          margin="normal"
-                          onChange={this.handleInputChange}
-                        />
-                        : <Dropzone onDrop={this.processUploadedImageInput}>
-                          {({ getRootProps, getInputProps }) => (
-                            <section>
-                              <div {...getRootProps()}>
-                                <input {...getInputProps()} />
-                                <Typography component="p">
-                                  Drag and drop some files here, or click to select files
-                                </Typography>
-                                <img
-                                  id="input-image"
-                                  width="500"
-                                  crossOrigin="anonymous"
-                                  src={this.state.inputImageUrl}
-                                  alt="The item to classify."
-                                />
-                              </div>
-                            </section>
-                          )}
-                        </Dropzone>}
-
+                    {this.renderInputBox()}
                     <InputLabel htmlFor="classification-selector">Classification</InputLabel>
                     <Select
                       value={this.state.trainClassIndex}
@@ -1104,6 +1059,27 @@ class Model extends React.Component {
         </Paper>
       </div>
     );
+  }
+
+  renderInputBox() {
+    return this.state.inputType === undefined ?
+      <div></div>
+      : this.state.inputType === INPUT_TYPE_TEXT ?
+        <TextField name="input" label="Input" onChange={this.handleInputChange} margin="normal"
+          value={this.state.input}
+        />
+        : <Dropzone onDrop={this.processUploadedImageInput}>
+          {({ getRootProps, getInputProps }) => (<section>
+            <div {...getRootProps()}>
+              <input {...getInputProps()} />
+              <Typography component="p">
+                Drag and drop some files here, or click to select files
+              </Typography>
+              <img id="input-image" width="500" crossOrigin="anonymous" alt="The item to classify or train with."
+                src={this.state.acceptedFiles ? undefined : this.state.inputImageUrl} />
+            </div>
+          </section>)}
+        </Dropzone>;
   }
 }
 
