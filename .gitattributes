@@ -1,8 +1,11 @@
 .gitattributes text eol=lf
 .gitignore text eol=lf
 
+# Override default for linguist-documentation.
+demo/ linguist-documentation=false
+
 # Ethereum
-*.sol text eol=lf
+*.sol text linguist-language=Solidity eol=lf
 .soliumignore text eol=lf
 .soliumrc.json text eol=lf
 
