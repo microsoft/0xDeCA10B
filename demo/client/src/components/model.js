@@ -146,7 +146,7 @@ class Model extends React.Component {
       acceptedFiles: undefined,
       predicting: false,
       accounts: undefined,
-      prediction: "",
+      prediction: undefined,
       accountScore: undefined,
       numGood: undefined,
       toFloat: undefined,
@@ -705,6 +705,7 @@ class Model extends React.Component {
   }
 
   processUploadedImageInput(acceptedFiles) {
+    this.setState({ prediction: undefined });
     if (acceptedFiles.length === 0 || acceptedFiles.length > 1) {
       alert("Please only provide one image.");
     }
@@ -912,8 +913,7 @@ class Model extends React.Component {
                     </Button>
                     <br />
                     <Typography component="p" title={this.state.encodedPredictionData}>
-                      <b>Prediction: </b>
-                      {this.getClassificationName(this.state.prediction)}
+                      <b>Prediction: {this.getClassificationName(this.state.prediction)}</b>
                     </Typography>
                     <GridLoader loading={this.state.predicting}
                       size="15"
@@ -1075,7 +1075,7 @@ class Model extends React.Component {
               <Typography component="p">
                 Drag and drop some files here, or click to select files
               </Typography>
-              <img id="input-image" width="500" crossOrigin="anonymous" alt="The item to classify or train with."
+              <img id="input-image" width="300" crossOrigin="anonymous" alt="The item to classify or train with."
                 src={this.state.acceptedFiles ? undefined : this.state.inputImageUrl} />
             </div>
           </section>)}
