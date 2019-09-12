@@ -2,7 +2,7 @@
 .gitignore text eol=lf
 
 # Override default for linguist-documentation.
-demo/ linguist-documentation=false
+demo/* linguist-documentation=false
 
 # Ethereum
 *.sol text linguist-language=Solidity eol=lf
