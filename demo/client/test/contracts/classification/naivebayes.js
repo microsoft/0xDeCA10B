@@ -100,10 +100,12 @@ contract('NaiveBayesClassifier', function (accounts) {
       await prevFeatureCounts.push(featureCount);
     }
     const prevTotalFeatureCount = await classifier.getClassTotalFeatureCount(classification).then(parseBN);
+    const prevNumSamples = await classifier.getNumSamples(classification).then(parseBN);
 
     const updateResponse = await classifier.update(data, classification);
-    assert.isBelow(updateResponse.receipt.gasUsed, 2E5, "Too much gas used.");
+    // To help with optimizing gas usage:
     // console.log(`  update gasUsed: ${updateResponse.receipt.gasUsed}`);
+    assert.isBelow(updateResponse.receipt.gasUsed, 106357 + 1, "Too much gas used.");
 
     for (let i in prevFeatureCounts) {
       const featureIndex = data[i];
@@ -113,6 +115,9 @@ contract('NaiveBayesClassifier', function (accounts) {
 
     const totalFeatureCount = await classifier.getClassTotalFeatureCount(classification).then(parseBN);
     assert.equal(totalFeatureCount, prevTotalFeatureCount + data.length);
+
+    const numSamples = await classifier.getNumSamples(classification).then(parseBN);
+    assert.equal(numSamples, prevNumSamples + 1);
 
     assert.equal(await classifier.predict(predictionData).then(parseBN), classification);
   });
