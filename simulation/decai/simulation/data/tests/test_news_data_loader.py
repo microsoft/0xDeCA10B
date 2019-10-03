@@ -20,5 +20,6 @@ class TestNewsDataLoader(unittest.TestCase):
         assert isinstance(cls.data_loader, NewsDataLoader)
         cls.data_loader = cast(NewsDataLoader, cls.data_loader)
 
+    @unittest.skip("The dataset does not exist on CI test machine.")
     def test_load_data(self):
         (x_train, y_train), (x_test, y_test) = self.data_loader.load_data()

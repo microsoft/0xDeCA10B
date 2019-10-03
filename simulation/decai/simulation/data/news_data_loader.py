@@ -1,11 +1,14 @@
 import json
 import os
+import random
+from collections import Counter
 from dataclasses import dataclass
-from enum import auto, Enum
+from enum import Enum
 from logging import Logger
 from operator import itemgetter
 from typing import Optional, Collection
 
+import numpy as np
 import pandas as pd
 from injector import ClassAssistedBuilder, inject, Module, provider, singleton
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -15,8 +18,8 @@ from .data_loader import DataLoader
 
 
 class Label(Enum):
-    RELIABLE = auto()
-    UNRELIABLE = auto()
+    RELIABLE = 0
+    UNRELIABLE = 1
 
 
 @dataclass
@@ -144,6 +147,9 @@ class NewsDataLoader(DataLoader):
             if len(row.text) > 0:
                 result.append(News(row.text, label))
 
+        # Consistent shuffle to aim for a mostly even distribution of labels.
+        random.shuffle(result, lambda: 0.618)
+
         return result
 
     def _pre_process_title(self, title: str) -> str:
@@ -159,14 +165,18 @@ class NewsDataLoader(DataLoader):
         return result
 
     def _pre_process(self, news_articles: Collection[News], train_size: int, test_size: int) -> (tuple, tuple):
-        self._logger.info("Getting feature for %d articles.", len(news_articles))
-        t = TfidfVectorizer(stop_words='english', max_features=3000)
+        self._logger.info("Getting features for %d articles.", len(news_articles))
+        # Only use binary features.
+        ngram_range = (2, 2)
+        t = TfidfVectorizer(max_features=3000, ngram_range=ngram_range)
         train_data = news_articles[:train_size]
         test_data = news_articles[-test_size:]
-        x_train = t.fit_transform([news.text for news in train_data])
-        y_train = [news.label.value for news in train_data]
-        x_test = t.transform([news.text for news in test_data])
-        y_test = [news.label.value for news in test_data]
+        x_train = t.fit_transform([news.text for news in train_data]).toarray()
+        y_train = np.array([news.label.value for news in train_data], np.int8)
+        x_test = t.transform([news.text for news in test_data]).toarray()
+        y_test = np.array([news.label.value for news in test_data], np.int8)
+        self._logger.debug("Training labels: %s", Counter(y_train))
+        self._logger.debug("Test labels: %s", Counter(y_test))
         self._logger.info("Done getting features.")
         return (x_train, y_train), (x_test, y_test)
 
