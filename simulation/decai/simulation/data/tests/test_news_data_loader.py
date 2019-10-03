@@ -23,3 +23,7 @@ class TestNewsDataLoader(unittest.TestCase):
     @unittest.skip("The dataset does not exist on CI test machine.")
     def test_load_data(self):
         (x_train, y_train), (x_test, y_test) = self.data_loader.load_data()
+
+    def test_entities(self):
+        actual = self.data_loader._pre_process_text("Today, John Smith walked to a store and bought an apple.")
+        self.assertEqual("<DATE>, <PERSON> walked to a store and bought an apple.", actual)

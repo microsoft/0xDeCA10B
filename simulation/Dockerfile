@@ -17,6 +17,7 @@ WORKDIR /root/workspace/0xDeCA10B/simulation
 COPY setup.py .
 
 RUN conda run --name decai-simulation pip install -e .[test]
+RUN conda run --name decai-simulation python -m spacy download en_core_web_lg
 
 RUN echo "conda activate decai-simulation" >> ~/.bashrc
 
