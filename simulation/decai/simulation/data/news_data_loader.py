@@ -133,6 +133,12 @@ class NewsDataLoader(DataLoader):
     _logger: Logger
     _train_split = 0.7
     _nlp = spacy.load('en_core_web_lg', disable={'tagger', 'parser', 'textcat'})
+    _replace_entities = True
+    """
+    If True, entities will be replaced in text by <LABEL>.
+    Accuracy with replacement: 0.9168
+    Accuracy without replacement: 0.9173
+    """
     _entity_types_to_replace = {'PERSON', 'GPE', 'ORG', 'DATE', 'TIME', 'PERCENT',
                                 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL'}
 
@@ -157,14 +163,18 @@ class NewsDataLoader(DataLoader):
 
         return result
 
-    def _pre_process_text(self, spacy_doc) -> str:
+    def _pre_process_text(self, doc) -> str:
         # TODO Remove name of news sources.
-        # Remove names in text using spaCy.
-        result = spacy_doc.text
-        for ent in spacy_doc.ents[::-1]:
-            if ent.label_ in self._entity_types_to_replace:
-                # TODO Make sure < and > are ok for TfidfVectorizer
-                result = result[:ent.start_char] + "<" + ent.label_ + ">" + result[ent.end_char:]
+        if self._replace_entities:
+            # Remove names in text using spaCy.
+            result = doc.text
+            for ent in doc.ents[::-1]:
+                if ent.label_ in self._entity_types_to_replace:
+                    # TODO Make sure < and > are ok for TfidfVectorizer
+                    result = result[:ent.start_char] + "<" + ent.label_ + ">" + result[ent.end_char:]
+        else:
+            assert isinstance(doc, str)
+            result = doc
         return result
 
     def _pre_process(self, news_articles: Collection[News], train_size: int, test_size: int) -> (tuple, tuple):
@@ -172,26 +182,31 @@ class NewsDataLoader(DataLoader):
         # Only use binary features.
         ngram_range = (2, 2)
         t = TfidfVectorizer(max_features=3000, ngram_range=ngram_range)
-        x_train = self._nlp.pipe(map(lambda news: news.text, itertools.islice(news_articles, train_size)), batch_size=128)
+        test_start = len(news_articles) - test_size
+
+        x_train = map(lambda news: news.text, itertools.islice(news_articles, train_size))
+        x_test = map(lambda news: news.text, itertools.islice(news_articles, test_start, len(news_articles)))
+        if self._replace_entities:
+            x_train = self._nlp.pipe(x_train, batch_size=128)
+            x_test = self._nlp.pipe(x_test, batch_size=128)
+
         x_train = map(self._pre_process_text, x_train)
+        x_test = map(self._pre_process_text, x_test)
+
         x_train = t.fit_transform(tqdm(x_train,
                                        desc="Processing training data",
                                        total=train_size,
                                        unit_scale=True, mininterval=2,
                                        unit=" articles"
                                        )).toarray()
-        y_train = np.array([news.label.value for news in itertools.islice(news_articles, train_size)], np.int8)
-
-        test_start = len(news_articles) - test_size
-        x_test = self._nlp.pipe(map(lambda news: news.text,
-                                    itertools.islice(news_articles, test_start, len(news_articles))))
-        x_test = map(self._pre_process_text, x_test)
         x_test = t.transform(tqdm(x_test,
                                   desc="Processing testing data",
                                   total=test_size,
                                   unit_scale=True, mininterval=2,
                                   unit=" articles"
                                   )).toarray()
+
+        y_train = np.array([news.label.value for news in itertools.islice(news_articles, train_size)], np.int8)
         y_test = np.array([news.label.value for news in itertools.islice(news_articles,
                                                                          test_start, len(news_articles))], np.int8)
         self._logger.debug("Training labels: %s", Counter(y_train))
