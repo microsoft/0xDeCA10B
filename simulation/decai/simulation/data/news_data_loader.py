@@ -133,11 +133,14 @@ class NewsDataLoader(DataLoader):
     _logger: Logger
     _train_split = 0.7
     _nlp = spacy.load('en_core_web_lg', disable={'tagger', 'parser', 'textcat'})
-    _replace_entities = True
+    _replace_entities = False
     """
-    If True, entities will be replaced in text by <LABEL>.
-    Accuracy with replacement: 0.9168
+    If True, entities will be replaced in text with the entity's label surrounded by angle brackets: "<LABEL>".
+    Accuracy with replacement: 0.9172
     Accuracy without replacement: 0.9173
+
+    Disabled because using spaCy is slow, it will be tricky to use spaCy in JavaScript,
+    and it didn't change the evaluation metrics much.
     """
 
     _entity_types_to_replace = {'PERSON', 'GPE', 'ORG', 'DATE', 'TIME', 'PERCENT',
@@ -177,7 +180,8 @@ class NewsDataLoader(DataLoader):
             result = doc
         return result
 
-    def _pre_process(self, news_articles: Collection[News], train_size: int, test_size: int) -> Tuple[Tuple[np.ndarray, np.ndarray],Tuple[np.ndarray, np.ndarray]]:
+    def _pre_process(self, news_articles: Collection[News], train_size: int, test_size: int) -> \
+            Tuple[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]]:
         self._logger.info("Getting features for %d articles.", len(news_articles))
         # Only use binary features.
         ngram_range = (2, 2)
@@ -214,7 +218,8 @@ class NewsDataLoader(DataLoader):
         self._logger.info("Done getting features.")
         return (x_train, y_train), (x_test, y_test)
 
-    def load_data(self, train_size: int = None, test_size: int = None) -> (tuple, tuple):
+    def load_data(self, train_size: int = None, test_size: int = None) -> \
+            Tuple[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]]:
         self._logger.info("Loading news data.")
         data_folder_path = os.path.join(__file__, '../../../../training_data/news')
 
