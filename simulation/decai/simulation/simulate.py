@@ -221,7 +221,7 @@ class Simulator(object):
                 self._logger.debug("Remaining training data evaluation: %s", s)
 
             self._logger.info("Evaluating initial model.")
-            accuracy = self._decai.model.evaluate(x_test, y_test)
+            accuracy = self._decai.model.log_evaluation_details(x_test, y_test)
             self._logger.info("Initial test set accuracy: %0.2f%%", accuracy * 100)
             t = self._time()
             doc.add_next_tick_callback(
@@ -239,6 +239,7 @@ class Simulator(object):
             next_data_index = 0
             next_accuracy_plot_time = 1E4
             desc = "Processing agent requests"
+            current_time = 0
             with tqdm(desc=desc,
                       unit_scale=True, mininterval=2, unit=" requests",
                       total=len(x_remaining),
@@ -436,9 +437,9 @@ class Simulator(object):
 
                 self._logger.info("Done issuing rewards.")
 
-            accuracy = self._decai.model.evaluate(x_test, y_test)
+            accuracy = self._decai.model.log_evaluation_details(x_test, y_test)
             doc.add_next_tick_callback(
-                partial(plot_accuracy_cb, t=current_time, a=accuracy))
+                partial(plot_accuracy_cb, t=current_time + 100, a=accuracy))
 
             with open(save_path, 'w') as f:
                 json.dump(save_data, f, separators=(',', ':'))

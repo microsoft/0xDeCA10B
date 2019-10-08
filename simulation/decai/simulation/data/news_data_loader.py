@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from enum import Enum
 from logging import Logger
 from operator import itemgetter
-from typing import Optional, Collection
+from typing import Optional, Collection, Tuple
 
 import numpy as np
 import pandas as pd
@@ -139,6 +139,7 @@ class NewsDataLoader(DataLoader):
     Accuracy with replacement: 0.9168
     Accuracy without replacement: 0.9173
     """
+
     _entity_types_to_replace = {'PERSON', 'GPE', 'ORG', 'DATE', 'TIME', 'PERCENT',
                                 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL'}
 
@@ -170,14 +171,13 @@ class NewsDataLoader(DataLoader):
             result = doc.text
             for ent in doc.ents[::-1]:
                 if ent.label_ in self._entity_types_to_replace:
-                    # TODO Make sure < and > are ok for TfidfVectorizer
                     result = result[:ent.start_char] + "<" + ent.label_ + ">" + result[ent.end_char:]
         else:
             assert isinstance(doc, str)
             result = doc
         return result
 
-    def _pre_process(self, news_articles: Collection[News], train_size: int, test_size: int) -> (tuple, tuple):
+    def _pre_process(self, news_articles: Collection[News], train_size: int, test_size: int) -> Tuple[Tuple[np.ndarray, np.ndarray],Tuple[np.ndarray, np.ndarray]]:
         self._logger.info("Getting features for %d articles.", len(news_articles))
         # Only use binary features.
         ngram_range = (2, 2)
@@ -235,7 +235,6 @@ class NewsDataLoader(DataLoader):
                             f"\n  test size: {test_size}")
 
         (x_train, y_train), (x_test, y_test) = self._pre_process(data, train_size, test_size)
-
         self._logger.info("Done loading news data.")
         return (x_train, y_train), (x_test, y_test)
 

@@ -15,6 +15,7 @@ from decai.simulation.simulate import Agent, Simulator
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 train_size: Optional[int] = None
+test_size: Optional[int] = None
 if train_size is None:
     init_train_data_portion = 0.08
 else:
@@ -68,6 +69,7 @@ def main():
                baseline_accuracy=0.9173,
                init_train_data_portion=init_train_data_portion,
                train_size=train_size,
+               test_size=test_size,
                )
 
 

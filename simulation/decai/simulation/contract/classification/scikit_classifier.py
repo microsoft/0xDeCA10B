@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 from dataclasses import dataclass
@@ -7,6 +8,7 @@ from typing import Any
 import joblib
 import numpy as np
 from injector import inject, Module, provider, ClassAssistedBuilder
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 from decai.simulation.contract.classification.classifier import Classifier
 
@@ -32,6 +34,23 @@ class SciKitClassifier(Classifier):
         assert isinstance(labels, np.ndarray), "The labels must be an array."
         self._logger.debug("Evaluating.")
         return self._model.score(data, labels)
+
+    def log_evaluation_details(self, data, labels, level=logging.INFO) -> float:
+        assert self._model is not None, "The model has not been initialized yet."
+        assert isinstance(data, np.ndarray), "The data must be an array."
+        assert isinstance(labels, np.ndarray), "The labels must be an array."
+        self._logger.debug("Evaluating.")
+        predicted_labels = self._model.predict(data)
+        result = accuracy_score(labels, predicted_labels)
+        if self._logger.isEnabledFor(level):
+            m = confusion_matrix(labels, predicted_labels)
+            report = classification_report(labels, predicted_labels)
+            self._logger.log(level,
+                             "Confusion matrix:\n%s"
+                             "\nReport:\n%s"
+                             "\nAccuracy: %0.2f%%",
+                             m, report, result * 100)
+        return result
 
     def init_model(self, training_data, labels):
         assert self._model is None, "The model has already been initialized."
