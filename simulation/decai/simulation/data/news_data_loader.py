@@ -128,6 +128,8 @@ class _SignalMediaDataLoader(DataLoader):
 class NewsDataLoader(DataLoader):
     """
     Load data from news sources.
+
+    Requires data from https://www.kaggle.com/c/fake-news/data to be saved to "simulation/trainin_data/news/fake-news/train.csv".
     """
 
     _logger: Logger

@@ -9,7 +9,7 @@ EXPOSE 5006
 
 ENV LC_ALL C.UTF-8
 
-RUN conda create --channel conda-forge --name decai-simulation --yes python=3.7 bokeh ipython mkl mkl-service numpy phantomjs scikit-learn scipy six tensorflow
+RUN conda create --channel conda-forge --name decai-simulation --yes python=3.7 bokeh ipython mkl mkl-service numpy pandas phantomjs scikit-learn scipy six tensorflow
 
 RUN conda init bash
 
