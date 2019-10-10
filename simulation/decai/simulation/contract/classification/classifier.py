@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 
 from decai.simulation.contract.objects import SmartContract
@@ -13,8 +14,20 @@ class Classifier(ABC, SmartContract):
         """
         Evaluate the model.
 
-        :param data: Many data samples.
+        :param data: Data samples.
         :param labels: The ground truth labels for `data`.
+        :return: The accuracy for the given test set.
+        """
+        pass
+
+    @abstractmethod
+    def log_evaluation_details(self, data, labels, level=logging.INFO) -> float:
+        """
+        Log some evaluation details.
+
+        :param data: Data samples.
+        :param labels: The ground truth labels for `data`.
+        :param level: The level at which to log.
         :return: The accuracy for the given test set.
         """
         pass

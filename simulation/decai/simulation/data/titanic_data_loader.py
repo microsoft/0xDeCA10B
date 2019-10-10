@@ -105,7 +105,7 @@ class TitanicDataLoader(DataLoader):
         data_folder_path = os.path.join(__file__, '../../../../training_data/titanic')
         if not os.path.exists(data_folder_path):
             # TODO Attempt to download the data.
-            raise Exception(f"Could not find Titanic dataset at {data_folder_path}"
+            raise Exception(f"Could not find Titanic dataset at \"{data_folder_path}\"."
                             "\nYou must download it from https://www.kaggle.com/c/titanic/data.")
 
         x_train = pd.read_csv(os.path.join(data_folder_path, 'train.csv'))
