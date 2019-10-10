@@ -4,6 +4,7 @@ import { createMuiTheme } from '@material-ui/core/styles';
 import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
 import React, { Component } from 'react';
 import { BrowserRouter as Router, Route } from "react-router-dom";
+import AddModel from './components/addModel';
 import AppBar from './components/appBar';
 import Model from './components/model';
 import ModelList from './containers/modelList';
@@ -40,9 +41,7 @@ class App extends Component {
               <div style={mainDiv}>
                 <Route exact path="/" component={ModelList} />
                 <Route path="/model" component={Model} />
-                {/* Disable adding new models through the UI for now until we standardize the process.
-                <Route path="/new" component={CreateModel} />
-                */}
+                <Route path="/add" component={AddModel} />
               </div>
             </div>
           </div>

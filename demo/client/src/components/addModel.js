@@ -29,7 +29,7 @@ const styles = theme => ({
   }
 });
 
-class CreateModel extends React.Component {
+class AddModel extends React.Component {
 
   constructor(props) {
     super(props);
@@ -144,8 +144,8 @@ class CreateModel extends React.Component {
   }
 }
 
-CreateModel.propTypes = {
+AddModel.propTypes = {
   classes: PropTypes.object.isRequired,
 };
 
-export default withStyles(styles)(CreateModel);
+export default withStyles(styles)(AddModel);
