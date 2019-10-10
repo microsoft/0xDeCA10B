@@ -33,7 +33,6 @@ Run:
 conda create --channel conda-forge --name decai-simulation python=3.7 bokeh ipython mkl mkl-service numpy pandas phantomjs scikit-learn scipy six tensorflow
 conda activate decai-simulation
 pip install -e .
-python -m spacy download en_core_web_lg
 ```
 
 ## Docker Setup

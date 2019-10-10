@@ -14,6 +14,7 @@ import pandas as pd
 import spacy
 from injector import ClassAssistedBuilder, inject, Module, provider, singleton
 from sklearn.feature_extraction.text import TfidfVectorizer
+from spacy.cli import download
 from tqdm import tqdm
 
 from .data_loader import DataLoader
@@ -134,8 +135,8 @@ class NewsDataLoader(DataLoader):
 
     _logger: Logger
     _train_split = 0.7
-    _nlp = spacy.load('en_core_web_lg', disable={'tagger', 'parser', 'textcat'})
-    _replace_entities = False
+
+    _replace_entities_enabled = False
     """
     If True, entities will be replaced in text with the entity's label surrounded by angle brackets: "<LABEL>".
     Accuracy with replacement: 0.9172
@@ -147,6 +148,12 @@ class NewsDataLoader(DataLoader):
 
     _entity_types_to_replace = {'PERSON', 'GPE', 'ORG', 'DATE', 'TIME', 'PERCENT',
                                 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL'}
+
+    def __post_init__(self):
+        spacy_model = 'en_core_web_lg'
+        download(spacy_model)
+        self._nlp = spacy.load(spacy_model, disable={'tagger', 'parser', 'textcat'})
+
 
     def _load_kaggle_data(self, data_folder_path: str) -> Collection[News]:
         """
@@ -169,14 +176,18 @@ class NewsDataLoader(DataLoader):
 
         return result
 
+    def _replace_entities(self, doc) -> str:
+        # Remove names in text using spaCy.
+        result = doc.text
+        for ent in doc.ents[::-1]:
+            if ent.label_ in self._entity_types_to_replace:
+                result = result[:ent.start_char] + "<" + ent.label_ + ">" + result[ent.end_char:]
+        return result
+
     def _pre_process_text(self, doc) -> str:
         # TODO Remove name of news sources.
-        if self._replace_entities:
-            # Remove names in text using spaCy.
-            result = doc.text
-            for ent in doc.ents[::-1]:
-                if ent.label_ in self._entity_types_to_replace:
-                    result = result[:ent.start_char] + "<" + ent.label_ + ">" + result[ent.end_char:]
+        if self._replace_entities_enabled:
+            result = self._replace_entities(doc)
         else:
             assert isinstance(doc, str)
             result = doc

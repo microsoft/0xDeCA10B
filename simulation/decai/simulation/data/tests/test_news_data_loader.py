@@ -25,5 +25,6 @@ class TestNewsDataLoader(unittest.TestCase):
         (x_train, y_train), (x_test, y_test) = self.data_loader.load_data()
 
     def test_entities(self):
-        actual = self.data_loader._pre_process_text("Today, John Smith walked to a store and bought an apple.")
+        doc = self.data_loader._nlp("Today, John Smith walked to a store and bought an apple.")
+        actual = self.data_loader._replace_entities(doc)
         self.assertEqual("<DATE>, <PERSON> walked to a store and bought an apple.", actual)

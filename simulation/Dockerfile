@@ -12,13 +12,11 @@ ENV LC_ALL C.UTF-8
 RUN conda create --channel conda-forge --name decai-simulation --yes python=3.7 bokeh ipython mkl mkl-service numpy pandas phantomjs scikit-learn scipy six tensorflow
 
 RUN conda init bash
+RUN echo "conda activate decai-simulation" >> ~/.bashrc
 
 WORKDIR /root/workspace/0xDeCA10B/simulation
 COPY setup.py .
 
 RUN conda run --name decai-simulation pip install -e .[test]
-RUN conda run --name decai-simulation python -m spacy download en_core_web_lg
-
-RUN echo "conda activate decai-simulation" >> ~/.bashrc
 
 CMD ["bash"]
