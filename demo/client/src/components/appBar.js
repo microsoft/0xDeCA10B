@@ -3,6 +3,7 @@ import Button from '@material-ui/core/Button';
 import { withStyles } from '@material-ui/core/styles';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
+import AddIcon from '@material-ui/icons/Add';
 import HomeIcon from '@material-ui/icons/Home';
 import PropTypes from 'prop-types';
 import React from 'react';
@@ -31,14 +32,11 @@ class CustomAppBar extends React.Component {
             <Typography variant="h6" color="inherit" className={classes.flex}>
               Decentralized &amp; Collaborative AI on Blockchain
             </Typography>
-            {/* Disable adding new models through the UI for now until we standardize the process.
-            <Link to='/new'>
+            <Link to='/add'>
               <Button className={classes.button}>
-                  <AddIcon />
-                  Create New Model
+                <AddIcon />
               </Button>
             </Link>
-            */}
             <Link to="/">
               <Button>
                 <HomeIcon />

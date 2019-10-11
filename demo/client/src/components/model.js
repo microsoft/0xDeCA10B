@@ -1073,7 +1073,7 @@ class Model extends React.Component {
             <div {...getRootProps()}>
               <input {...getInputProps()} />
               <Typography component="p">
-                Drag and drop some files here, or click to select files
+                Drag and drop an image here, or click to select a file
               </Typography>
               <img id="input-image" width="300" crossOrigin="anonymous" alt="The item to classify or train with."
                 src={this.state.acceptedFiles ? undefined : this.state.inputImageUrl} />
