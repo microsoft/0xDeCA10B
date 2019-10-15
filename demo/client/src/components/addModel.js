@@ -1,6 +1,7 @@
 import getWeb3 from "@drizzle-utils/get-web3";
-import { Container, InputLabel, MenuItem, Select } from "@material-ui/core";
+import { Container, InputLabel, MenuItem, Select } from '@material-ui/core';
 import Button from '@material-ui/core/Button';
+import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
 import { withStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
@@ -14,8 +15,8 @@ import Web3 from "web3"; // Only required for custom/fallback provider option.
 const styles = theme => ({
   root: {
     ...theme.mixins.gutters(),
-    paddingTop: theme.spacing.unit * 2,
-    paddingBottom: theme.spacing.unit * 2,
+    paddingTop: theme.spacing(2),
+    paddingBottom: theme.spacing(2),
   },
   form: {
     display: 'flex',
@@ -33,6 +34,10 @@ const styles = theme => ({
   },
   selector: {
     marginBottom: 8,
+  },
+  numberTextField: {
+    // Some of the labels are long so we need long input boxes to show the entire label nicely.
+    width: 300,
   }
 });
 
@@ -156,41 +161,7 @@ class AddModel extends React.Component {
                 <MenuItem value={"Stakeable64"}>Stakeable64</MenuItem>
               </Select>
               {this.state.incentiveMechanism === "Stakeable64" &&
-                <div>
-                  <TextField
-                    name="refundTimeWaitTimeS"
-                    label="Refund wait time (seconds)"
-                    value={this.state.refundTimeWaitTimeS}
-                    type="number"
-                    margin="normal"
-                    onChange={this.handleInputChange}
-                  />
-                  <TextField
-                    name="ownerClaimWaitTimeS"
-                    label="Owner claim wait time (seconds)"
-                    value={this.state.ownerClaimWaitTimeS}
-                    type="number"
-                    margin="normal"
-                    onChange={this.handleInputChange}
-                  />
-                  <TextField
-                    name="anyAddressClaimWaitTimeS"
-                    label="Any address claim wait time (seconds)"
-                    value={this.state.anyAddressClaimWaitTimeS}
-                    type="number"
-                    margin="normal"
-                    onChange={this.handleInputChange}
-                  />
-                  <TextField
-                    name="costWeight"
-                    label="Cost weight (in wei)"
-                    value={this.state.costWeight}
-                    type="number"
-                    margin="normal"
-                    onChange={this.handleInputChange}
-                  />
-                  {/* End section for Stakeable64. */}
-                </div>
+                this.renderStakeableOptions()
               }
               <Dropzone onDrop={this.processUploadedModel}>
                 {({ getRootProps, getInputProps }) => (<section>
@@ -208,6 +179,43 @@ class AddModel extends React.Component {
         </Paper>
       </Container>
     );
+  }
+
+  renderStakeableOptions() {
+    return <Grid container spacing={2}>
+      <Grid item xs={12} sm={6}>
+        <TextField name="refundTimeWaitTimeS" label="Refund wait time (seconds)"
+          className={this.classes.numberTextField}
+          value={this.state.refundTimeWaitTimeS}
+          type="number"
+          margin="normal"
+          onChange={this.handleInputChange} />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField name="ownerClaimWaitTimeS" label="Owner claim wait time (seconds)"
+          className={this.classes.numberTextField}
+          value={this.state.ownerClaimWaitTimeS}
+          type="number"
+          margin="normal"
+          onChange={this.handleInputChange} />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField name="anyAddressClaimWaitTimeS" label="Any address claim wait time (seconds)"
+          className={this.classes.numberTextField}
+          value={this.state.anyAddressClaimWaitTimeS}
+          type="number"
+          margin="normal"
+          onChange={this.handleInputChange} />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField name="costWeight" label="Cost weight (in wei)"
+          className={this.classes.numberTextField}
+          value={this.state.costWeight}
+          type="number"
+          margin="normal"
+          onChange={this.handleInputChange} />
+      </Grid>
+    </Grid>;
   }
 
   save() {
