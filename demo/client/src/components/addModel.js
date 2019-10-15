@@ -38,6 +38,11 @@ const styles = theme => ({
   numberTextField: {
     // Some of the labels are long so we need long input boxes to show the entire label nicely.
     width: 300,
+  },
+  dropPaper: {
+    ...theme.mixins.gutters(),
+    paddingTop: theme.spacing(2),
+    paddingBottom: theme.spacing(2),
   }
 });
 
@@ -62,6 +67,7 @@ class AddModel extends React.Component {
     this.uploadWeights = this.uploadWeights.bind(this);
     this.save = this.save.bind(this);
     this.handleInputChange = this.handleInputChange.bind(this);
+    this.processUploadedModel = this.processUploadedModel.bind(this);
   }
 
   componentDidMount = async () => {
@@ -100,7 +106,16 @@ class AddModel extends React.Component {
     if (acceptedFiles.length === 0 || acceptedFiles.length > 1) {
       alert("Please only provide one file.");
     }
+    const reader = new FileReader();
     const file = acceptedFiles[0];
+    reader.onabort = () => console.error("File reading was aborted.");
+    reader.onerror = () => console.error("File reading has failed.");
+    reader.onload = () => {
+      const binaryStr = reader.result
+      const model = JSON.parse(binaryStr);
+      this.setState({ model });
+    };
+    reader.readAsBinaryString(file);
   }
 
   render() {
@@ -164,14 +179,14 @@ class AddModel extends React.Component {
                 this.renderStakeableOptions()
               }
               <Dropzone onDrop={this.processUploadedModel}>
-                {({ getRootProps, getInputProps }) => (<section>
-                  <div {...getRootProps()}>
+                {({ getRootProps, getInputProps }) => (
+                  <Paper {...getRootProps()} className={this.classes.dropPaper}>
                     <input {...getInputProps()} />
                     <Typography component="p">
                       Drag and drop a model file here, or click to select a file
                     </Typography>
-                  </div>
-                </section>)}
+                  </Paper>
+                )}
               </Dropzone>
             </div>
           </form>
