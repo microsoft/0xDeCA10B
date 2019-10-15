@@ -1,7 +1,9 @@
+import Container from '@material-ui/core/Container';
 import Divider from '@material-ui/core/Divider';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
+import Paper from '@material-ui/core/Paper';
 import { withStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import axios from 'axios';
@@ -10,13 +12,8 @@ import React from 'react';
 import { Link } from "react-router-dom";
 
 const styles = theme => ({
-  root: {
-    width: '65%',
-    marginTop: theme.spacing.unit * 3,
-    overflowX: 'auto',
-  },
-  table: {
-    minWidth: 700,
+  link: {
+    color: theme.palette.primary.main,
   }
 });
 
@@ -40,7 +37,9 @@ class ModelList extends React.Component {
           <div key={`model-${m.id}`}>
             <Link to={`/model?modelId=${m.id}&tab=predict`}>
               <ListItem button>
-                <ListItemText primary={m.name} secondary={(m.accuracy * 100).toFixed(1) + "%"} />
+                <ListItemText primary={m.name}
+                  primaryTypographyProps={{ className: this.props.classes.link }}
+                  secondary={(m.accuracy * 100).toFixed(1) + "%"} />
               </ListItem>
             </Link>
             <Divider />
@@ -50,13 +49,17 @@ class ModelList extends React.Component {
     }
 
     return (
-      <List component="nav" className={this.props.classes.list}>
-        {listItems ? listItems :
-          <Typography component="p">
-            There are currently no models available.
-        </Typography>
-        }
-      </List>
+      <Container>
+        <Paper>
+          <List component="nav" className={this.props.classes.list}>
+            {listItems ? listItems :
+              <Typography component="p">
+                There are currently no models available.
+            </Typography>
+            }
+          </List>
+        </Paper>
+      </Container>
     );
   }
 }

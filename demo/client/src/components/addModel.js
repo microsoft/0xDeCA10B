@@ -1,5 +1,5 @@
 import getWeb3 from "@drizzle-utils/get-web3";
-import { InputLabel, MenuItem, Select } from "@material-ui/core";
+import { Container, InputLabel, MenuItem, Select } from "@material-ui/core";
 import Button from '@material-ui/core/Button';
 import Paper from '@material-ui/core/Paper';
 import { withStyles } from '@material-ui/core/styles';
@@ -8,8 +8,8 @@ import Typography from '@material-ui/core/Typography';
 import axios from 'axios';
 import PropTypes from 'prop-types';
 import React from 'react';
+import Dropzone from 'react-dropzone';
 import Web3 from "web3"; // Only required for custom/fallback provider option.
-
 
 const styles = theme => ({
   root: {
@@ -100,7 +100,7 @@ class AddModel extends React.Component {
 
   render() {
     return (
-      <div>
+      <Container>
         <Paper className={this.classes.root} elevation={1}>
           <Typography variant="h5" component="h3">
             Add your model
@@ -206,7 +206,7 @@ class AddModel extends React.Component {
           </form>
           <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}> Save </Button>
         </Paper>
-      </div>
+      </Container>
     );
   }
 

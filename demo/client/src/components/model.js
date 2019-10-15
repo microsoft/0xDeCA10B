@@ -1,4 +1,5 @@
-import getWeb3 from "@drizzle-utils/get-web3";
+import getWeb3 from '@drizzle-utils/get-web3';
+import Container from '@material-ui/core/Container';
 import AppBar from '@material-ui/core/AppBar';
 import Button from '@material-ui/core/Button';
 import InputLabel from '@material-ui/core/InputLabel';
@@ -854,7 +855,7 @@ class Model extends React.Component {
 
   render() {
     return (
-      <div>
+      <Container>
         <Paper className={this.classes.root} elevation={1}>
           <Typography variant="h5" component="h3">
             {this.state.contractInfo.name}
@@ -1057,7 +1058,7 @@ class Model extends React.Component {
             }
           </div>
         </Paper>
-      </div>
+      </Container>
     );
   }
 

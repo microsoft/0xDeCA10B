@@ -1,7 +1,7 @@
 import { CssBaseline } from '@material-ui/core';
 import blue from '@material-ui/core/colors/blue';
 import { createMuiTheme } from '@material-ui/core/styles';
-import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
+import { ThemeProvider } from '@material-ui/styles';
 import React, { Component } from 'react';
 import { BrowserRouter as Router, Route } from "react-router-dom";
 import AddModel from './components/addModel';
@@ -16,20 +16,18 @@ const theme = createMuiTheme({
   },
   typography: {
     useNextVariants: true,
-  },
+  }
 });
 
 class App extends Component {
   render() {
     const mainDiv = {
-      'width': '50%',
-      'marginLeft': '25%',
       'marginTop': '50px'
     };
 
     return (
       <Router>
-        <MuiThemeProvider theme={theme}>
+        <ThemeProvider theme={theme}>
           <CssBaseline />
           <div className="App">
             <div className="App-header">
@@ -37,15 +35,13 @@ class App extends Component {
               <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
               <AppBar />
             </div>
-            <div>
-              <div style={mainDiv}>
-                <Route exact path="/" component={ModelList} />
-                <Route path="/model" component={Model} />
-                <Route path="/add" component={AddModel} />
-              </div>
+            <div style={mainDiv}>
+              <Route exact path="/" component={ModelList} />
+              <Route path="/model" component={Model} />
+              <Route path="/add" component={AddModel} />
             </div>
           </div>
-        </MuiThemeProvider>
+        </ThemeProvider>
       </Router>
     );
   }
