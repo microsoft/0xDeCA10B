@@ -11,6 +11,9 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import Dropzone from 'react-dropzone';
 import Web3 from "web3"; // Only required for custom/fallback provider option.
+import CollaborativeTrainer from '../contracts/CollaborativeTrainer64.json';
+import DataHandler from '../contracts/DataHandler64.json';
+import Stakeable64 from '../contracts/Stakeable64.json';
 
 const styles = theme => ({
   root: {
@@ -78,15 +81,6 @@ class AddModel extends React.Component {
       alert(`Failed to load web3, accounts, or contract. Check console for details.`);
       console.error(error);
     }
-  }
-
-  createNewContract(callback) {
-    // TODO Get labels as input.
-    // TODO Get abi to use.
-
-    this.web3.eth.getAccounts((error, accounts) => {
-      // TODO Deploy new contract or use existing one.
-    });
   }
 
   uploadWeights(e) {
@@ -190,7 +184,7 @@ class AddModel extends React.Component {
               </Dropzone>
             </div>
           </form>
-          <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}> Save </Button>
+          <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}>Save</Button>
         </Paper>
       </Container>
     );
@@ -233,10 +227,26 @@ class AddModel extends React.Component {
     </Grid>;
   }
 
-  save() {
+  async save() {
     //deploy contract, get address, save to db
-    this.createNewContract(i => {
-      axios.post('/api/models', { ...this.state, address: i.address });
+    const { name, description, modelType, encoder } = this.state;
+    const modelInfo = {
+      name, description, modelType, encoder,
+    };
+    this.web3.eth.getAccounts((error, accounts) => {
+      const account = accounts[0];
+      // TODO Deploy new contracts.
+      // See https://ethereum.stackexchange.com/a/70539/9564 for an example.
+      // .abi
+      // .bytecode
+      this.createNewContract(i => {
+        modelInfo.address = i.address;
+        axios.post('/api/models', modelInfo).then(() => {
+          console.log("Saved");
+        }).catch(err => {
+          console.error(err);
+        });
+      });
     });
   }
 }

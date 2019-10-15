@@ -893,6 +893,7 @@ class Model extends React.Component {
             <AppBar position="static" className={this.classes.tabs}>
               <Tabs
                 value={this.state.tab}
+                variant="fullWidth"
                 onChange={this.handleTabChange}
                 centered>
                 <Tab label="Predict" />
