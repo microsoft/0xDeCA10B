@@ -11,8 +11,8 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import Dropzone from 'react-dropzone';
 import Web3 from "web3"; // Only required for custom/fallback provider option.
-import CollaborativeTrainer from '../contracts/CollaborativeTrainer64.json';
-import DataHandler from '../contracts/DataHandler64.json';
+import CollaborativeTrainer64 from '../contracts/CollaborativeTrainer64.json';
+import DataHandler64 from '../contracts/DataHandler64.json';
 import Stakeable64 from '../contracts/Stakeable64.json';
 
 const styles = theme => ({
@@ -145,6 +145,16 @@ class AddModel extends React.Component {
               >
                 <MenuItem value={"Classifier64"}>Classifier64</MenuItem>
               </Select>
+              <Dropzone onDrop={this.processUploadedModel}>
+                {({ getRootProps, getInputProps }) => (
+                  <Paper {...getRootProps()} className={this.classes.dropPaper}>
+                    <input {...getInputProps()} />
+                    <Typography component="p">
+                      Drag and drop a model file here, or click to select a file
+                    </Typography>
+                  </Paper>
+                )}
+              </Dropzone>
               <InputLabel className={this.classes.selectorLabel} htmlFor="encoder">Encoder</InputLabel>
               <Select className={this.classes.selector}
                 onChange={this.handleInputChange}
@@ -172,16 +182,6 @@ class AddModel extends React.Component {
               {this.state.incentiveMechanism === "Stakeable64" &&
                 this.renderStakeableOptions()
               }
-              <Dropzone onDrop={this.processUploadedModel}>
-                {({ getRootProps, getInputProps }) => (
-                  <Paper {...getRootProps()} className={this.classes.dropPaper}>
-                    <input {...getInputProps()} />
-                    <Typography component="p">
-                      Drag and drop a model file here, or click to select a file
-                    </Typography>
-                  </Paper>
-                )}
-              </Dropzone>
             </div>
           </form>
           <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}>Save</Button>
@@ -233,20 +233,39 @@ class AddModel extends React.Component {
     const modelInfo = {
       name, description, modelType, encoder,
     };
-    this.web3.eth.getAccounts((error, accounts) => {
+    this.web3.eth.getAccounts(async (error, accounts) => {
       const account = accounts[0];
-      // TODO Deploy new contracts.
-      // See https://ethereum.stackexchange.com/a/70539/9564 for an example.
-      // .abi
-      // .bytecode
-      this.createNewContract(i => {
-        modelInfo.address = i.address;
-        axios.post('/api/models', modelInfo).then(() => {
-          console.log("Saved");
-        }).catch(err => {
-          console.error(err);
-        });
+      const DataHandlerContract = new this.web3.eth.Contract(DataHandler64.abi);
+      // TODO Post to a section: "Please accept to deploy the classifier"
+      let model;
+      if (modelType === "Classifier64") {
+        // TODO Load the model from the file and set up deployment.
+        // TODO Deploy.
+      } else {
+        throw new Error(`Unrecognized model type: "${modelType}"`);
+      }
+      // TODO Post to a section: `The model contract has been deployed to ${model.address}`
+
+
+      // TODO Post to a section: "Please accept to deploy the incentive mechanism contract"
+      if (this.state.incentiveMechanism === "Points") {
+        // TODO  
+      } else if (this.state.incentiveMechanism === "Stakeable64") {
+         // TODO
+      }
+      // TODO Post to a section: `The data handler contract has been deployed to ${dataHandler.address}`
+     
+      // TODO Deploy main entry point.
+
+      // modelInfo.address = i.address;
+      // Save to the database.
+      axios.post('/api/models', modelInfo).then(() => {
+        console.log("Saved");
+      }).catch(err => {
+        console.error(err);
+        console.error(err.response.data.message);
       });
+
     });
   }
 }
