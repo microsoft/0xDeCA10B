@@ -14,6 +14,7 @@ import Web3 from "web3"; // Only required for custom/fallback provider option.
 import CollaborativeTrainer64 from '../contracts/CollaborativeTrainer64.json';
 import DataHandler64 from '../contracts/DataHandler64.json';
 import Stakeable64 from '../contracts/Stakeable64.json';
+import { withSnackbar } from 'notistack';
 
 const styles = theme => ({
   root: {
@@ -57,9 +58,9 @@ class AddModel extends React.Component {
       json: null,
       name: "",
       description: "",
-      modelType: "Classifier64",
-      encoder: "none",
-      incentiveMechanism: "Points",
+      modelType: 'Classifier64',
+      encoder: 'none',
+      incentiveMechanism: 'Stakeable64',
       refundTimeWaitTimeS: 60,
       ownerClaimWaitTimeS: 120,
       anyAddressClaimWaitTimeS: 300,
@@ -67,7 +68,6 @@ class AddModel extends React.Component {
     };
     this.classes = props.classes;
     this.web3 = null;
-    this.uploadWeights = this.uploadWeights.bind(this);
     this.save = this.save.bind(this);
     this.handleInputChange = this.handleInputChange.bind(this);
     this.processUploadedModel = this.processUploadedModel.bind(this);
@@ -83,8 +83,12 @@ class AddModel extends React.Component {
     }
   }
 
-  uploadWeights(e) {
-    this.setState({ json: e.target.files[0] });
+  notify(...args) {
+    return this.props.enqueueSnackbar(...args);
+  }
+
+  dismissNotification(...args) {
+    return this.props.closeSnackbar(...args);
   }
 
   handleInputChange(event) {
@@ -176,7 +180,7 @@ class AddModel extends React.Component {
                   name: 'incentiveMechanism',
                 }}
               >
-                <MenuItem value={"Points"}>Points</MenuItem>
+                {/* TODO <MenuItem value={"Points"}>Points</MenuItem> */}
                 <MenuItem value={"Stakeable64"}>Stakeable64</MenuItem>
               </Select>
               {this.state.incentiveMechanism === "Stakeable64" &&
@@ -228,36 +232,55 @@ class AddModel extends React.Component {
   }
 
   async save() {
-    //deploy contract, get address, save to db
+    // TODO Keep track of contract addresses of whatever has been deployed so far so that the process can be recovered.
     const { name, description, modelType, encoder } = this.state;
     const modelInfo = {
       name, description, modelType, encoder,
     };
-    this.web3.eth.getAccounts(async (error, accounts) => {
+    this.web3.eth.getAccounts(async (err, accounts) => {
+      if (err) {
+        throw err;
+      }
       const account = accounts[0];
-      const DataHandlerContract = new this.web3.eth.Contract(DataHandler64.abi);
-      // TODO Post to a section: "Please accept to deploy the classifier"
-      let model;
-      if (modelType === "Classifier64") {
-        // TODO Load the model from the file and set up deployment.
-        // TODO Deploy.
-      } else {
-        throw new Error(`Unrecognized model type: "${modelType}"`);
-      }
-      // TODO Post to a section: `The model contract has been deployed to ${model.address}`
 
+      const [model, incentiveMechanism, dataHandler] = await Promise.all([
+        this.deployModel(account),
+        this.deployIncentiveMechanism(account),
+        this.deployDataHandler(account),
+      ]);
 
-      // TODO Post to a section: "Please accept to deploy the incentive mechanism contract"
-      if (this.state.incentiveMechanism === "Points") {
-        // TODO  
-      } else if (this.state.incentiveMechanism === "Stakeable64") {
-         // TODO
-      }
-      // TODO Post to a section: `The data handler contract has been deployed to ${dataHandler.address}`
-     
-      // TODO Deploy main entry point.
+      const pleaseAcceptKey = this.notify("Please accept the prompt to deploy the main entry point contact");
+      const CollaborativeTrainer64Contract = new this.web3.eth.Contract(CollaborativeTrainer64.abi);
+      const mainContract = await CollaborativeTrainer64Contract.deploy({
+        data: CollaborativeTrainer64.bytecode,
+      }).send({
+        from: account,
+      }).then(mainContract => {
+        this.dismissNotification(pleaseAcceptKey);
+        this.notify(`The main entry point contract has been deployed to ${mainContract.options.address}`, { variant: 'success' });
+        return mainContract;
+      }).catch(err => {
+        this.dismissNotification(pleaseAcceptKey);
+        console.error(err);
+        this.notify(`Error deploying the main entry point contract`, { variant: 'error' });
+        throw err;
+      });
 
-      // modelInfo.address = i.address;
+      this.notify(`Please accept the next 3 transactions to transfer ownership of the components to the main entry point contract`);
+      await Promise.all([
+        dataHandler.methods.transferOwnership(mainContract.options.address).send({
+          from: account
+        }),
+        incentiveMechanism.methods.transferOwnership(mainContract.options.address).send({
+          from: account
+        }),
+        model.methods.transferOwnership(mainContract.options.address).send({
+          from: account
+        }),
+      ]);
+
+      modelInfo.address = mainContract.options.address;
+
       // Save to the database.
       axios.post('/api/models', modelInfo).then(() => {
         console.log("Saved");
@@ -265,7 +288,68 @@ class AddModel extends React.Component {
         console.error(err);
         console.error(err.response.data.message);
       });
+    });
+  }
 
+
+
+  async deployModel(account) {
+    const { modelType, encoder } = this.state;
+    const pleaseAcceptKey = this.notify("Please accept to deploy the classifier");
+    let result;
+    switch (modelType) {
+      case 'Classifier64':
+        // TODO Load the model from the file and set up deployment.
+        // TODO Deploy.
+        break;
+      default:
+        // Should not happen.
+        this.dismissNotification(pleaseAcceptKey);
+        throw new Error(`Unrecognized model type: "${modelType}"`);
+    }
+
+    // this.notify(`The model contract has been deployed to ${result.options.address}`);
+    return result;
+  }
+
+  async deployIncentiveMechanism(account) {
+    let result;
+    const pleaseAcceptKey = this.notify("Please accept to deploy the incentive mechanism contract");
+    switch (this.state.incentiveMechanism) {
+      case 'Points':
+        // TODO
+        break;
+      case 'Stakeable64':
+        // TODO
+
+        break;
+      default:
+        break;
+    }
+
+    // this.notify(`The incentive mechanism contract has been deployed to ${result.options.address}`);
+    return result;
+  }
+
+  deployDataHandler(account) {
+    const pleaseAcceptKey = this.notify("Please accept the prompt to deploy the data handler");
+    const DataHandlerContract = new this.web3.eth.Contract(DataHandler64.abi);
+    // FIXME "Error: Invalid number of parameters for "undefined". Got 0 expected 3!"
+    DataHandlerContract.deploy({
+      data: DataHandler64.bytecode,
+    }).send({
+      from: account,
+    }).on('transactionHash', transactionHash => {
+      this.dismissNotification(pleaseAcceptKey);
+      this.notify(`Submitted the data handler with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+    }).on('receipt', dataHandler => {      
+      this.notify(`The data handler contract has been deployed to ${dataHandler.options.address}`, { variant: 'success' });
+      return dataHandler;
+    }).on('error', err => {
+      this.dismissNotification(pleaseAcceptKey);
+      console.error(err);
+      this.notify(`Error deploying the data handler`, { variant: 'error' });
+      throw err;
     });
   }
 }
@@ -274,4 +358,4 @@ AddModel.propTypes = {
   classes: PropTypes.object.isRequired,
 };
 
-export default withStyles(styles)(AddModel);
+export default withSnackbar(withStyles(styles)(AddModel));

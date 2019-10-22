@@ -2,6 +2,7 @@ import { CssBaseline } from '@material-ui/core';
 import blue from '@material-ui/core/colors/blue';
 import { createMuiTheme } from '@material-ui/core/styles';
 import { ThemeProvider } from '@material-ui/styles';
+import { SnackbarProvider } from 'notistack';
 import React, { Component } from 'react';
 import { BrowserRouter as Router, Route } from "react-router-dom";
 import AddModel from './components/addModel';
@@ -28,19 +29,21 @@ class App extends Component {
     return (
       <Router>
         <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <div className="App">
-            <div className="App-header">
-              <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500" />
-              <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
-              <AppBar />
+          <SnackbarProvider maxSnack={3}>
+            <CssBaseline />
+            <div className="App">
+              <div className="App-header">
+                <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500" />
+                <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+                <AppBar />
+              </div>
+              <div style={mainDiv}>
+                <Route exact path="/" component={ModelList} />
+                <Route path="/model" component={Model} />
+                <Route path="/add" component={AddModel} />
+              </div>
             </div>
-            <div style={mainDiv}>
-              <Route exact path="/" component={ModelList} />
-              <Route path="/model" component={Model} />
-              <Route path="/add" component={AddModel} />
-            </div>
-          </div>
+          </SnackbarProvider>
         </ThemeProvider>
       </Router>
     );
