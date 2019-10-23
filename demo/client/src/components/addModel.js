@@ -249,37 +249,17 @@ class AddModel extends React.Component {
         this.deployDataHandler(account),
       ]);
 
-      const pleaseAcceptKey = this.notify("Please accept the prompt to deploy the main entry point contact");
-      const CollaborativeTrainer64Contract = new this.web3.eth.Contract(CollaborativeTrainer64.abi);
-      const mainContract = await CollaborativeTrainer64Contract.deploy({
-        data: CollaborativeTrainer64.bytecode,
-      }).send({
-        from: account,
-      }).then(mainContract => {
-        this.dismissNotification(pleaseAcceptKey);
-        this.notify(`The main entry point contract has been deployed to ${mainContract.options.address}`, { variant: 'success' });
-        return mainContract;
-      }).catch(err => {
-        this.dismissNotification(pleaseAcceptKey);
-        console.error(err);
-        this.notify(`Error deploying the main entry point contract`, { variant: 'error' });
-        throw err;
-      });
 
-      this.notify(`Please accept the next 3 transactions to transfer ownership of the components to the main entry point contract`);
-      await Promise.all([
-        dataHandler.methods.transferOwnership(mainContract.options.address).send({
-          from: account
-        }),
-        incentiveMechanism.methods.transferOwnership(mainContract.options.address).send({
-          from: account
-        }),
-        model.methods.transferOwnership(mainContract.options.address).send({
-          from: account
-        }),
-      ]);
+      console.log(dataHandler);
+      // FIXME Remove this check once the methods are implemented to deploy the other components.
+      if (model === undefined || incentiveMechanism === undefined) {
+        this.notify("No model or IM yet.", { variant: 'error' });
+        return;
+      }
 
-      modelInfo.address = mainContract.options.address;
+      const mainContract = await this.deployMainEntryPoint(account, dataHandler, incentiveMechanism, model);
+
+      modelInfo.address = mainContract.contractAddress;
 
       // Save to the database.
       axios.post('/api/models', modelInfo).then(() => {
@@ -290,8 +270,6 @@ class AddModel extends React.Component {
       });
     });
   }
-
-
 
   async deployModel(account) {
     const { modelType, encoder } = this.state;
@@ -331,25 +309,63 @@ class AddModel extends React.Component {
     return result;
   }
 
-  deployDataHandler(account) {
+  async deployDataHandler(account) {
     const pleaseAcceptKey = this.notify("Please accept the prompt to deploy the data handler");
     const DataHandlerContract = new this.web3.eth.Contract(DataHandler64.abi);
-    // FIXME "Error: Invalid number of parameters for "undefined". Got 0 expected 3!"
-    DataHandlerContract.deploy({
-      data: DataHandler64.bytecode,
-    }).send({
-      from: account,
-    }).on('transactionHash', transactionHash => {
-      this.dismissNotification(pleaseAcceptKey);
-      this.notify(`Submitted the data handler with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
-    }).on('receipt', dataHandler => {      
-      this.notify(`The data handler contract has been deployed to ${dataHandler.options.address}`, { variant: 'success' });
-      return dataHandler;
-    }).on('error', err => {
-      this.dismissNotification(pleaseAcceptKey);
-      console.error(err);
-      this.notify(`Error deploying the data handler`, { variant: 'error' });
-      throw err;
+    return new Promise((resolve, reject) => {
+      DataHandlerContract.deploy({
+        data: DataHandler64.bytecode,
+      }).send({
+        from: account,
+      }).on('transactionHash', transactionHash => {
+        this.dismissNotification(pleaseAcceptKey);
+        this.notify(`Submitted the data handler with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+      }).on('receipt', dataHandler => {
+        this.notify(`The data handler contract has been deployed to ${dataHandler.contractAddress}`, { variant: 'success' });
+        resolve(dataHandler);
+      }).on('error', err => {
+        this.dismissNotification(pleaseAcceptKey);
+        console.error(err);
+        this.notify(`Error deploying the data handler`, { variant: 'error' });
+        reject(err);
+      });
+    });
+  }
+
+  async deployMainEntryPoint(account, dataHandler, incentiveMechanism, model) {
+    const pleaseAcceptKey = this.notify("Please accept the prompt to deploy the main entry point contact");
+    const CollaborativeTrainer64Contract = new this.web3.eth.Contract(CollaborativeTrainer64.abi);
+    return new Promise((resolve, reject) => {
+      CollaborativeTrainer64Contract.deploy({
+        data: CollaborativeTrainer64.bytecode,
+        arguments: [dataHandler.contractAddress, incentiveMechanism.contractAddress, model.contractAddress],
+      }).send({
+        from: account,
+      }).on('transactionHash', transactionHash => {
+        this.dismissNotification(pleaseAcceptKey);
+        this.notify(`Submitted the data handler with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+      }).on('receipt', mainContract => {
+        this.notify(`The main entry point contract has been deployed to ${mainContract.contractAddress}`, { variant: 'success' });
+        this.notify(`Please accept the next 3 transactions to transfer ownership of the components to the main entry point contract`);
+        return Promise.all([
+          dataHandler.methods.transferOwnership(mainContract.contractAddress).send({
+            from: account
+          }),
+          incentiveMechanism.methods.transferOwnership(mainContract.contractAddress).send({
+            from: account
+          }),
+          model.methods.transferOwnership(mainContract.contractAddress).send({
+            from: account
+          }),
+        ]).then(_ => {
+          resolve(mainContract);
+        });
+      }).on('error', err => {
+        this.dismissNotification(pleaseAcceptKey);
+        console.error(err);
+        this.notify(`Error deploying the main entry point contract`, { variant: 'error' });
+        reject(err);
+      });
     });
   }
 }

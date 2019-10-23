@@ -29,7 +29,7 @@ class App extends Component {
     return (
       <Router>
         <ThemeProvider theme={theme}>
-          <SnackbarProvider maxSnack={3}>
+          <SnackbarProvider maxSnack={5}>
             <CssBaseline />
             <div className="App">
               <div className="App-header">
