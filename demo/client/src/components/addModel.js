@@ -249,8 +249,6 @@ class AddModel extends React.Component {
         this.deployDataHandler(account),
       ]);
 
-
-      console.log(dataHandler);
       // FIXME Remove this check once the methods are implemented to deploy the other components.
       if (model === undefined || incentiveMechanism === undefined) {
         this.notify("No model or IM yet.", { variant: 'error' });
@@ -259,11 +257,11 @@ class AddModel extends React.Component {
 
       const mainContract = await this.deployMainEntryPoint(account, dataHandler, incentiveMechanism, model);
 
-      modelInfo.address = mainContract.contractAddress;
+      modelInfo.address = mainContract.options.address;
 
       // Save to the database.
       axios.post('/api/models', modelInfo).then(() => {
-        console.log("Saved");
+        this.notify("Saved")
       }).catch(err => {
         console.error(err);
         console.error(err.response.data.message);
@@ -292,17 +290,39 @@ class AddModel extends React.Component {
 
   async deployIncentiveMechanism(account) {
     let result;
+    const { refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS, costWeight, incentiveMechanism } = this.state;
     const pleaseAcceptKey = this.notify("Please accept to deploy the incentive mechanism contract");
-    switch (this.state.incentiveMechanism) {
+    switch (incentiveMechanism) {
       case 'Points':
         // TODO
         break;
       case 'Stakeable64':
-        // TODO
-
+        const stakeableContract = new this.web3.eth.Contract(Stakeable64.abi);
+        result = new Promise((resolve, reject) => {
+          stakeableContract.deploy({
+            data: Stakeable64.bytecode,
+            arguments: [refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS, costWeight],
+          }).send({
+            from: account,
+          }).on('transactionHash', transactionHash => {
+            this.dismissNotification(pleaseAcceptKey);
+            this.notify(`Submitted the incentive mechanism with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+          }).on('receipt', receipt => {
+            this.notify(`The incentive mechanism contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
+            stakeableContract.options.address = receipt.contractAddress;
+            resolve(stakeableContract);
+          }).on('error', err => {
+            this.dismissNotification(pleaseAcceptKey);
+            console.error(err);
+            this.notify("Error deploying the incentive mechanism", { variant: 'error' });
+            reject(err);
+          });
+        });
         break;
       default:
-        break;
+        // Should not happen.
+        this.dismissNotification(pleaseAcceptKey);
+        throw new Error(`Unrecognized incentive mechanism: "${incentiveMechanism}"`);
     }
 
     // this.notify(`The incentive mechanism contract has been deployed to ${result.options.address}`);
@@ -311,22 +331,23 @@ class AddModel extends React.Component {
 
   async deployDataHandler(account) {
     const pleaseAcceptKey = this.notify("Please accept the prompt to deploy the data handler");
-    const DataHandlerContract = new this.web3.eth.Contract(DataHandler64.abi);
+    const dataHandlerContract = new this.web3.eth.Contract(DataHandler64.abi);
     return new Promise((resolve, reject) => {
-      DataHandlerContract.deploy({
+      dataHandlerContract.deploy({
         data: DataHandler64.bytecode,
       }).send({
         from: account,
       }).on('transactionHash', transactionHash => {
         this.dismissNotification(pleaseAcceptKey);
         this.notify(`Submitted the data handler with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
-      }).on('receipt', dataHandler => {
-        this.notify(`The data handler contract has been deployed to ${dataHandler.contractAddress}`, { variant: 'success' });
-        resolve(dataHandler);
+      }).on('receipt', receipt => {
+        this.notify(`The data handler contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
+        dataHandlerContract.options.address = receipt.contractAddress;
+        resolve(dataHandlerContract);
       }).on('error', err => {
         this.dismissNotification(pleaseAcceptKey);
         console.error(err);
-        this.notify(`Error deploying the data handler`, { variant: 'error' });
+        this.notify("Error deploying the data handler", { variant: 'error' });
         reject(err);
       });
     });
@@ -348,13 +369,13 @@ class AddModel extends React.Component {
         this.notify(`The main entry point contract has been deployed to ${mainContract.contractAddress}`, { variant: 'success' });
         this.notify(`Please accept the next 3 transactions to transfer ownership of the components to the main entry point contract`);
         return Promise.all([
-          dataHandler.methods.transferOwnership(mainContract.contractAddress).send({
+          dataHandler.methods.transferOwnership(mainContract.options.address).send({
             from: account
           }),
-          incentiveMechanism.methods.transferOwnership(mainContract.contractAddress).send({
+          incentiveMechanism.methods.transferOwnership(mainContract.options.address).send({
             from: account
           }),
-          model.methods.transferOwnership(mainContract.contractAddress).send({
+          model.methods.transferOwnership(mainContract.options.address).send({
             from: account
           }),
         ]).then(_ => {
