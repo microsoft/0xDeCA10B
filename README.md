@@ -70,7 +70,7 @@ This system will work as a source for quality data and models.
 People will contribute data to help improve the machine learning models they use in their daily life.
 
 Profit depends on the incentive mechanism (IM).
-Yes, in in Deposit, Refund, and Take: Self-Assessment, the contributors will not profit and should be able to claim back their own deposits.
+Yes, in Deposit, Refund, and Take: Self-Assessment, the contributors will not profit and should be able to claim back their own deposits.
 In the Prediction Market based mechanism, contributors can still get rewarded by the original provider of the bounty and test set.
 
 # Contributing
