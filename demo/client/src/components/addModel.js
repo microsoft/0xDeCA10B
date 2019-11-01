@@ -7,14 +7,17 @@ import { withStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import axios from 'axios';
+import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
 import React from 'react';
 import Dropzone from 'react-dropzone';
 import Web3 from "web3"; // Only required for custom/fallback provider option.
 import CollaborativeTrainer64 from '../contracts/CollaborativeTrainer64.json';
 import DataHandler64 from '../contracts/DataHandler64.json';
+import DensePerceptron from '../contracts/DensePerceptron.json';
+import SparsePerceptron from '../contracts/SparsePerceptron.json';
 import Stakeable64 from '../contracts/Stakeable64.json';
-import { withSnackbar } from 'notistack';
+import { convertToHex, convertToHexData } from '../float-utils';
 
 const styles = theme => ({
   root: {
@@ -55,16 +58,21 @@ class AddModel extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      json: null,
       name: "",
       description: "",
+      toFloat: 1E9,
       modelType: 'Classifier64',
+      modelFileName: undefined,
       encoder: 'none',
       incentiveMechanism: 'Stakeable64',
       refundTimeWaitTimeS: 60,
       ownerClaimWaitTimeS: 120,
       anyAddressClaimWaitTimeS: 300,
       costWeight: 1E15
+    };
+    this.modelTypes = {
+      'dense perceptron': DensePerceptron,
+      'sparse perceptron': SparsePerceptron,
     };
     this.classes = props.classes;
     this.web3 = null;
@@ -111,7 +119,7 @@ class AddModel extends React.Component {
     reader.onload = () => {
       const binaryStr = reader.result
       const model = JSON.parse(binaryStr);
-      this.setState({ model });
+      this.setState({ model, modelFileName: file.path });
     };
     reader.readAsBinaryString(file);
   }
@@ -155,6 +163,7 @@ class AddModel extends React.Component {
                     <input {...getInputProps()} />
                     <Typography component="p">
                       Drag and drop a model file here, or click to select a file
+                      {this.state.modelFileName && ` (using ${this.state.modelFileName})`}
                     </Typography>
                   </Paper>
                 )}
@@ -249,19 +258,14 @@ class AddModel extends React.Component {
         this.deployDataHandler(account),
       ]);
 
-      // FIXME Remove this check once the methods are implemented to deploy the other components.
-      if (model === undefined || incentiveMechanism === undefined) {
-        this.notify("No model or IM yet.", { variant: 'error' });
-        return;
-      }
-
       const mainContract = await this.deployMainEntryPoint(account, dataHandler, incentiveMechanism, model);
 
       modelInfo.address = mainContract.options.address;
 
       // Save to the database.
       axios.post('/api/models', modelInfo).then(() => {
-        this.notify("Saved")
+        this.notify("Saved", { variant: 'success' });
+        // TODO Redirect.
       }).catch(err => {
         console.error(err);
         console.error(err.response.data.message);
@@ -270,13 +274,25 @@ class AddModel extends React.Component {
   }
 
   async deployModel(account) {
-    const { modelType, encoder } = this.state;
-    const pleaseAcceptKey = this.notify("Please accept to deploy the classifier");
+    const { model, modelType } = this.state;
+    const pleaseAcceptKey = this.notify("Please accept the prompt to deploy the classifier");
     let result;
     switch (modelType) {
       case 'Classifier64':
-        // TODO Load the model from the file and set up deployment.
-        // TODO Deploy.
+        switch (model.type) {
+          case 'nearest centroid classifier':
+            // TODO Load the model from the file and set up deployment.
+            this.dismissNotification(pleaseAcceptKey);
+            break;
+          case 'dense perceptron':
+          case 'sparse perceptron':
+            result = this.deployPerceptron(pleaseAcceptKey, account);
+            break;
+          default:
+            // Should not happen.
+            this.dismissNotification(pleaseAcceptKey);
+            throw new Error(`Unrecognized model type: "${model.type}"`);
+        }
         break;
       default:
         // Should not happen.
@@ -284,8 +300,71 @@ class AddModel extends React.Component {
         throw new Error(`Unrecognized model type: "${modelType}"`);
     }
 
-    // this.notify(`The model contract has been deployed to ${result.options.address}`);
     return result;
+  }
+
+  async deployPerceptron(pleaseAcceptKey, account) {
+    const defaultPerceptronLearningRate = 0.5;
+    const weightChunkSize = 450;
+
+    const { model } = this.state;
+    const { classifications, featureIndices } = model;
+    const weights = convertToHexData(model.weights, this.web3, this.state.toFloat);
+    const intercept = convertToHex(model.bias, this.web3, this.state.toFloat);
+    const learningRate = convertToHex(model.learningRate || defaultPerceptronLearningRate, this.web3, this.toFloat);
+
+    if (featureIndices !== undefined && featureIndices.length !== weights.length) {
+      console.error("The number of features must match the number of weights.");
+      this.notify("The number of features must match the number of weights", { variant: 'error' });
+    }
+
+    return new Promise((resolve, reject) => {
+      const Contract = this.modelTypes[model.type];
+      const contract = new this.web3.eth.Contract(Contract.abi, {
+        from: account,
+      });
+      contract.deploy({
+        data: Contract.bytecode,
+        arguments: [classifications, weights.slice(0, weightChunkSize), intercept, learningRate],
+      }).send({
+        // Block gas limit by most miners as of October 2019.
+        gas: 9E6,
+      }).on('transactionHash', transactionHash => {
+        this.dismissNotification(pleaseAcceptKey);
+        this.notify(`Submitted the model with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+      }).on('receipt', async receipt => {
+        this.notify(`The model contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
+        contract.options.address = receipt.contractAddress;
+
+        // Add remaining weights.
+        for (let i = weightChunkSize; i < weights.length; i += weightChunkSize) {
+          const notification = this.notify("Please accept the prompt to upload classifier weights")
+          if (model.type === 'dense perceptron') {
+            await contract.methods.initializeWeights(weights.slice(i, i + weightChunkSize)).send();
+          } else if (model.type === 'sparse perceptron') {
+            await contract.methods.initializeWeights(i, weights.slice(i, i + weightChunkSize)).send();
+          } else {
+            throw new Error(`Unrecognized model type: "${model.type}"`);
+          }
+          this.dismissNotification(notification);
+        }
+        if (featureIndices !== undefined) {
+          // Add feature indices to use.
+          for (let i = 0; i < featureIndices.length; i += weightChunkSize) {
+            const notification = this.notify("Please accept the prompt to upload the feature indices")
+            await contract.methods.addFeatureIndices(featureIndices.slice(i, i + weightChunkSize)).send();
+            this.dismissNotification(notification);
+          }
+        }
+
+        resolve(contract);
+      }).on('error', err => {
+        this.dismissNotification(pleaseAcceptKey);
+        console.error(err);
+        this.notify("Error deploying the model", { variant: 'error' });
+        reject(err);
+      });
+    });
   }
 
   async deployIncentiveMechanism(account) {
@@ -297,13 +376,14 @@ class AddModel extends React.Component {
         // TODO
         break;
       case 'Stakeable64':
-        const stakeableContract = new this.web3.eth.Contract(Stakeable64.abi);
         result = new Promise((resolve, reject) => {
+          const stakeableContract = new this.web3.eth.Contract(Stakeable64.abi, {
+            from: account,
+          });
           stakeableContract.deploy({
             data: Stakeable64.bytecode,
             arguments: [refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS, costWeight],
           }).send({
-            from: account,
           }).on('transactionHash', transactionHash => {
             this.dismissNotification(pleaseAcceptKey);
             this.notify(`Submitted the incentive mechanism with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
@@ -325,18 +405,18 @@ class AddModel extends React.Component {
         throw new Error(`Unrecognized incentive mechanism: "${incentiveMechanism}"`);
     }
 
-    // this.notify(`The incentive mechanism contract has been deployed to ${result.options.address}`);
     return result;
   }
 
   async deployDataHandler(account) {
     const pleaseAcceptKey = this.notify("Please accept the prompt to deploy the data handler");
-    const dataHandlerContract = new this.web3.eth.Contract(DataHandler64.abi);
+    const dataHandlerContract = new this.web3.eth.Contract(DataHandler64.abi, {
+      from: account,
+    });
     return new Promise((resolve, reject) => {
       dataHandlerContract.deploy({
         data: DataHandler64.bytecode,
       }).send({
-        from: account,
       }).on('transactionHash', transactionHash => {
         this.dismissNotification(pleaseAcceptKey);
         this.notify(`Submitted the data handler with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
@@ -355,31 +435,30 @@ class AddModel extends React.Component {
 
   async deployMainEntryPoint(account, dataHandler, incentiveMechanism, model) {
     const pleaseAcceptKey = this.notify("Please accept the prompt to deploy the main entry point contact");
-    const CollaborativeTrainer64Contract = new this.web3.eth.Contract(CollaborativeTrainer64.abi);
     return new Promise((resolve, reject) => {
-      CollaborativeTrainer64Contract.deploy({
-        data: CollaborativeTrainer64.bytecode,
-        arguments: [dataHandler.contractAddress, incentiveMechanism.contractAddress, model.contractAddress],
-      }).send({
+      const collaborativeTrainer64Contract = new this.web3.eth.Contract(CollaborativeTrainer64.abi, {
         from: account,
+      });
+      collaborativeTrainer64Contract.deploy({
+        data: CollaborativeTrainer64.bytecode,
+        arguments: [dataHandler.options.address, incentiveMechanism.options.address, model.options.address],
+      }).send({
       }).on('transactionHash', transactionHash => {
         this.dismissNotification(pleaseAcceptKey);
-        this.notify(`Submitted the data handler with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
-      }).on('receipt', mainContract => {
-        this.notify(`The main entry point contract has been deployed to ${mainContract.contractAddress}`, { variant: 'success' });
+        this.notify(`Submitted the main entry point with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+      }).on('receipt', receipt => {
+        collaborativeTrainer64Contract.options.address = receipt.contractAddress;
+        this.notify(`The main entry point contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
         this.notify(`Please accept the next 3 transactions to transfer ownership of the components to the main entry point contract`);
+        // TODO Batch.
+        // const batch = new this.web3.BatchRequest();
+        // batch.
         return Promise.all([
-          dataHandler.methods.transferOwnership(mainContract.options.address).send({
-            from: account
-          }),
-          incentiveMechanism.methods.transferOwnership(mainContract.options.address).send({
-            from: account
-          }),
-          model.methods.transferOwnership(mainContract.options.address).send({
-            from: account
-          }),
+          dataHandler.methods.transferOwnership(receipt.contractAddress).send(),
+          incentiveMechanism.methods.transferOwnership(receipt.contractAddress).send(),
+          model.methods.transferOwnership(receipt.contractAddress).send(),
         ]).then(_ => {
-          resolve(mainContract);
+          resolve(collaborativeTrainer64Contract);
         });
       }).on('error', err => {
         this.dismissNotification(pleaseAcceptKey);

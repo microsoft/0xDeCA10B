@@ -266,6 +266,7 @@ function getNearestCentroidModel() {
                 });
                 const modelPath = path.join(__dirname, 'classifier-centroids.json');
                 console.log(`Saving centroids to "${modelPath}".`);
+                model.type = 'nearest centroid classifier'
                 fs.writeFileSync(modelPath, JSON.stringify(model));
                 resolve(model);
             }).catch(reject);
@@ -377,6 +378,7 @@ async function getPerceptronModel() {
         const modelPath = path.join(__dirname, 'classifier-perceptron.json');
         console.log(`Saving Perceptron to "${modelPath}".`);
         fs.writeFileSync(modelPath, JSON.stringify({
+            type: 'perceptron',
             weights: model.weights.arraySync(),
             classifications: [NEGATIVE_CLASS, POSITIVE_CLASS],
             bias: model.bias
@@ -446,6 +448,7 @@ async function main() {
         const modelPath = path.join(__dirname, `classifier-perceptron-${PERCEPTRON_NUM_FEATS}.json`);
         console.log(`Saving Perceptron with ${PERCEPTRON_NUM_FEATS} weights to "${modelPath}".`);
         fs.writeFileSync(modelPath, JSON.stringify({
+            type: 'perceptron',
             classifications: [NEGATIVE_CLASS, POSITIVE_CLASS],
             featureIndices: model.featureIndices.arraySync(),
             weights: model.weights.arraySync(),
