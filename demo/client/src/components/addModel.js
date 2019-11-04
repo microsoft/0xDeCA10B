@@ -7,6 +7,7 @@ import { withStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import axios from 'axios';
+import update from 'immutability-helper';
 import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
 import React from 'react';
@@ -68,7 +69,25 @@ class AddModel extends React.Component {
       refundTimeWaitTimeS: 60,
       ownerClaimWaitTimeS: 120,
       anyAddressClaimWaitTimeS: 300,
-      costWeight: 1E15
+      costWeight: 1E15,
+      deploymentInfo: {
+        dataHandler: {
+          transactionHash: undefined,
+          address: undefined,
+        },
+        incentiveMechanism: {
+          transactionHash: undefined,
+          address: undefined,
+        },
+        model: {
+          transactionHash: undefined,
+          address: undefined,
+        },
+        main: {
+          transactionHash: undefined,
+          address: undefined,
+        },
+      }
     };
     this.modelTypes = {
       'dense perceptron': DensePerceptron,
@@ -97,6 +116,13 @@ class AddModel extends React.Component {
 
   dismissNotification(...args) {
     return this.props.closeSnackbar(...args);
+  }
+
+  saveAddress(key, address) {
+    this.setState({ deploymentInfo: update(this.state.deploymentInfo, { [key]: { address: { $set: address } } }) });
+  }
+  saveTransactionHash(key, transactionHash) {
+    this.setState({ deploymentInfo: update(this.state.deploymentInfo, { [key]: { transactionHash: { $set: transactionHash } } }) });
   }
 
   handleInputChange(event) {
@@ -197,7 +223,12 @@ class AddModel extends React.Component {
               }
             </div>
           </form>
-          <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}>Save</Button>
+          {/* TODO Add table with transaction hashes and addresses. */}
+          <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}
+            disabled={this.state.deploymentInfo.address !== undefined}
+          >
+            Save
+          </Button>
         </Paper>
       </Container>
     );
@@ -253,9 +284,9 @@ class AddModel extends React.Component {
       const account = accounts[0];
 
       const [model, incentiveMechanism, dataHandler] = await Promise.all([
-        this.deployModel(account),
-        this.deployIncentiveMechanism(account),
         this.deployDataHandler(account),
+        this.deployIncentiveMechanism(account),
+        this.deployModel(account),
       ]);
 
       const mainContract = await this.deployMainEntryPoint(account, dataHandler, incentiveMechanism, model);
@@ -305,13 +336,13 @@ class AddModel extends React.Component {
 
   async deployPerceptron(pleaseAcceptKey, account) {
     const defaultPerceptronLearningRate = 0.5;
-    const weightChunkSize = 450;
+    const weightChunkSize = 250;
 
     const { model } = this.state;
     const { classifications, featureIndices } = model;
     const weights = convertToHexData(model.weights, this.web3, this.state.toFloat);
     const intercept = convertToHex(model.bias, this.web3, this.state.toFloat);
-    const learningRate = convertToHex(model.learningRate || defaultPerceptronLearningRate, this.web3, this.toFloat);
+    const learningRate = convertToHex(model.learningRate || defaultPerceptronLearningRate, this.web3, this.state.toFloat);
 
     if (featureIndices !== undefined && featureIndices.length !== weights.length) {
       console.error("The number of features must match the number of weights.");
@@ -332,6 +363,7 @@ class AddModel extends React.Component {
       }).on('transactionHash', transactionHash => {
         this.dismissNotification(pleaseAcceptKey);
         this.notify(`Submitted the model with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+        this.saveTransactionHash('model', transactionHash);
       }).on('receipt', async receipt => {
         this.notify(`The model contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
         contract.options.address = receipt.contractAddress;
@@ -339,6 +371,7 @@ class AddModel extends React.Component {
         // Add remaining weights.
         for (let i = weightChunkSize; i < weights.length; i += weightChunkSize) {
           const notification = this.notify("Please accept the prompt to upload classifier weights")
+          // TODO Use the event based way to send transactions so that others can be queued.
           if (model.type === 'dense perceptron') {
             await contract.methods.initializeWeights(weights.slice(i, i + weightChunkSize)).send();
           } else if (model.type === 'sparse perceptron') {
@@ -357,6 +390,7 @@ class AddModel extends React.Component {
           }
         }
 
+        this.saveAddress('model', receipt.contractAddress);
         resolve(contract);
       }).on('error', err => {
         this.dismissNotification(pleaseAcceptKey);
@@ -387,9 +421,11 @@ class AddModel extends React.Component {
           }).on('transactionHash', transactionHash => {
             this.dismissNotification(pleaseAcceptKey);
             this.notify(`Submitted the incentive mechanism with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+            this.saveTransactionHash('dataHandler', transactionHash);
           }).on('receipt', receipt => {
             this.notify(`The incentive mechanism contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
             stakeableContract.options.address = receipt.contractAddress;
+            this.saveAddress('dataHandler', receipt.contractAddress);
             resolve(stakeableContract);
           }).on('error', err => {
             this.dismissNotification(pleaseAcceptKey);
@@ -420,9 +456,11 @@ class AddModel extends React.Component {
       }).on('transactionHash', transactionHash => {
         this.dismissNotification(pleaseAcceptKey);
         this.notify(`Submitted the data handler with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+        this.saveTransactionHash('dataHandler', transactionHash);
       }).on('receipt', receipt => {
         this.notify(`The data handler contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
         dataHandlerContract.options.address = receipt.contractAddress;
+        this.saveAddress('dataHandler', receipt.contractAddress);
         resolve(dataHandlerContract);
       }).on('error', err => {
         this.dismissNotification(pleaseAcceptKey);
@@ -446,13 +484,12 @@ class AddModel extends React.Component {
       }).on('transactionHash', transactionHash => {
         this.dismissNotification(pleaseAcceptKey);
         this.notify(`Submitted the main entry point with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+        this.saveTransactionHash('main', transactionHash);
       }).on('receipt', receipt => {
         collaborativeTrainer64Contract.options.address = receipt.contractAddress;
         this.notify(`The main entry point contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
         this.notify(`Please accept the next 3 transactions to transfer ownership of the components to the main entry point contract`);
-        // TODO Batch.
-        // const batch = new this.web3.BatchRequest();
-        // batch.
+        this.saveAddress('main', receipt.contractAddress);
         return Promise.all([
           dataHandler.methods.transferOwnership(receipt.contractAddress).send(),
           incentiveMechanism.methods.transferOwnership(receipt.contractAddress).send(),
