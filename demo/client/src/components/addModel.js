@@ -1,5 +1,5 @@
 import getWeb3 from "@drizzle-utils/get-web3";
-import { Container, InputLabel, MenuItem, Select } from '@material-ui/core';
+import { Container, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableHead, TableRow } from '@material-ui/core';
 import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
@@ -25,6 +25,8 @@ const styles = theme => ({
     ...theme.mixins.gutters(),
     paddingTop: theme.spacing(2),
     paddingBottom: theme.spacing(2),
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(2),
   },
   form: {
     display: 'flex',
@@ -35,7 +37,7 @@ const styles = theme => ({
     // display: 'none'
   },
   button: {
-    marginTop: '20px'
+    marginTop: 20,
   },
   selectorLabel: {
     marginTop: 8,
@@ -51,7 +53,11 @@ const styles = theme => ({
     ...theme.mixins.gutters(),
     paddingTop: theme.spacing(2),
     paddingBottom: theme.spacing(2),
-  }
+  },
+  table: {
+    minWidth: 650,
+    wordBreak: 'break-word',
+  },
 });
 
 class AddModel extends React.Component {
@@ -118,11 +124,12 @@ class AddModel extends React.Component {
     return this.props.closeSnackbar(...args);
   }
 
-  saveAddress(key, address) {
-    this.setState({ deploymentInfo: update(this.state.deploymentInfo, { [key]: { address: { $set: address } } }) });
-  }
   saveTransactionHash(key, transactionHash) {
     this.setState({ deploymentInfo: update(this.state.deploymentInfo, { [key]: { transactionHash: { $set: transactionHash } } }) });
+  }
+
+  saveAddress(key, address) {
+    this.setState({ deploymentInfo: update(this.state.deploymentInfo, { [key]: { address: { $set: address } } }) });
   }
 
   handleInputChange(event) {
@@ -223,12 +230,44 @@ class AddModel extends React.Component {
               }
             </div>
           </form>
-          {/* TODO Add table with transaction hashes and addresses. */}
           <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}
-            disabled={this.state.deploymentInfo.address !== undefined}
+            disabled={this.state.deploymentInfo.main.address !== undefined}
           >
             Save
           </Button>
+        </Paper>
+        <Paper className={this.classes.root} elevation={1}>
+          <Table className={this.classes.table} aria-label="Deployment Information Table">
+            <TableHead>
+              <TableRow>
+                <TableCell>Contract</TableCell>
+                <TableCell>Transaction Hash</TableCell>
+                <TableCell>Address</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              <TableRow>
+                <TableCell component="th">Data Handler</TableCell>
+                <TableCell>{this.state.deploymentInfo.dataHandler.transactionHash}</TableCell>
+                <TableCell>{this.state.deploymentInfo.dataHandler.address}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell component="th">Incentive Mechanism</TableCell>
+                <TableCell>{this.state.deploymentInfo.incentiveMechanism.transactionHash}</TableCell>
+                <TableCell>{this.state.deploymentInfo.incentiveMechanism.address}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell component="th">Model</TableCell>
+                <TableCell>{this.state.deploymentInfo.model.transactionHash}</TableCell>
+                <TableCell>{this.state.deploymentInfo.model.address}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell component="th">Main Entry Point</TableCell>
+                <TableCell>{this.state.deploymentInfo.main.transactionHash}</TableCell>
+                <TableCell>{this.state.deploymentInfo.main.address}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </Paper>
       </Container>
     );
@@ -273,17 +312,28 @@ class AddModel extends React.Component {
 
   async save() {
     // TODO Keep track of contract addresses of whatever has been deployed so far so that the process can be recovered.
-    const { name, description, modelType, encoder } = this.state;
+    const { name, description, model, modelType, encoder } = this.state;
     const modelInfo = {
       name, description, modelType, encoder,
     };
+
+    // Validate
+    if (!name) {
+      this.notify("Please provide a name", { variant: 'error' });
+      return;
+    }
+    if (modelType === undefined || model === undefined) {
+      this.notify("You must select model type and provide a model file", { variant: 'error' });
+      return;
+    }
+
     this.web3.eth.getAccounts(async (err, accounts) => {
       if (err) {
         throw err;
       }
       const account = accounts[0];
 
-      const [model, incentiveMechanism, dataHandler] = await Promise.all([
+      const [dataHandler, incentiveMechanism, model] = await Promise.all([
         this.deployDataHandler(account),
         this.deployIncentiveMechanism(account),
         this.deployModel(account),
@@ -308,13 +358,15 @@ class AddModel extends React.Component {
     const { model, modelType } = this.state;
     const pleaseAcceptKey = this.notify("Please accept the prompt to deploy the classifier");
     let result;
+
     switch (modelType) {
       case 'Classifier64':
         switch (model.type) {
           case 'nearest centroid classifier':
             // TODO Load the model from the file and set up deployment.
             this.dismissNotification(pleaseAcceptKey);
-            break;
+            throw new Error("Nearest centroid classifier is not supported yet.")
+          // break;
           case 'dense perceptron':
           case 'sparse perceptron':
             result = this.deployPerceptron(pleaseAcceptKey, account);
@@ -349,54 +401,74 @@ class AddModel extends React.Component {
       this.notify("The number of features must match the number of weights", { variant: 'error' });
     }
 
-    return new Promise((resolve, reject) => {
-      const Contract = this.modelTypes[model.type];
-      const contract = new this.web3.eth.Contract(Contract.abi, {
-        from: account,
-      });
-      contract.deploy({
-        data: Contract.bytecode,
-        arguments: [classifications, weights.slice(0, weightChunkSize), intercept, learningRate],
-      }).send({
-        // Block gas limit by most miners as of October 2019.
-        gas: 9E6,
-      }).on('transactionHash', transactionHash => {
-        this.dismissNotification(pleaseAcceptKey);
-        this.notify(`Submitted the model with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
-        this.saveTransactionHash('model', transactionHash);
-      }).on('receipt', async receipt => {
-        this.notify(`The model contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
-        contract.options.address = receipt.contractAddress;
-
-        // Add remaining weights.
-        for (let i = weightChunkSize; i < weights.length; i += weightChunkSize) {
-          const notification = this.notify("Please accept the prompt to upload classifier weights")
-          // TODO Use the event based way to send transactions so that others can be queued.
-          if (model.type === 'dense perceptron') {
-            await contract.methods.initializeWeights(weights.slice(i, i + weightChunkSize)).send();
-          } else if (model.type === 'sparse perceptron') {
-            await contract.methods.initializeWeights(i, weights.slice(i, i + weightChunkSize)).send();
-          } else {
-            throw new Error(`Unrecognized model type: "${model.type}"`);
-          }
-          this.dismissNotification(notification);
+    const Contract = this.modelTypes[model.type];
+    const contract = new this.web3.eth.Contract(Contract.abi, {
+      from: account,
+    });
+    return contract.deploy({
+      data: Contract.bytecode,
+      arguments: [classifications, weights.slice(0, weightChunkSize), intercept, learningRate],
+    }).send({
+      // Block gas limit by most miners as of October 2019.
+      gas: 8.9E6,
+    }).on('transactionHash', transactionHash => {
+      this.dismissNotification(pleaseAcceptKey);
+      this.notify(`Submitted the model with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+      this.saveTransactionHash('model', transactionHash);
+    }).on('error', err => {
+      this.dismissNotification(pleaseAcceptKey);
+      console.error(err);
+      this.notify("Error deploying the model", { variant: 'error' });
+      throw err;
+    }).then(async newContractInstance => {
+      // Could create a batch but I was getting various errors when trying to do and could not find docs on what `execute` returns.
+      const transactions = [];
+      // Add remaining weights.
+      for (let i = weightChunkSize; i < weights.length; i += weightChunkSize) {
+        let transaction;
+        if (model.type === 'dense perceptron') {
+          transaction = newContractInstance.methods.initializeWeights(weights.slice(i, i + weightChunkSize));
+        } else if (model.type === 'sparse perceptron') {
+          transaction = newContractInstance.methods.initializeWeights(i, weights.slice(i, i + weightChunkSize));
+        } else {
+          throw new Error(`Unrecognized model type: "${model.type}"`);
         }
-        if (featureIndices !== undefined) {
-          // Add feature indices to use.
-          for (let i = 0; i < featureIndices.length; i += weightChunkSize) {
-            const notification = this.notify("Please accept the prompt to upload the feature indices")
-            await contract.methods.addFeatureIndices(featureIndices.slice(i, i + weightChunkSize)).send();
+        transactions.push(new Promise((resolve, reject) => {
+          // Subtract 1 from the count because the first chunk has already been uploaded.
+          const notification = this.notify(`Please accept the prompt to upload classifier 
+          weights [${i},${i + weightChunkSize}) (${i / weightChunkSize}/${Math.ceil(weights.length / weightChunkSize) - 1})`);
+          transaction.send().on('transactionHash', _ => {
             this.dismissNotification(notification);
-          }
+          }).on('error', err => {
+            this.dismissNotification(notification);
+            console.error(err);
+            this.notify(`Error setting weights classifier weights [${i},${i + weightChunkSize})`, { variant: 'error' });
+            reject(err);
+          }).then(resolve);
+        }));
+      }
+      if (featureIndices !== undefined) {
+        // Add feature indices to use.
+        for (let i = 0; i < featureIndices.length; i += weightChunkSize) {
+          transactions.push(new Promise((resolve, reject) => {
+            const notification = this.notify(`Please accept the prompt to upload the feature indices [${i},${i + weightChunkSize})`);
+            newContractInstance.methods.addFeatureIndices(featureIndices.slice(i, i + weightChunkSize)).send()
+              .on('transactionHash', _ => {
+                this.dismissNotification(notification);
+              }).on('error', err => {
+                this.dismissNotification(notification);
+                console.error(err);
+                this.notify(`Error setting feature indices for [${i},${i + weightChunkSize})`, { variant: 'error' });
+                reject(err);
+              }).then(resolve);
+          }));
         }
+      }
 
-        this.saveAddress('model', receipt.contractAddress);
-        resolve(contract);
-      }).on('error', err => {
-        this.dismissNotification(pleaseAcceptKey);
-        console.error(err);
-        this.notify("Error deploying the model", { variant: 'error' });
-        reject(err);
+      return Promise.all(transactions).then(_ => {
+        this.notify(`The model contract has been deployed to ${newContractInstance.options.address}`, { variant: 'success' });
+        this.saveAddress('model', newContractInstance.options.address);
+        return newContractInstance;
       });
     });
   }
@@ -410,29 +482,25 @@ class AddModel extends React.Component {
         // TODO
         break;
       case 'Stakeable64':
-        result = new Promise((resolve, reject) => {
-          const stakeableContract = new this.web3.eth.Contract(Stakeable64.abi, {
-            from: account,
-          });
-          stakeableContract.deploy({
-            data: Stakeable64.bytecode,
-            arguments: [refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS, costWeight],
-          }).send({
-          }).on('transactionHash', transactionHash => {
-            this.dismissNotification(pleaseAcceptKey);
-            this.notify(`Submitted the incentive mechanism with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
-            this.saveTransactionHash('dataHandler', transactionHash);
-          }).on('receipt', receipt => {
-            this.notify(`The incentive mechanism contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
-            stakeableContract.options.address = receipt.contractAddress;
-            this.saveAddress('dataHandler', receipt.contractAddress);
-            resolve(stakeableContract);
-          }).on('error', err => {
-            this.dismissNotification(pleaseAcceptKey);
-            console.error(err);
-            this.notify("Error deploying the incentive mechanism", { variant: 'error' });
-            reject(err);
-          });
+        const stakeableContract = new this.web3.eth.Contract(Stakeable64.abi, {
+          from: account,
+        });
+        result = stakeableContract.deploy({
+          data: Stakeable64.bytecode,
+          arguments: [refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS, costWeight],
+        }).send({
+        }).on('transactionHash', transactionHash => {
+          this.dismissNotification(pleaseAcceptKey);
+          this.notify(`Submitted the incentive mechanism with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+          this.saveTransactionHash('incentiveMechanism', transactionHash);
+        }).on('receipt', receipt => {
+          this.notify(`The incentive mechanism contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
+          this.saveAddress('incentiveMechanism', receipt.contractAddress);
+        }).on('error', err => {
+          this.dismissNotification(pleaseAcceptKey);
+          console.error(err);
+          this.notify("Error deploying the incentive mechanism", { variant: 'error' });
+          throw err;
         });
         break;
       default:
@@ -449,59 +517,53 @@ class AddModel extends React.Component {
     const dataHandlerContract = new this.web3.eth.Contract(DataHandler64.abi, {
       from: account,
     });
-    return new Promise((resolve, reject) => {
-      dataHandlerContract.deploy({
-        data: DataHandler64.bytecode,
-      }).send({
-      }).on('transactionHash', transactionHash => {
-        this.dismissNotification(pleaseAcceptKey);
-        this.notify(`Submitted the data handler with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
-        this.saveTransactionHash('dataHandler', transactionHash);
-      }).on('receipt', receipt => {
-        this.notify(`The data handler contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
-        dataHandlerContract.options.address = receipt.contractAddress;
-        this.saveAddress('dataHandler', receipt.contractAddress);
-        resolve(dataHandlerContract);
-      }).on('error', err => {
-        this.dismissNotification(pleaseAcceptKey);
-        console.error(err);
-        this.notify("Error deploying the data handler", { variant: 'error' });
-        reject(err);
-      });
+    return dataHandlerContract.deploy({
+      data: DataHandler64.bytecode,
+    }).send({
+    }).on('transactionHash', transactionHash => {
+      this.dismissNotification(pleaseAcceptKey);
+      this.notify(`Submitted the data handler with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+      this.saveTransactionHash('dataHandler', transactionHash);
+    }).on('receipt', receipt => {
+      this.notify(`The data handler contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
+      this.saveAddress('dataHandler', receipt.contractAddress);
+    }).on('error', err => {
+      this.dismissNotification(pleaseAcceptKey);
+      console.error(err);
+      this.notify("Error deploying the data handler", { variant: 'error' });
+      throw err;
     });
   }
 
   async deployMainEntryPoint(account, dataHandler, incentiveMechanism, model) {
     const pleaseAcceptKey = this.notify("Please accept the prompt to deploy the main entry point contact");
-    return new Promise((resolve, reject) => {
-      const collaborativeTrainer64Contract = new this.web3.eth.Contract(CollaborativeTrainer64.abi, {
-        from: account,
-      });
-      collaborativeTrainer64Contract.deploy({
-        data: CollaborativeTrainer64.bytecode,
-        arguments: [dataHandler.options.address, incentiveMechanism.options.address, model.options.address],
-      }).send({
-      }).on('transactionHash', transactionHash => {
-        this.dismissNotification(pleaseAcceptKey);
-        this.notify(`Submitted the main entry point with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
-        this.saveTransactionHash('main', transactionHash);
-      }).on('receipt', receipt => {
-        collaborativeTrainer64Contract.options.address = receipt.contractAddress;
-        this.notify(`The main entry point contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
-        this.notify(`Please accept the next 3 transactions to transfer ownership of the components to the main entry point contract`);
-        this.saveAddress('main', receipt.contractAddress);
-        return Promise.all([
-          dataHandler.methods.transferOwnership(receipt.contractAddress).send(),
-          incentiveMechanism.methods.transferOwnership(receipt.contractAddress).send(),
-          model.methods.transferOwnership(receipt.contractAddress).send(),
-        ]).then(_ => {
-          resolve(collaborativeTrainer64Contract);
-        });
-      }).on('error', err => {
-        this.dismissNotification(pleaseAcceptKey);
-        console.error(err);
-        this.notify(`Error deploying the main entry point contract`, { variant: 'error' });
-        reject(err);
+    const collaborativeTrainer64Contract = new this.web3.eth.Contract(CollaborativeTrainer64.abi, {
+      from: account,
+    });
+    return collaborativeTrainer64Contract.deploy({
+      data: CollaborativeTrainer64.bytecode,
+      arguments: [dataHandler.options.address, incentiveMechanism.options.address, model.options.address],
+    }).send({
+    }).on('transactionHash', transactionHash => {
+      this.dismissNotification(pleaseAcceptKey);
+      this.notify(`Submitted the main entry point with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+      this.saveTransactionHash('main', transactionHash);
+    }).on('receipt', receipt => {
+      this.notify(`The main entry point contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
+      this.saveAddress('main', receipt.contractAddress);
+    }).on('error', err => {
+      this.dismissNotification(pleaseAcceptKey);
+      console.error(err);
+      this.notify(`Error deploying the main entry point contract`, { variant: 'error' });
+      throw err;
+    }).then(newContractInstance => {
+      this.notify(`Please accept the next 3 transactions to transfer ownership of the components to the main entry point contract`);
+      return Promise.all([
+        dataHandler.methods.transferOwnership(newContractInstance.options.address).send(),
+        incentiveMechanism.methods.transferOwnership(newContractInstance.options.address).send(),
+        model.methods.transferOwnership(newContractInstance.options.address).send(),
+      ]).then(_ => {
+        return newContractInstance;
       });
     });
   }

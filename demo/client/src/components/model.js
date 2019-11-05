@@ -549,6 +549,9 @@ class Model extends React.Component {
                 this.setState({ classifications: update(this.state.classifications, { [i]: { $set: classificationName } }) });
               });
           }
+        }).catch(err => {
+          console.error("Could not get the number of classifications.");
+          console.error(err);
         }),
       this.state.classifier.methods.toFloat().call()
         .then(parseInt)
