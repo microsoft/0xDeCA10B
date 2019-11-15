@@ -17,7 +17,7 @@ const theme = createMuiTheme({
   },
   typography: {
     useNextVariants: true,
-  }
+  },
 });
 
 class App extends Component {
