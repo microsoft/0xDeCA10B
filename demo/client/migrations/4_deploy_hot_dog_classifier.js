@@ -25,7 +25,7 @@ module.exports = function (deployer) {
   };
 
   // Low default times for testing.
-  const refundTimeS = 15;
+  const refundTimeWaitTimeS = 15;
   const anyAddressClaimWaitTimeS = 20;
   const ownerClaimWaitTimeS = 20;
   // Weight for deposit cost in wei.
@@ -48,7 +48,7 @@ module.exports = function (deployer) {
     const dataHandler = await deployer.deploy(DataHandler64);
     console.log(`  Deployed data handler to ${dataHandler.address}.`);
     const incentiveMechanism = await deployer.deploy(Stakeable64,
-      refundTimeS,
+      refundTimeWaitTimeS,
       ownerClaimWaitTimeS,
       anyAddressClaimWaitTimeS,
       costWeight);

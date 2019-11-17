@@ -31,17 +31,15 @@ module.exports = async function (deployer) {
   // Weight for deposit cost in wei.
   const costWeight = 1E15;
 
-  const classifications = ["Negative", "Positive"];
-
   const data = fs.readFileSync('./src/ml-models/imdb-sentiment-model.json', 'utf8');
   const model = JSON.parse(data);
-
-  const weights = convertData(model['coef'], web3, toFloat);
+  const { classifications } = model;
+  const weights = convertData(model.weights, web3, toFloat);
   const initNumWords = 250;
   const numWordsPerUpdate = 250;
 
   console.log(`Deploying IMDB model with ${weights.length} weights.`);
-  const intercept = convertNum(model['intercept'], web3, toFloat);
+  const intercept = convertNum(model.bias, web3, toFloat);
   const learningRate = convertNum(0.5, web3, toFloat);
 
   console.log(`Deploying DataHandler.`);

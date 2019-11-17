@@ -1,6 +1,7 @@
-import getWeb3 from "@drizzle-utils/get-web3";
+import getWeb3 from '@drizzle-utils/get-web3';
 import AppBar from '@material-ui/core/AppBar';
 import Button from '@material-ui/core/Button';
+import Container from '@material-ui/core/Container';
 import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
 import Paper from '@material-ui/core/Paper';
@@ -42,8 +43,8 @@ const INPUT_TYPE_TEXT = 'text';
 const styles = theme => ({
   root: {
     ...theme.mixins.gutters(),
-    paddingTop: theme.spacing.unit * 2,
-    paddingBottom: theme.spacing.unit * 2,
+    paddingTop: theme.spacing(2),
+    paddingBottom: theme.spacing(2),
     display: 'flex',
     flexDirection: 'column'
   },
@@ -548,6 +549,9 @@ class Model extends React.Component {
                 this.setState({ classifications: update(this.state.classifications, { [i]: { $set: classificationName } }) });
               });
           }
+        }).catch(err => {
+          console.error("Could not get the number of classifications.");
+          console.error(err);
         }),
       this.state.classifier.methods.toFloat().call()
         .then(parseInt)
@@ -854,7 +858,7 @@ class Model extends React.Component {
 
   render() {
     return (
-      <div>
+      <Container>
         <Paper className={this.classes.root} elevation={1}>
           <Typography variant="h5" component="h3">
             {this.state.contractInfo.name}
@@ -892,6 +896,7 @@ class Model extends React.Component {
             <AppBar position="static" className={this.classes.tabs}>
               <Tabs
                 value={this.state.tab}
+                variant="fullWidth"
                 onChange={this.handleTabChange}
                 centered>
                 <Tab label="Predict" />
@@ -1057,7 +1062,7 @@ class Model extends React.Component {
             }
           </div>
         </Paper>
-      </div>
+      </Container>
     );
   }
 
@@ -1073,7 +1078,7 @@ class Model extends React.Component {
             <div {...getRootProps()}>
               <input {...getInputProps()} />
               <Typography component="p">
-                Drag and drop some files here, or click to select files
+                Drag and drop an image here, or click to select a file
               </Typography>
               <img id="input-image" width="300" crossOrigin="anonymous" alt="The item to classify or train with."
                 src={this.state.acceptedFiles ? undefined : this.state.inputImageUrl} />

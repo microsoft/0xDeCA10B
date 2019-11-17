@@ -75,11 +75,15 @@ initSqlJs().then(SQL => {
 
   // Insert a new model.
   app.post('/api/models', jsonParser, (req, res) => {
-    const body = req.body
+    const body = req.body;
     if (!isBodyValid(body)) {
-      return res.sendStatus(400);
+      return res.status(400).send({ message: "The body is invalid." });
     }
-    persistModel(body);
+    try {
+      persistModel(body);
+    } catch (err) {
+      return res.status(400).send({ message: err.message || err });
+    }
     return res.sendStatus(200);
   });
 
