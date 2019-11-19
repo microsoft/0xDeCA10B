@@ -1,7 +1,22 @@
 .git/
 .vscode/
 
+client/build/
+
+# DB
+db.sqlite
+
+# Libraries
+SafeMath.sol
+SignedSafeMath.sol
+
 blockchain_db/
 
 node_modules/
 client/node_modules/
+
+# Generated contract configs
+client/src/contracts/*.json
+
+# Training
+embedding_cache.json
