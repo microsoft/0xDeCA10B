@@ -4,7 +4,8 @@ FROM appsvc/node:10-lts
 
 LABEL maintainer="Justin D. Harris (justin.harris@microsoft.com)"
 
-WORKDIR /root/workspace/demo
+# Already set:
+# WORKDIR /home/site/wwwroot
 
 RUN apt-get update && apt-get install --fix-missing --yes build-essential git locales locales-all
 
@@ -15,4 +16,6 @@ RUN bash setup.sh
 
 # Override the port the blockchain uses (just for this command).
 # Test also builds the contracts.
-RUN cd client && PORT=7545 yarn test && yarn build
+RUN cd client && PORT=7545 yarn test
+
+RUN cd client && yarn build

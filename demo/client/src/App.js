@@ -10,6 +10,10 @@ import AppBar from './components/appBar';
 import Model from './components/model';
 import ModelList from './containers/modelList';
 
+if (axios.defaults.baseURL === undefined && process.env.NODE_ENV === 'production' && process.env.BACKEND_URL) {
+  axios.defaults.baseURL = process.env.BACKEND_URL;
+}
+
 const theme = createMuiTheme({
   palette: {
     primary: blue,
