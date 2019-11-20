@@ -4,13 +4,6 @@ FROM appsvc/node:10-lts
 
 LABEL maintainer="Justin D. Harris (justin.harris@microsoft.com)"
 
-# Front-end:
-EXPOSE 3000
-# Back-end:
-EXPOSE 5387
-# Blockchain:
-EXPOSE 7545
-
 WORKDIR /root/workspace/demo
 
 RUN apt-get update && apt-get install --fix-missing --yes build-essential git locales locales-all
