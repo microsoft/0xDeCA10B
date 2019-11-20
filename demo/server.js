@@ -42,7 +42,7 @@ initSqlJs().then(SQL => {
 
   function marshalResults(res) {
     if (!res[0]) {
-      return null;
+      return [];
     }
 
     return res[0].values.map(v => ({

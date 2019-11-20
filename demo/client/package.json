@@ -25,6 +25,7 @@
     "react-router-dom": "^5.0.0",
     "react-scripts": "^2.1.8",
     "react-spinners": "^0.6.1",
+    "serve": "^11.2.0",
     "truffle": "^5.0.29",
     "web3": "^1.2.0"
   },
