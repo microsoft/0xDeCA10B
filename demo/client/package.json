@@ -30,6 +30,7 @@
   },
   "scripts": {
     "start": "bash deploy_client.sh",
+    "start-prod": "bash start_prod.sh",
     "build": "react-scripts build",
     "test": "bash test.sh",
     "train-vpa-classifier": "node src/ml-models/vpa/train-classifier.js",

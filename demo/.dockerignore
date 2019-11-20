@@ -1,7 +1,32 @@
 .git/
 .vscode/
 
+**/README.md
+**/*.Dockerfile
+**/Dockerfile
+
+client/build/
+
+# DB
+db.sqlite
+
+# Libraries
+**/SafeMath.sol
+**/SignedSafeMath.sol
+
 blockchain_db/
 
 node_modules/
 client/node_modules/
+
+# Generated contract configs
+client/src/contracts/*.json
+
+# Training
+**/embedding_cache.json
+**/*.zip
+client/src/ml-models/hot_dog-not/seefood/
+
+client/coverage/
+
+**/*~
