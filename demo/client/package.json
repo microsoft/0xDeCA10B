@@ -32,7 +32,7 @@
   "scripts": {
     "start": "bash deploy_client.sh",
     "start-prod": "bash start_prod.sh",
-    "build": "react-scripts --max-old-space-size=1024 --max_old_space_size=1024 build",
+    "build": "react-scripts build",
     "test": "bash test.sh",
     "train-vpa-classifier": "node src/ml-models/vpa/train-classifier.js",
     "train-hot-dog-classifier": "node src/ml-models/hot_dog-not/train-classifier.js",
