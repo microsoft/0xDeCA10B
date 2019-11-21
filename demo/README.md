@@ -45,6 +45,7 @@ First get permission to push 0xdeca10bcontainerreg.azurecr.io.
 
 Then
 ```bash
+docker login 0xdeca10bcontainerreg.azurecr.io
 newVersion=<Set the new version. E.g. 1.2.0>
 docker tag decai-demo 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-demo:${newVersion}
 docker tag decai-demo 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-demo:latest

@@ -1,5 +1,9 @@
 # For deployment to an Azure Web Service
-# Build with: docker image build --file service.Dockerfile --tag decai-demo-prod .
+# First get permission to push 0xdeca10bcontainerreg.azurecr.io, then:
+# docker login 0xdeca10bcontainerreg.azurecr.io
+# docker build --file service.Dockerfile -t 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-demo-prod .
+# docker push 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-demo-prod:latest
+# The deployment is set up to happen automatically in Azure.
 FROM appsvc/node:10-lts
 
 LABEL maintainer="Justin D. Harris (justin.harris@microsoft.com)"
@@ -18,4 +22,4 @@ RUN bash setup.sh
 # Test also builds the contracts.
 RUN cd client && PORT=7545 yarn test
 
-RUN cd client && yarn build --max_old_space_size=1024m
+RUN cd client && yarn build
