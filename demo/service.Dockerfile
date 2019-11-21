@@ -18,4 +18,4 @@ RUN bash setup.sh
 # Test also builds the contracts.
 RUN cd client && PORT=7545 yarn test
 
-RUN cd client && yarn build --max_old_space_size=1024m
+RUN cd client && yarn build
