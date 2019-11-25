@@ -19,7 +19,6 @@ import Typography from '@material-ui/core/Typography';
 import * as mobilenet from '@tensorflow-models/mobilenet';
 import * as UniversalSentenceEncoder from '@tensorflow-models/universal-sentence-encoder';
 import * as tf from '@tensorflow/tfjs';
-import axios from 'axios';
 import loadImage from 'blueimp-load-image';
 import update from 'immutability-helper';
 import moment from 'moment';
@@ -34,6 +33,8 @@ import CollaborativeTrainer from '../contracts/CollaborativeTrainer64.json';
 import DataHandler from '../contracts/DataHandler64.json';
 import IncentiveMechanism from '../contracts/Stakeable64.json';
 import ImdbVocab from '../data/imdb.json';
+import { OriginalData } from '../storage/storage';
+import { StorageFactory, StorageType } from '../storage/storage-factory';
 
 moment.relativeTimeThreshold('ss', 4);
 
@@ -119,6 +120,10 @@ class Model extends React.Component {
     this.props = props;
     this.classes = props.classes;
 
+    this.storageFactory = new StorageFactory();
+    // Set up a default storage.
+    this.storage = this.storageFactory.create(StorageType.SERVICE);
+
     let tabIndex = 0;
     const currentUrlParams = new URLSearchParams(window.location.search);
     const tab = currentUrlParams.get('tab');
@@ -185,8 +190,8 @@ class Model extends React.Component {
       const fallbackProvider = new Web3.providers.HttpProvider("http://127.0.0.1:7545");
       this.web3 = await getWeb3({ fallbackProvider, requestPermission: true });
 
-      axios.get(`/api/models/${this.state.modelId}`).then(r => {
-        this.setState({ contractInfo: r.data.model },
+      this.storage.getModel(this.state.modelId).then(modelInfo => {
+        this.setState({ contractInfo: modelInfo },
           async _ => {
             await this.setContractInstance();
           });
@@ -466,13 +471,13 @@ class Model extends React.Component {
 
   // Returns a Promise.
   async getOriginalData(transactionHash) {
-    return axios.get(`/api/data/${transactionHash}`).then(r => {
-      let result = r.data.originalData;
+    return this.storage.getOriginalData(transactionHash).then(originalData => {
+      originalData = originalData.text
       if (this.state.inputType === INPUT_TYPE_IMAGE) {
         // Return the encoding.
-        result = JSON.parse(result);
+        originalData = JSON.parse(originalData);
       }
-      return result;
+      return originalData;
     });
   }
 
@@ -823,10 +828,7 @@ class Model extends React.Component {
               // Just store the encoding.
               originalData = JSON.stringify(trainData);
             }
-            return axios.post('/api/data', {
-              originalData,
-              transactionHash,
-            }).then(() => {
+            return this.storage.addOriginalData(transactionHash, new OriginalData(originalData)).then(() => {
               console.log("Saved info to DB.")
               return this.updateRefundData().then(this.updateDynamicInfo);
             }).catch(err => {

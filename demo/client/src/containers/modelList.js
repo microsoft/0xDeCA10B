@@ -6,10 +6,10 @@ import ListItemText from '@material-ui/core/ListItemText';
 import Paper from '@material-ui/core/Paper';
 import { withStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
-import axios from 'axios';
 import PropTypes from 'prop-types';
 import React from 'react';
 import { Link } from "react-router-dom";
+import { StorageFactory, StorageType } from '../storage/storage-factory';
 
 const styles = theme => ({
   link: {
@@ -20,13 +20,19 @@ const styles = theme => ({
 class ModelList extends React.Component {
   constructor(props) {
     super(props);
+
+    this.storageFactory = new StorageFactory();
+    // Set up a default storage.
+    this.storage = this.storageFactory.create(StorageType.SERVICE);
+
     this.state = {
     }
   }
+
   componentDidMount() {
-    axios.get('/api/models').then(r => {
-      this.setState({ models: r.data.models });
-    }).catch(console.error);
+    this.storage.getModels().then(models => {
+      this.setState({ models });
+    });
   }
 
   render() {

@@ -6,7 +6,7 @@ import Paper from '@material-ui/core/Paper';
 import { withStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import axios from 'axios';
+import { StorageFactory, StorageType } from '../storage/storage-factory';
 import update from 'immutability-helper';
 import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
@@ -64,6 +64,11 @@ class AddModel extends React.Component {
 
   constructor(props) {
     super(props);
+    
+    this.storageFactory = new StorageFactory();
+    // Set up a default storage.
+    this.storage = this.storageFactory.create(StorageType.SERVICE);
+
     this.state = {
       name: "",
       description: "",
@@ -344,7 +349,7 @@ class AddModel extends React.Component {
       modelInfo.address = mainContract.options.address;
 
       // Save to the database.
-      axios.post('/api/models', modelInfo).then(() => {
+      this.storage.saveModelInformation(modelInfo).then(() => {
         this.notify("Saved", { variant: 'success' });
         // TODO Redirect.
       }).catch(err => {

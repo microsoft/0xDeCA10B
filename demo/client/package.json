@@ -12,6 +12,10 @@
     "@tensorflow-models/universal-sentence-encoder": "^1.0.1",
     "@tensorflow/tfjs": "^1.0.4",
     "@tensorflow/tfjs-node": "^1.2.8",
+    "@types/jest": "^24.0.23",
+    "@types/node": "^12.12.12",
+    "@types/react": "^16.9.13",
+    "@types/react-dom": "^16.9.4",
     "axios": "^0.18.0",
     "blueimp-load-image": "^2.23.0",
     "canvas": "^2.6.0",
@@ -27,6 +31,7 @@
     "react-spinners": "^0.6.1",
     "serve": "^11.2.0",
     "truffle": "^5.0.29",
+    "typescript": "^3.7.2",
     "web3": "^1.2.0"
   },
   "scripts": {
