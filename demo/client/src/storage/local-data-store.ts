@@ -31,19 +31,23 @@ export class LocalDataStore implements DataStore {
 		}
 	}
 
-	private checkOpened() {
-		if (this.db) {
-			return;
-		} else if (this.errorOpening) {
-			throw new Error("The database could not be opened.")
-		} else {
-			// TODO Wait until opened or error.
-		}
+	private checkOpened(timeout = 0) {
+		return new Promise((resolve, reject) => {
+			setTimeout(async () => {
+				if (this.db) {
+					resolve()
+				} else if (this.errorOpening) {
+					reject(new Error("The database could not be opened."))
+				} else {
+					await this.checkOpened(Math.min(500, 1.618 * timeout + 10))
+				}
+			}, timeout)
+		})
 	}
 
 	addOriginalData(transactionHash: string, originalData: OriginalData): Promise<any> {
-		return new Promise((resolve, reject) => {
-			this.checkOpened()
+		return new Promise(async (resolve, reject) => {
+			await this.checkOpened()
 			const transaction = this.db!.transaction(this.dataStoreName, 'readwrite')
 			transaction.onerror = reject
 			const dataStore = transaction.objectStore(this.dataStoreName)
@@ -54,22 +58,26 @@ export class LocalDataStore implements DataStore {
 	}
 
 	getOriginalData(transactionHash: string): Promise<OriginalData> {
-		return new Promise((resolve, reject) => {
-			this.checkOpened()
+		return new Promise(async (resolve, reject) => {
+			await this.checkOpened()
 			const transaction = this.db!.transaction(this.dataStoreName, 'readonly')
 			transaction.onerror = reject
 			const dataStore = transaction.objectStore(this.dataStoreName)
 			const request = dataStore.get(transactionHash)
 			request.onerror = reject
 			request.onsuccess = (event: any) => {
-				resolve(event.target.result)
+				if (event.target.result === undefined) {
+					reject(new Error("Data not found."))
+				} else {
+					resolve(event.target.result)
+				}
 			}
 		})
 	}
 
 	saveModelInformation(modelInformation: ModelInformation): Promise<any> {
-		return new Promise((resolve, reject) => {
-			this.checkOpened()
+		return new Promise(async (resolve, reject) => {
+			await this.checkOpened()
 			const transaction = this.db!.transaction(this.modelStoreName, 'readwrite')
 			transaction.onerror = reject
 			const modelStore = transaction.objectStore(this.modelStoreName)
@@ -80,8 +88,8 @@ export class LocalDataStore implements DataStore {
 	}
 
 	getModels(_afterId?: string, _limit?: number): Promise<ModelInformation[]> {
-		return new Promise((resolve, reject) => {
-			this.checkOpened()
+		return new Promise(async (resolve, reject) => {
+			await this.checkOpened()
 			const transaction = this.db!.transaction(this.modelStoreName, 'readwrite')
 			transaction.onerror = reject
 			const modelStore = transaction.objectStore(this.modelStoreName)
@@ -103,15 +111,19 @@ export class LocalDataStore implements DataStore {
 		if (address === null || address === undefined) {
 			throw new Error("An address is required.")
 		}
-		return new Promise((resolve, reject) => {
-			this.checkOpened()
+		return new Promise(async (resolve, reject) => {
+			await this.checkOpened()
 			const transaction = this.db!.transaction(this.modelStoreName, 'readwrite')
 			transaction.onerror = reject
 			const modelStore = transaction.objectStore(this.modelStoreName)
 			const request = modelStore.get(address)
 			request.onerror = reject
 			request.onsuccess = (event: any) => {
-				resolve(event.target.result)
+				if (event.target.result === undefined) {
+					reject(new Error("Model not found."))
+				} else {
+					resolve(event.target.result)
+				}
 			}
 		})
 	}

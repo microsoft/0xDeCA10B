@@ -138,6 +138,7 @@ class Model extends React.Component {
       readyForInput: false,
       contractInfo: {},
       modelId: currentUrlParams.get('modelId'),
+      contractAddress: currentUrlParams.get('address'),
       classifications: [],
       tab: tabIndex,
       addedData: [],
@@ -190,7 +191,7 @@ class Model extends React.Component {
       const fallbackProvider = new Web3.providers.HttpProvider("http://127.0.0.1:7545");
       this.web3 = await getWeb3({ fallbackProvider, requestPermission: true });
 
-      this.storage.getModel(this.state.modelId).then(modelInfo => {
+      this.storage.getModel(this.state.modelId, this.state.contractAddress).then(modelInfo => {
         this.setState({ contractInfo: modelInfo },
           async _ => {
             await this.setContractInstance();

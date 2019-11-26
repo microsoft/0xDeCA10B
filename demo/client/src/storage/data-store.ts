@@ -45,5 +45,5 @@ export interface DataStore {
 	saveModelInformation(modelInformation: ModelInformation): Promise<any>
 
 	getModels(afterId?: string, limit?: number): Promise<ModelInformation[]>
-	getModel(modelId: string): Promise<ModelInformation>;
+	getModel(modelId?: string, address?: string): Promise<ModelInformation>
 }
