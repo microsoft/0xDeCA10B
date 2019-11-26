@@ -33,8 +33,8 @@ import CollaborativeTrainer from '../contracts/CollaborativeTrainer64.json';
 import DataHandler from '../contracts/DataHandler64.json';
 import IncentiveMechanism from '../contracts/Stakeable64.json';
 import ImdbVocab from '../data/imdb.json';
-import { OriginalData } from '../storage/storage';
-import { StorageFactory, StorageType } from '../storage/storage-factory';
+import { OriginalData } from '../storage/data-store';
+import { DataStoreFactory, DataStoreType } from '../storage/data-store-factory';
 
 moment.relativeTimeThreshold('ss', 4);
 
@@ -120,9 +120,9 @@ class Model extends React.Component {
     this.props = props;
     this.classes = props.classes;
 
-    this.storageFactory = new StorageFactory();
+    this.storageFactory = new DataStoreFactory();
     // Set up a default storage.
-    this.storage = this.storageFactory.create(StorageType.SERVICE);
+    this.storage = this.storageFactory.create(DataStoreType.SERVICE);
 
     let tabIndex = 0;
     const currentUrlParams = new URLSearchParams(window.location.search);

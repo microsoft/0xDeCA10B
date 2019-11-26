@@ -9,7 +9,7 @@ import Typography from '@material-ui/core/Typography';
 import PropTypes from 'prop-types';
 import React from 'react';
 import { Link } from "react-router-dom";
-import { StorageFactory, StorageType } from '../storage/storage-factory';
+import { DataStoreFactory, DataStoreType } from '../storage/data-store-factory';
 
 const styles = theme => ({
   link: {
@@ -21,9 +21,9 @@ class ModelList extends React.Component {
   constructor(props) {
     super(props);
 
-    this.storageFactory = new StorageFactory();
+    this.storageFactory = new DataStoreFactory();
     // Set up a default storage.
-    this.storage = this.storageFactory.create(StorageType.SERVICE);
+    this.storage = this.storageFactory.create(DataStoreType.SERVICE);
 
     this.state = {
     }

@@ -6,7 +6,7 @@ import Paper from '@material-ui/core/Paper';
 import { withStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import { StorageFactory, StorageType } from '../storage/storage-factory';
+import { DataStoreFactory, DataStoreType } from '../storage/data-store-factory';
 import update from 'immutability-helper';
 import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
@@ -65,9 +65,9 @@ class AddModel extends React.Component {
   constructor(props) {
     super(props);
     
-    this.storageFactory = new StorageFactory();
+    this.storageFactory = new DataStoreFactory();
     // Set up a default storage.
-    this.storage = this.storageFactory.create(StorageType.SERVICE);
+    this.storage = this.storageFactory.create(DataStoreType.SERVICE);
 
     this.state = {
       name: "",

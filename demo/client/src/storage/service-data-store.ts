@@ -1,7 +1,11 @@
 import axios from 'axios';
-import { ModelInformation, OriginalData, Storage } from './storage';
+import { DataStore, ModelInformation, OriginalData } from './data-store';
 
-export class ServiceStorage implements Storage {
+if (process.env.NODE_ENV === 'production' && axios.defaults.baseURL === undefined && process.env.BACKEND_URL) {
+	axios.defaults.baseURL = process.env.BACKEND_URL;
+}
+
+export class ServiceDataStore implements DataStore {
 	addOriginalData(transactionHash: string, originalData: OriginalData): Promise<any> {
 		return axios.post('/api/data', {
 			transactionHash,
@@ -16,19 +20,22 @@ export class ServiceStorage implements Storage {
 		})
 	}
 
+	saveModelInformation(modelInformation: ModelInformation): Promise<any> {
+		return axios.post('/api/models', modelInformation)
+	}
+
 	getModels(afterId?: string, limit?: number): Promise<ModelInformation[]> {
 		return axios.get('/api/models').then(response => {
 			return response.data.models
 		})
 	}
 
-	saveModelInformation(modelInformation: ModelInformation): Promise<any> {
-		return axios.post('/api/models', modelInformation)
-	}
-
-	getModel(modelId: string): Promise<ModelInformation> {
+	getModel(modelId?: string, address?: string): Promise<ModelInformation> {
 		return axios.get(`/api/models/${modelId}`).then(response => {
 			const { model } = response.data;
+			if (address !== null && address !== undefined && model.address !== address) {
+				throw new Error("Could not find a model with the matching address.")
+			}
 			return new ModelInformation(
 				model.id,
 				model.name,

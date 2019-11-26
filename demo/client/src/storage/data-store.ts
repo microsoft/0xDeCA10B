@@ -38,7 +38,7 @@ export class OriginalData {
 /**
  * Interact with the storage of model and data information.
  */
-export interface Storage {
+export interface DataStore {
 	addOriginalData(transactionHash: string, originalData: OriginalData): Promise<any>
 	getOriginalData(transactionHash: string): Promise<OriginalData>
 

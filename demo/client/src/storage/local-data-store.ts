@@ -1,0 +1,118 @@
+import { DataStore, ModelInformation, OriginalData } from './data-store';
+
+export class LocalDataStore implements DataStore {
+	errorOpening?: boolean
+
+	db?: IDBDatabase
+
+	private readonly dataStoreName = 'data'
+	private readonly modelStoreName = 'model';
+
+	constructor() {
+		const openRequest = window.indexedDB.open("database", 1);
+		openRequest.onerror = (event: any) => {
+			this.errorOpening = true
+			console.error("Could not open the database.")
+			console.error(event);
+			throw new Error("Could not open the database.")
+		}
+
+		openRequest.onsuccess = (event: any) => {
+			this.db = event.target.result
+		}
+
+		openRequest.onupgradeneeded = (event: any) => {
+			const db: IDBDatabase = event.target.result
+
+			// Index by transaction hash.
+			db.createObjectStore(this.dataStoreName, { keyPath: 'tx' })
+
+			db.createObjectStore(this.modelStoreName, { keyPath: 'address' })
+		}
+	}
+
+	private checkOpened() {
+		if (this.db) {
+			return;
+		} else if (this.errorOpening) {
+			throw new Error("The database could not be opened.")
+		} else {
+			// TODO Wait until opened or error.
+		}
+	}
+
+	addOriginalData(transactionHash: string, originalData: OriginalData): Promise<any> {
+		return new Promise((resolve, reject) => {
+			this.checkOpened()
+			const transaction = this.db!.transaction(this.dataStoreName, 'readwrite')
+			transaction.onerror = reject
+			const dataStore = transaction.objectStore(this.dataStoreName)
+			const request = dataStore.add({ tx: transactionHash, text: originalData.text })
+			request.onerror = reject
+			request.onsuccess = resolve
+		})
+	}
+
+	getOriginalData(transactionHash: string): Promise<OriginalData> {
+		return new Promise((resolve, reject) => {
+			this.checkOpened()
+			const transaction = this.db!.transaction(this.dataStoreName, 'readonly')
+			transaction.onerror = reject
+			const dataStore = transaction.objectStore(this.dataStoreName)
+			const request = dataStore.get(transactionHash)
+			request.onerror = reject
+			request.onsuccess = (event: any) => {
+				resolve(event.target.result)
+			}
+		})
+	}
+
+	saveModelInformation(modelInformation: ModelInformation): Promise<any> {
+		return new Promise((resolve, reject) => {
+			this.checkOpened()
+			const transaction = this.db!.transaction(this.modelStoreName, 'readwrite')
+			transaction.onerror = reject
+			const modelStore = transaction.objectStore(this.modelStoreName)
+			const request = modelStore.add(modelInformation)
+			request.onerror = reject
+			request.onsuccess = resolve
+		})
+	}
+
+	getModels(_afterId?: string, _limit?: number): Promise<ModelInformation[]> {
+		return new Promise((resolve, reject) => {
+			this.checkOpened()
+			const transaction = this.db!.transaction(this.modelStoreName, 'readwrite')
+			transaction.onerror = reject
+			const modelStore = transaction.objectStore(this.modelStoreName)
+			const models: ModelInformation[] = []
+			modelStore.openCursor().onsuccess = (event: any) => {
+				const cursor = event.target.result
+				if (cursor) {
+					// TODO
+					models.push(cursor.value)
+					cursor.continue()
+				} else {
+					resolve(models)
+				}
+			}
+		})
+	}
+
+	getModel(_modelId?: string, address?: string): Promise<ModelInformation> {
+		if (address === null || address === undefined) {
+			throw new Error("An address is required.")
+		}
+		return new Promise((resolve, reject) => {
+			this.checkOpened()
+			const transaction = this.db!.transaction(this.modelStoreName, 'readwrite')
+			transaction.onerror = reject
+			const modelStore = transaction.objectStore(this.modelStoreName)
+			const request = modelStore.get(address)
+			request.onerror = reject
+			request.onsuccess = (event: any) => {
+				resolve(event.target.result)
+			}
+		})
+	}
+}
