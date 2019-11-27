@@ -35,6 +35,7 @@ import IncentiveMechanism from '../contracts/Stakeable64.json';
 import ImdbVocab from '../data/imdb.json';
 import { OriginalData } from '../storage/data-store';
 import { DataStoreFactory } from '../storage/data-store-factory';
+import { renderStorageSelector } from './storageSelector';
 
 moment.relativeTimeThreshold('ss', 4);
 
@@ -128,7 +129,6 @@ class Model extends React.Component {
     super(props);
     this.props = props;
     this.classes = props.classes;
-
 
     const storageFactory = new DataStoreFactory();
     this.storages = {
@@ -529,8 +529,8 @@ class Model extends React.Component {
       [name]: value
     }, _ => {
       if (name === 'storageType') {
-        localStorage.setItem('storageType', value);
-        // TODO Just update the original data.
+        localStorage.setItem(name, value);
+        // TODO Just update the original data field.
         this.updateRefundData();
         this.updateRewardData();
       }
@@ -935,21 +935,7 @@ class Model extends React.Component {
             </Typography>
           </div>
           <div className={this.classes.controls}>
-            <InputLabel htmlFor="storage-selector">
-              Original data storage (the storage that links your update to your original unprocessed data)
-                    </InputLabel>
-            <Select
-              value={this.state.storageType}
-              onChange={this.handleInputChange}
-              inputProps={{
-                name: 'storageType',
-                id: 'storage-selector',
-              }}
-            >
-              <MenuItem key="storage-select-none" value="none">None (do not store original data)</MenuItem>
-              <MenuItem key="storage-select-local" value="local">Local (only on this device)</MenuItem>
-              <MenuItem key="storage-select-service" value="service">External (a database elsewhere)</MenuItem>
-            </Select>
+            {renderStorageSelector(this.state.storageType, this.handleInputChange)}
           </div>
           <div>
             <AppBar position="static" className={this.classes.tabs}>

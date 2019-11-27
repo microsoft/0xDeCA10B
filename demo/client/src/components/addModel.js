@@ -19,6 +19,7 @@ import SparsePerceptron from '../contracts/SparsePerceptron.json';
 import Stakeable64 from '../contracts/Stakeable64.json';
 import { convertToHex, convertToHexData } from '../float-utils';
 import { DataStoreFactory } from '../storage/data-store-factory';
+import { renderStorageSelector } from './storageSelector';
 
 const styles = theme => ({
   root: {
@@ -43,6 +44,7 @@ const styles = theme => ({
     marginTop: 8,
   },
   selector: {
+    paddingTop: theme.spacing(1),
     marginBottom: 8,
   },
   numberTextField: {
@@ -64,11 +66,11 @@ class AddModel extends React.Component {
 
   constructor(props) {
     super(props);
-    
+
     this.storageFactory = new DataStoreFactory();
-    // TODO Ask where they want to save the model to.
-    // Set up a default storage.
-    this.storage = this.storageFactory.create('local');
+
+    // Default to local storage for storing original data.
+    const storageType = localStorage.getItem('storageType') || 'local';
 
     this.state = {
       name: "",
@@ -99,8 +101,10 @@ class AddModel extends React.Component {
           transactionHash: undefined,
           address: undefined,
         },
-      }
+      },
+      storageType,
     };
+
     this.modelTypes = {
       'dense perceptron': DensePerceptron,
       'sparse perceptron': SparsePerceptron,
@@ -114,6 +118,9 @@ class AddModel extends React.Component {
 
   componentDidMount = async () => {
     try {
+      // Get rid of a warning about network refreshing.
+      window.ethereum.autoRefreshOnNetworkChange = false;
+
       const fallbackProvider = new Web3.providers.HttpProvider("http://127.0.0.1:7545");
       this.web3 = await getWeb3({ fallbackProvider, requestPermission: true });
     } catch (error) {
@@ -144,6 +151,10 @@ class AddModel extends React.Component {
     const name = target.name;
     this.setState({
       [name]: value
+    }, _ => {
+      if (name === 'storageType') {
+        localStorage.setItem(name, value);
+      }
     });
   }
 
@@ -234,6 +245,9 @@ class AddModel extends React.Component {
               {this.state.incentiveMechanism === "Stakeable64" &&
                 this.renderStakeableOptions()
               }
+              <div className={this.classes.selector}>
+                {renderStorageSelector(this.state.storageType, this.handleInputChange)}
+              </div>
             </div>
           </form>
           <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}
@@ -349,14 +363,18 @@ class AddModel extends React.Component {
 
       modelInfo.address = mainContract.options.address;
 
-      // Save to the database.
-      this.storage.saveModelInformation(modelInfo).then(() => {
-        this.notify("Saved", { variant: 'success' });
-        // TODO Redirect.
-      }).catch(err => {
-        console.error(err);
-        console.error(err.response.data.message);
-      });
+
+      if (this.state.storageType !== 'none') {
+        // Save to a database.
+        const storage = this.storageFactory.create(this.state.storageType);
+        storage.saveModelInformation(modelInfo).then(() => {
+          this.notify("Saved", { variant: 'success' });
+          // TODO Redirect.
+        }).catch(err => {
+          console.error(err);
+          console.error(err.response.data.message);
+        });
+      }
     });
   }
 
