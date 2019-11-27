@@ -6,7 +6,6 @@ import Paper from '@material-ui/core/Paper';
 import { withStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import { DataStoreFactory, DataStoreType } from '../storage/data-store-factory';
 import update from 'immutability-helper';
 import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
@@ -19,6 +18,7 @@ import DensePerceptron from '../contracts/DensePerceptron.json';
 import SparsePerceptron from '../contracts/SparsePerceptron.json';
 import Stakeable64 from '../contracts/Stakeable64.json';
 import { convertToHex, convertToHexData } from '../float-utils';
+import { DataStoreFactory } from '../storage/data-store-factory';
 
 const styles = theme => ({
   root: {
@@ -66,8 +66,9 @@ class AddModel extends React.Component {
     super(props);
     
     this.storageFactory = new DataStoreFactory();
+    // TODO Ask where they want to save the model to.
     // Set up a default storage.
-    this.storage = this.storageFactory.create(DataStoreType.SERVICE);
+    this.storage = this.storageFactory.create('local');
 
     this.state = {
       name: "",

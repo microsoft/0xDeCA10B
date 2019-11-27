@@ -34,7 +34,7 @@ import DataHandler from '../contracts/DataHandler64.json';
 import IncentiveMechanism from '../contracts/Stakeable64.json';
 import ImdbVocab from '../data/imdb.json';
 import { OriginalData } from '../storage/data-store';
-import { DataStoreFactory, DataStoreType } from '../storage/data-store-factory';
+import { DataStoreFactory } from '../storage/data-store-factory';
 
 moment.relativeTimeThreshold('ss', 4);
 
@@ -121,8 +121,9 @@ class Model extends React.Component {
     this.classes = props.classes;
 
     this.storageFactory = new DataStoreFactory();
+    // TODO Ask where they want to save the data to.
     // Set up a default storage.
-    this.storage = this.storageFactory.create(DataStoreType.SERVICE);
+    this.storage = this.storageFactory.create('local');
 
     let tabIndex = 0;
     const currentUrlParams = new URLSearchParams(window.location.search);
@@ -191,15 +192,14 @@ class Model extends React.Component {
       const fallbackProvider = new Web3.providers.HttpProvider("http://127.0.0.1:7545");
       this.web3 = await getWeb3({ fallbackProvider, requestPermission: true });
 
-      this.storage.getModel(this.state.modelId, this.state.contractAddress).then(modelInfo => {
-        this.setState({ contractInfo: modelInfo },
-          async _ => {
-            await this.setContractInstance();
-          });
-      });
+      const modelInfo = await this.storage.getModel(this.state.modelId, this.state.contractAddress);
+      this.setState({ contractInfo: modelInfo },
+        async _ => {
+          await this.setContractInstance();
+        });
     } catch (error) {
-      alert(`Failed to load web3, accounts, or contract. Check console for details.`);
       console.error(error);
+      alert(`Failed to load web3, accounts, or contract. Check console for details.`);
     }
   }
 
@@ -221,7 +221,6 @@ class Model extends React.Component {
 
     // Using one `.then` and then awaiting helps with making the page more responsive.
     this.getContractInstance({
-      web3: this.web3,
       abi: CollaborativeTrainer.abi,
       address: contractAddress
     }).then(async contractInstance => {
@@ -232,7 +231,6 @@ class Model extends React.Component {
       ] = await Promise.all([
         contractInstance.methods.dataHandler().call().then(dataHandlerAddress => {
           return this.getContractInstance({
-            web3: this.web3,
             abi: DataHandler.abi,
             address: dataHandlerAddress
           })
@@ -246,14 +244,12 @@ class Model extends React.Component {
             alert("Couldn't determine model ABI.");
           }
           return this.getContractInstance({
-            web3: this.web3,
             abi: modelAbi,
             address: classifierAddress
           });
         }),
         contractInstance.methods.incentiveMechanism().call().then(incentiveMechanismAddress => {
           return this.getContractInstance({
-            web3: this.web3,
             abi: IncentiveMechanism.abi,
             address: incentiveMechanismAddress
           });
@@ -440,15 +436,8 @@ class Model extends React.Component {
       });
   }
 
-  getContractInstance(options) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const instance = new options.web3.eth.Contract(options.abi, options.address);
-        return resolve(instance);
-      } catch (err) {
-        return reject(err);
-      }
-    });
+  async getContractInstance(options) {
+    return new this.web3.eth.Contract(options.abi, options.address);
   }
 
   getDisplayableEncodedData(data) {
@@ -871,12 +860,13 @@ class Model extends React.Component {
           </Typography>
           <br />
           <br />
-          {typeof this.state.accountScore !== 'undefined' &&
-            <Typography component="p">
-              <b>Your score: </b>
-              {this.state.accountScore} ({this.state.numGood}/{this.state.totalGoodDataCount})
-            </Typography>
-          }
+          <Typography component="p">
+            <b>Your score: </b>
+            {typeof this.state.totalGoodDataCount !== 'undefined' ?
+              `${this.state.accountScore || 0} (${this.state.numGood || 0}/${this.state.totalGoodDataCount || 0})`
+              : "(loading)"
+            }
+          </Typography>
           <Typography component="p">
             <b>Time to wait before requesting a refund: </b>
             {this.state.refundWaitTimeS ?

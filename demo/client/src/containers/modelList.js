@@ -9,7 +9,7 @@ import Typography from '@material-ui/core/Typography';
 import PropTypes from 'prop-types';
 import React from 'react';
 import { Link } from "react-router-dom";
-import { DataStoreFactory, DataStoreType } from '../storage/data-store-factory';
+import { DataStoreFactory } from '../storage/data-store-factory';
 
 const styles = theme => ({
   link: {
@@ -21,17 +21,29 @@ class ModelList extends React.Component {
   constructor(props) {
     super(props);
 
-    this.storageFactory = new DataStoreFactory();
-    // Set up a default storage.
-    this.storage = this.storageFactory.create(DataStoreType.SERVICE);
+    const storageFactory = new DataStoreFactory();
+    this.localStorage = storageFactory.create('local');
+    this.serviceStorage = storageFactory.create('service');
 
     this.state = {
+      models: [],
     }
   }
 
-  componentDidMount() {
-    this.storage.getModels().then(models => {
-      this.setState({ models });
+  async componentDidMount() {
+    this.localStorage.getModels().then(newModels => {
+      this.setState(prevState => ({ models: prevState.models.concat(newModels) }));
+    }).catch(err => {
+      // TODO Show warning toast.
+      console.warn("Could not get local models.");
+      console.warn(err);
+    });
+    this.serviceStorage.getModels().then(newModels => {
+      this.setState(prevState => ({ models: prevState.models.concat(newModels) }));
+    }).catch(err => {
+      // TODO Show warning toast.
+      console.warn("Could not get models from the server.");
+      console.warn(err);
     });
   }
 
