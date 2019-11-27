@@ -120,10 +120,13 @@ class Model extends React.Component {
     this.props = props;
     this.classes = props.classes;
 
-    this.storageFactory = new DataStoreFactory();
+
     // TODO Ask where they want to save the data to.
-    // Set up a default storage.
-    this.storage = this.storageFactory.create('local');
+    const storageFactory = new DataStoreFactory();
+    this.storages = {
+      local: storageFactory.create('local'),
+      service: storageFactory.create('service'),
+    }
 
     let tabIndex = 0;
     const currentUrlParams = new URLSearchParams(window.location.search);
@@ -158,7 +161,9 @@ class Model extends React.Component {
       accountScore: undefined,
       numGood: undefined,
       toFloat: undefined,
-      totalGoodDataCount: undefined
+      totalGoodDataCount: undefined,
+      // Default to local storage for storing original data.
+      storageType: 'local',
     }
 
     this.addDataCost = this.addDataCost.bind(this);
@@ -192,7 +197,8 @@ class Model extends React.Component {
       const fallbackProvider = new Web3.providers.HttpProvider("http://127.0.0.1:7545");
       this.web3 = await getWeb3({ fallbackProvider, requestPermission: true });
 
-      const modelInfo = await this.storage.getModel(this.state.modelId, this.state.contractAddress);
+      const storage = this.state.modelId ? this.storages.service : this.storages.local;
+      const modelInfo = await storage.getModel(this.state.modelId, this.state.contractAddress);
       this.setState({ contractInfo: modelInfo },
         async _ => {
           await this.setContractInstance();
@@ -461,7 +467,8 @@ class Model extends React.Component {
 
   // Returns a Promise.
   async getOriginalData(transactionHash) {
-    return this.storage.getOriginalData(transactionHash).then(originalData => {
+    // FIXME Choose the right storage and default to no original data if 'none'.
+    return this.storages[this.state.storageType].getOriginalData(transactionHash).then(originalData => {
       originalData = originalData.text
       if (this.state.inputType === INPUT_TYPE_IMAGE) {
         // Return the encoding.
@@ -590,20 +597,21 @@ class Model extends React.Component {
   }
 
   updateDynamicAccountInfo() {
-    return this.state.incentiveMechanism.methods.numGoodDataPerAddress(this.state.accounts[0]).call()
-      .then(parseInt)
-      .then((numGood) => {
-        if (numGood > 0) {
-          this.state.incentiveMechanism.methods.totalGoodDataCount().call()
-            .then(parseInt)
-            .then((totalGoodDataCount) => {
-              const accountScore = (100 * numGood / totalGoodDataCount).toFixed(2) + "%";
-              this.setState({ accountScore, numGood, totalGoodDataCount });
-            });
-        } else if (this.state.accountScore !== undefined) {
-          this.setState({ accountScore: undefined, numGood: undefined });
-        }
-      });
+    return Promise.all(
+      [this.state.incentiveMechanism.methods.numGoodDataPerAddress(this.state.accounts[0]).call()
+        .then(parseInt),
+      this.state.incentiveMechanism.methods.totalGoodDataCount().call()
+        .then(parseInt),
+      ]
+    ).then(([numGood, totalGoodDataCount]) => {
+      let accountScore;
+      if (totalGoodDataCount > 0) {
+        accountScore = (100 * numGood / totalGoodDataCount).toFixed(2) + "%";
+      } else {
+        accountScore = "0%";
+      }
+      this.setState({ accountScore, numGood, totalGoodDataCount });
+    });
   }
 
   updateRefundData() {
@@ -818,13 +826,18 @@ class Model extends React.Component {
               // Just store the encoding.
               originalData = JSON.stringify(trainData);
             }
-            return this.storage.addOriginalData(transactionHash, new OriginalData(originalData)).then(() => {
-              console.log("Saved info to DB.")
-              return this.updateRefundData().then(this.updateDynamicInfo);
-            }).catch(err => {
-              console.error("Error saving original data to DB.");
-              console.error(err);
-            });
+            if (this.state.storageType !== 'none') {
+              const storage = this.storages[this.state.storageType];
+              return storage.addOriginalData(transactionHash, new OriginalData(originalData)).then(() => {
+                // TODO Toast.
+                console.log("Saved info to DB.")
+                return this.updateRefundData().then(this.updateDynamicInfo);
+              }).catch(err => {
+                // TODO Toast.
+                console.error("Error saving original data to DB.");
+                console.error(err);
+              });
+            }
           })
           .on('receipt', (receipt) => {
             // Doesn't get triggered through promise after updating to `web3 1.0.0-beta.52`.
@@ -862,9 +875,10 @@ class Model extends React.Component {
           <br />
           <Typography component="p">
             <b>Your score: </b>
-            {typeof this.state.totalGoodDataCount !== 'undefined' ?
-              `${this.state.accountScore || 0} (${this.state.numGood || 0}/${this.state.totalGoodDataCount || 0})`
-              : "(loading)"
+            {this.state.accountScore !== undefined ? this.state.accountScore : "(loading)"}
+            {this.state.totalGoodDataCount !== undefined ?
+              ` (${this.state.numGood || 0}/${this.state.totalGoodDataCount || 0})`
+              : ""
             }
           </Typography>
           <Typography component="p">
@@ -885,6 +899,24 @@ class Model extends React.Component {
               this.getHumanReadableEth(this.state.depositCost)
               : "(loading)"}
           </Typography>
+          <div>
+            {/* TODO Add some padding above. */}
+            <InputLabel htmlFor="storage-selector">
+              Original data storage (the storage that links your update to your original unprocessed data)
+                    </InputLabel>
+            <Select
+              value={this.state.storageType}
+              onChange={this.handleInputChange}
+              inputProps={{
+                name: 'storageType',
+                id: 'storage-selector',
+              }}
+            >
+              <MenuItem key="storage-select-none" value="none">None (do not store original data)</MenuItem>
+              <MenuItem key="storage-select-local" value="local">Local (only on this device)</MenuItem>
+              <MenuItem key="storage-select-service" value="service">External (a database elsewhere)</MenuItem>
+            </Select>
+          </div>
           <div>
             <AppBar position="static" className={this.classes.tabs}>
               <Tabs
@@ -940,7 +972,6 @@ class Model extends React.Component {
                           {classificationName}
                         </MenuItem>;
                       })}
-
                     </Select>
                     {this.renderLoadingContract()}
                     <Button type="submit" className={this.classes.button} variant="outlined"
