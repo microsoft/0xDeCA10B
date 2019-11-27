@@ -39,13 +39,22 @@ class ModelList extends React.Component {
     let listItems = [];
     if (this.state.models) {
       listItems = this.state.models.map(m => {
+        let key, keyName;
+        if (m.id) {
+          key = m.id;
+          keyName = 'modelId';
+        } else {
+          key = m.address;
+          keyName = 'address'
+        }
+        const url = `/model?${keyName}=${key}&tab=predict`;
         return (
-          <div key={`model-${m.id}`}>
-            <Link to={`/model?modelId=${m.id}&tab=predict`}>
+          <div key={`model-${key}`}>
+            <Link to={url}>
               <ListItem button>
                 <ListItemText primary={m.name}
                   primaryTypographyProps={{ className: this.props.classes.link }}
-                  secondary={(m.accuracy * 100).toFixed(1) + "%"} />
+                  secondary={m.accuracy && (m.accuracy * 100).toFixed(1) + "%"} />
               </ListItem>
             </Link>
             <Divider />

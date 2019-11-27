@@ -33,13 +33,15 @@ export class LocalDataStore implements DataStore {
 
 	private checkOpened(timeout = 0) {
 		return new Promise((resolve, reject) => {
-			setTimeout(async () => {
+			setTimeout(() => {
 				if (this.db) {
 					resolve()
 				} else if (this.errorOpening) {
 					reject(new Error("The database could not be opened."))
 				} else {
-					await this.checkOpened(Math.min(500, 1.618 * timeout + 10))
+					this.checkOpened(Math.min(500, 1.618 * timeout + 10))
+						.then(resolve)
+						.catch(reject)
 				}
 			}, timeout)
 		})
