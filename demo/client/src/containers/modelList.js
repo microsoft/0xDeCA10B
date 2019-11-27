@@ -22,29 +22,26 @@ class ModelList extends React.Component {
     super(props);
 
     const storageFactory = new DataStoreFactory();
-    this.localStorage = storageFactory.create('local');
-    this.serviceStorage = storageFactory.create('service');
+    this.storages = {
+      local: storageFactory.create('local'),
+      service: storageFactory.create('service'),
+    }
 
     this.state = {
       models: [],
     }
   }
 
-  async componentDidMount() {
-    this.localStorage.getModels().then(newModels => {
-      this.setState(prevState => ({ models: prevState.models.concat(newModels) }));
-    }).catch(err => {
-      // TODO Show warning toast.
-      console.warn("Could not get local models.");
-      console.warn(err);
-    });
-    this.serviceStorage.getModels().then(newModels => {
-      this.setState(prevState => ({ models: prevState.models.concat(newModels) }));
-    }).catch(err => {
-      // TODO Show warning toast.
-      console.warn("Could not get models from the server.");
-      console.warn(err);
-    });
+  componentDidMount() {
+    Promise.all(Object.entries(this.storages).map(([key, storage]) => {
+      return storage.getModels().then(newModels => {
+        this.setState(prevState => ({ models: prevState.models.concat(newModels) }));
+      }).catch(err => {
+        // TODO Show warning toast.
+        console.warn(`Could not get ${key} models.`);
+        console.warn(err);
+      });
+    }));
   }
 
   render() {

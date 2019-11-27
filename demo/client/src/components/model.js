@@ -49,6 +49,12 @@ const styles = theme => ({
     display: 'flex',
     flexDirection: 'column'
   },
+  info: {
+    paddingBottom: theme.spacing(1),
+  },
+  controls: {
+    paddingTop: theme.spacing(1),
+  },
   button: {
     marginTop: '20px'
   },
@@ -89,6 +95,9 @@ function areDataEqual(data1, data2) {
 }
 
 function getDisplayableOriginalData(data) {
+  if (data === undefined) {
+    return "<not found>";
+  }
   if (typeof data === 'string') {
     return `"${data}"`;
   }
@@ -121,7 +130,6 @@ class Model extends React.Component {
     this.classes = props.classes;
 
 
-    // TODO Ask where they want to save the data to.
     const storageFactory = new DataStoreFactory();
     this.storages = {
       local: storageFactory.create('local'),
@@ -137,6 +145,9 @@ class Model extends React.Component {
         tabIndex = 0;
       }
     }
+
+    // Default to local storage for storing original data.
+    const storageType = localStorage.getItem('storageType') || 'local';
 
     this.state = {
       readyForInput: false,
@@ -162,8 +173,7 @@ class Model extends React.Component {
       numGood: undefined,
       toFloat: undefined,
       totalGoodDataCount: undefined,
-      // Default to local storage for storing original data.
-      storageType: 'local',
+      storageType,
     }
 
     this.addDataCost = this.addDataCost.bind(this);
@@ -465,9 +475,15 @@ class Model extends React.Component {
     return `Ξ${(amount * 1E-18).toFixed(6)}`;
   }
 
-  // Returns a Promise.
+  /**
+   * 
+   * @param {string} transactionHash The transaction hash for the transacation that added the data.
+   * @returns A representation of the original data. If the storage type is 'none' or the data cannot be found then `undefined` is returned.
+   */
   async getOriginalData(transactionHash) {
-    // FIXME Choose the right storage and default to no original data if 'none'.
+    if (this.state.storageType === 'none') {
+      return undefined;
+    }
     return this.storages[this.state.storageType].getOriginalData(transactionHash).then(originalData => {
       originalData = originalData.text
       if (this.state.inputType === INPUT_TYPE_IMAGE) {
@@ -475,6 +491,9 @@ class Model extends React.Component {
         originalData = JSON.parse(originalData);
       }
       return originalData;
+    }).catch(err => {
+      console.warn(`Could not find the original data for ${transactionHash}.`);
+      console.warn(err);
     });
   }
 
@@ -508,6 +527,13 @@ class Model extends React.Component {
     const name = target.name;
     this.setState({
       [name]: value
+    }, _ => {
+      if (name === 'storageType') {
+        localStorage.setItem('storageType', value);
+        // TODO Just update the original data.
+        this.updateRefundData();
+        this.updateRewardData();
+      }
     });
   }
 
@@ -630,32 +656,35 @@ class Model extends React.Component {
       const initialDeposit = parseInt(d.returnValues.cost);
 
       this.getOriginalData(d.transactionHash).then(originalData => {
-        this.transformInput(originalData).then(encodedData => {
-          const info = {
-            data, classification, initialDeposit, sender, time,
-            dataMatches: areDataEqual(data, encodedData),
-            originalData: getDisplayableOriginalData(originalData),
-          };
-
-          info.hasEnoughTimePassed = this.hasEnoughTimePassed(info, this.state.refundWaitTimeS);
-          this.canAttemptRefund(info, false, refundInfo => {
-            const {
-              canAttemptRefund = false,
-              claimableAmount = null,
-              err = null,
-              prediction = null,
-            } = refundInfo;
-            if (err) {
-              info.errorCheckingStatus = true;
-            } else {
-              info.canAttemptRefund = canAttemptRefund;
-              info.claimableAmount = claimableAmount;
-              info.prediction = prediction;
-            }
-            this.setState({
-              addedData: [...this.state.addedData, info]
-            });
+        const info = {
+          data, classification, initialDeposit, sender, time,
+          originalData: getDisplayableOriginalData(originalData),
+        };
+        if (originalData !== undefined) {
+          // If transforming the input takes a long time then it's possible that flag does not get added to the actual page.
+          this.transformInput(originalData).then(encodedData => {
+            info.dataMatches = areDataEqual(data, encodedData);
           });
+        }
+
+        info.hasEnoughTimePassed = this.hasEnoughTimePassed(info, this.state.refundWaitTimeS);
+        this.canAttemptRefund(info, false, refundInfo => {
+          const {
+            canAttemptRefund = false,
+            claimableAmount = null,
+            err = null,
+            prediction = null,
+          } = refundInfo;
+          if (err) {
+            info.errorCheckingStatus = true;
+          } else {
+            info.canAttemptRefund = canAttemptRefund;
+            info.claimableAmount = claimableAmount;
+            info.prediction = prediction;
+          }
+          this.setState(prevState => ({
+            addedData: prevState.addedData.concat([info])
+          }));
         });
       }).catch(err => {
         console.error(`Error getting original data for transactionHash: ${d.transactionHash}`);
@@ -679,30 +708,34 @@ class Model extends React.Component {
       const time = parseInt(d.returnValues.t);
       const initialDeposit = parseInt(d.returnValues.cost);
       this.getOriginalData(d.transactionHash).then(originalData => {
-        this.transformInput(originalData).then(encodedData => {
-          const info = {
-            data, classification, initialDeposit, sender, time,
-            dataMatches: areDataEqual(data, encodedData),
-            originalData: getDisplayableOriginalData(originalData),
-          };
-          info.hasEnoughTimePassed = this.hasEnoughTimePassed(info, this.state.refundWaitTimeS);
-          this.canAttemptRefund(info, true, refundInfo => {
-            const { canAttemptRefund = false,
-              claimableAmount = null,
-              err = null,
-              prediction = null,
-            } = refundInfo;
-            if (err) {
-              info.errorCheckingStatus = true;
-            } else {
-              info.canAttemptRefund = canAttemptRefund;
-              info.claimableAmount = claimableAmount;
-              info.prediction = prediction;
-            }
-            this.setState({
-              rewardData: [...this.state.rewardData, info]
-            });
+        const info = {
+          data, classification, initialDeposit, sender, time,
+          originalData: getDisplayableOriginalData(originalData),
+        };
+        if (originalData !== undefined) {
+          // If transforming the input takes a long time then it's possible that flag does not get added to the actual page.
+          this.transformInput(originalData).then(encodedData => {
+            info.dataMatches = areDataEqual(data, encodedData);
           });
+        }
+
+        info.hasEnoughTimePassed = this.hasEnoughTimePassed(info, this.state.refundWaitTimeS);
+        this.canAttemptRefund(info, true, refundInfo => {
+          const { canAttemptRefund = false,
+            claimableAmount = null,
+            err = null,
+            prediction = null,
+          } = refundInfo;
+          if (err) {
+            info.errorCheckingStatus = true;
+          } else {
+            info.canAttemptRefund = canAttemptRefund;
+            info.claimableAmount = claimableAmount;
+            info.prediction = prediction;
+          }
+          this.setState(prevState => ({
+            rewardData: prevState.rewardData.concat([info])
+          }));
         });
       }).catch(err => {
         console.error(`Error getting original data for transactionHash: ${d.transactionHash}`);
@@ -873,34 +906,35 @@ class Model extends React.Component {
           </Typography>
           <br />
           <br />
-          <Typography component="p">
-            <b>Your score: </b>
-            {this.state.accountScore !== undefined ? this.state.accountScore : "(loading)"}
-            {this.state.totalGoodDataCount !== undefined ?
-              ` (${this.state.numGood || 0}/${this.state.totalGoodDataCount || 0})`
-              : ""
-            }
-          </Typography>
-          <Typography component="p">
-            <b>Time to wait before requesting a refund: </b>
-            {this.state.refundWaitTimeS ?
-              moment.duration(this.state.refundWaitTimeS, 's').humanize() :
-              "(loading)"}
-          </Typography>
-          <Typography component="p">
-            <b>Time to wait before taking another's deposit: </b>
-            {this.state.ownerClaimWaitTimeS ?
-              moment.duration(this.state.ownerClaimWaitTimeS, 's').humanize() :
-              "(loading)"}
-          </Typography>
-          <Typography component="p" title={`${this.state.depositCost} wei`}>
-            <b>Current Required Deposit: </b>
-            {this.state.depositCost ?
-              this.getHumanReadableEth(this.state.depositCost)
-              : "(loading)"}
-          </Typography>
-          <div>
-            {/* TODO Add some padding above. */}
+          <div className={this.classes.info}>
+            <Typography component="p">
+              <b>Your score: </b>
+              {this.state.accountScore !== undefined ? this.state.accountScore : "(loading)"}
+              {this.state.totalGoodDataCount !== undefined ?
+                ` (${this.state.numGood || 0}/${this.state.totalGoodDataCount || 0})`
+                : ""
+              }
+            </Typography>
+            <Typography component="p">
+              <b>Time to wait before requesting a refund: </b>
+              {this.state.refundWaitTimeS ?
+                moment.duration(this.state.refundWaitTimeS, 's').humanize() :
+                "(loading)"}
+            </Typography>
+            <Typography component="p">
+              <b>Time to wait before taking another's deposit: </b>
+              {this.state.ownerClaimWaitTimeS ?
+                moment.duration(this.state.ownerClaimWaitTimeS, 's').humanize() :
+                "(loading)"}
+            </Typography>
+            <Typography component="p" title={`${this.state.depositCost} wei`}>
+              <b>Current Required Deposit: </b>
+              {this.state.depositCost ?
+                this.getHumanReadableEth(this.state.depositCost)
+                : "(loading)"}
+            </Typography>
+          </div>
+          <div className={this.classes.controls}>
             <InputLabel htmlFor="storage-selector">
               Original data storage (the storage that links your update to your original unprocessed data)
                     </InputLabel>
@@ -1003,7 +1037,7 @@ class Model extends React.Component {
                     {this.state.addedData.map(d => {
                       return (<TableRow key={`refund-row-${d.time}`}>
                         <TableCell title={`Encoded data: ${this.getDisplayableEncodedData(d.data)}`}>
-                          {d.originalData}{!d.dataMatches && " ⚠ The actual data doesn't match this!"}
+                          {d.originalData}{d.dataMatches === false && " ⚠ The actual data doesn't match this!"}
                         </TableCell>
                         <TableCell>{this.getClassificationName(d.classification)}</TableCell>
                         <TableCell title={`${d.initialDeposit} wei`}>
@@ -1056,7 +1090,7 @@ class Model extends React.Component {
                     {this.state.rewardData.map(d => {
                       return (<TableRow key={`reward-row-${d.time}`}>
                         <TableCell title={`Encoded data: ${this.getDisplayableEncodedData(d.data)}`}>
-                          {d.originalData}{!d.dataMatches && " ⚠ The actual data doesn't match this!"}
+                          {d.originalData}{d.dataMatches === false && " ⚠ The actual data doesn't match this!"}
                         </TableCell>
                         <TableCell>{this.getClassificationName(d.classification)}</TableCell>
                         <TableCell title={`${d.initialDeposit} wei`}>
