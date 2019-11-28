@@ -1,11 +1,20 @@
-import axios from 'axios';
-import { DataStore, ModelInformation, OriginalData } from './data-store';
+import axios from 'axios'
+import { DataStore, DataStoreHealthStatus, ModelInformation, OriginalData } from './data-store'
+
+// It would be good to allow the URL to be set in the constructor but this is not needed yet.
 
 if (process.env.NODE_ENV === 'production' && axios.defaults.baseURL === undefined && process.env.BACK_END_URL) {
-	axios.defaults.baseURL = process.env.BACK_END_URL;
+	axios.defaults.baseURL = process.env.BACK_END_URL
 }
 
 export class ServiceDataStore implements DataStore {
+	health(): Promise<DataStoreHealthStatus> {
+		return axios.get('/api/health').then(response => {
+			const { healthy } = response.data
+			return new DataStoreHealthStatus(healthy)
+		})
+	}
+
 	saveOriginalData(transactionHash: string, originalData: OriginalData): Promise<any> {
 		return axios.post('/api/data', {
 			transactionHash,
@@ -15,9 +24,9 @@ export class ServiceDataStore implements DataStore {
 
 	getOriginalData(transactionHash: string): Promise<OriginalData> {
 		return axios.get(`/api/data/${transactionHash}`).then(response => {
-			const { originalData } = response.data;
-			const {text} = originalData;
-			return new OriginalData(text);
+			const { originalData } = response.data
+			const { text } = originalData
+			return new OriginalData(text)
 		})
 	}
 
@@ -41,7 +50,7 @@ export class ServiceDataStore implements DataStore {
 
 	getModel(modelId?: string, address?: string): Promise<ModelInformation> {
 		return axios.get(`/api/models/${modelId}`).then(response => {
-			const { model } = response.data;
+			const { model } = response.data
 			if (address !== null && address !== undefined && model.address !== address) {
 				throw new Error("Could not find a model with the matching address.")
 			}
@@ -53,7 +62,7 @@ export class ServiceDataStore implements DataStore {
 				model.modelType,
 				model.encoder,
 				model.accuracy,
-			);
-		});
+			)
+		})
 	}
 }

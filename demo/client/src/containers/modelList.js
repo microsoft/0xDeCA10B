@@ -34,13 +34,22 @@ class ModelList extends React.Component {
 
   componentDidMount() {
     Promise.all(Object.entries(this.storages).map(([key, storage]) => {
-      return storage.getModels().then(newModels => {
-        this.setState(prevState => ({ models: prevState.models.concat(newModels) }));
+      return storage.health().then(status => {
+        if (status.healthy) {
+          return storage.getModels().then(newModels => {
+            this.setState(prevState => ({ models: prevState.models.concat(newModels) }));
+          }).catch(err => {
+            // TODO Show error toast.
+            console.error(`Could not get ${key} models.`);
+            console.error(err);
+          });
+        } else {
+          console.warn(`${key} models are not available.`);
+        }
       }).catch(err => {
-        // TODO Show warning toast.
-        console.warn(`Could not get ${key} models.`);
+        console.warn(`${key} models are not available.`);
         console.warn(err);
-      });
+      })
     }));
   }
 

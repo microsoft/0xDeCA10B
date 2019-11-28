@@ -56,6 +56,11 @@ initSqlJs().then(SQL => {
     }));
   }
 
+  // Health
+  app.get('/api/health', (req, res) => {
+    res.send({ healthy: true });
+  })
+
   // Get all models.
   app.get('/api/models', (req, res) => {
     const results = db.exec("SELECT * FROM model");

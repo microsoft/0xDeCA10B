@@ -35,7 +35,7 @@ import IncentiveMechanism from '../contracts/Stakeable64.json';
 import ImdbVocab from '../data/imdb.json';
 import { OriginalData } from '../storage/data-store';
 import { DataStoreFactory } from '../storage/data-store-factory';
-import { renderStorageSelector } from './storageSelector';
+import { checkStorages, renderStorageSelector } from './storageSelector';
 
 moment.relativeTimeThreshold('ss', 4);
 
@@ -130,6 +130,8 @@ class Model extends React.Component {
     this.props = props;
     this.classes = props.classes;
 
+    // Default to local storage for storing original data.
+    const storageType = localStorage.getItem('storageType') || 'local';
     const storageFactory = new DataStoreFactory();
     this.storages = {
       local: storageFactory.create('local'),
@@ -145,9 +147,6 @@ class Model extends React.Component {
         tabIndex = 0;
       }
     }
-
-    // Default to local storage for storing original data.
-    const storageType = localStorage.getItem('storageType') || 'local';
 
     this.state = {
       readyForInput: false,
@@ -174,6 +173,7 @@ class Model extends React.Component {
       toFloat: undefined,
       totalGoodDataCount: undefined,
       storageType,
+      permittedStorageTypes: [],
     }
 
     this.addDataCost = this.addDataCost.bind(this);
@@ -200,6 +200,9 @@ class Model extends React.Component {
   }
 
   componentDidMount = async () => {
+    checkStorages(this.storages).then(permittedStorageTypes => {
+      this.setState({ permittedStorageTypes })
+    })
     try {
       // Get rid of a warning about network refreshing.
       window.ethereum.autoRefreshOnNetworkChange = false;
@@ -215,6 +218,7 @@ class Model extends React.Component {
         });
     } catch (error) {
       console.error(error);
+      // TODO Toast error.
       alert(`Failed to load web3, accounts, or contract. Check console for details.`);
     }
   }
@@ -940,7 +944,7 @@ class Model extends React.Component {
           </div>
           <div className={this.classes.controls}>
             {renderStorageSelector("where to store the link between your update and your original unprocessed data",
-              this.state.storageType, this.handleInputChange)}
+              this.state.storageType, this.handleInputChange, this.state.permittedStorageTypes)}
           </div>
           <div>
             <AppBar position="static" className={this.classes.tabs}>

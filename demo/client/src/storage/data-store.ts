@@ -35,10 +35,20 @@ export class OriginalData {
 	}
 }
 
+export class DataStoreHealthStatus {
+	healthy: boolean
+
+	constructor(healthy: boolean) {
+		this.healthy = healthy
+	}
+}
+
 /**
  * Interact with the storage of model and data information.
  */
 export interface DataStore {
+	health(): Promise<DataStoreHealthStatus>
+
 	saveOriginalData(transactionHash: string, originalData: OriginalData): Promise<any>
 	getOriginalData(transactionHash: string): Promise<OriginalData>
 

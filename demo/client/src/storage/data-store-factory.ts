@@ -1,6 +1,6 @@
-import { DataStore } from './data-store';
-import { LocalDataStore } from './local-data-store';
-import { ServiceDataStore } from './service-data-store';
+import { DataStore } from './data-store'
+import { LocalDataStore } from './local-data-store'
+import { ServiceDataStore } from './service-data-store'
 
 export class DataStoreFactory {
 	create(storageType: 'local' | 'service'): DataStore {
