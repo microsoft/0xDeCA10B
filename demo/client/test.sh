@@ -26,4 +26,4 @@ cleanup
 mocha --recursive src/**/__tests__/*.test.js || exit 1
 
 # Set `CI=true` to avoid watching for changes.
-CI=true react-scripts test --env=./test/custom-test-env.js --testPathIgnorePatterns='src/.*/__tests__/[^/]*-node.test.js' --testMatch=**/*.test.js || exit 1
+CI=true react-scripts test --env=./test/custom-test-env.js --testPathIgnorePatterns='src/.*/__tests__/[^/]*-node.test.js' --testMatch=**/*.test.{js,ts} || exit 1

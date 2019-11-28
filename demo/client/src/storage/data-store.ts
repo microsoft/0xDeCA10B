@@ -10,7 +10,7 @@ export class ModelInformation {
 	encoder: string
 	accuracy: number
 
-	public constructor(id: string,
+	constructor(id: string,
 		name: string,
 		address: string,
 		description: string,
@@ -39,7 +39,7 @@ export class OriginalData {
  * Interact with the storage of model and data information.
  */
 export interface DataStore {
-	addOriginalData(transactionHash: string, originalData: OriginalData): Promise<any>
+	saveOriginalData(transactionHash: string, originalData: OriginalData): Promise<any>
 	getOriginalData(transactionHash: string): Promise<OriginalData>
 
 	saveModelInformation(modelInformation: ModelInformation): Promise<any>

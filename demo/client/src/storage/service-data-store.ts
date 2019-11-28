@@ -6,7 +6,7 @@ if (process.env.NODE_ENV === 'production' && axios.defaults.baseURL === undefine
 }
 
 export class ServiceDataStore implements DataStore {
-	addOriginalData(transactionHash: string, originalData: OriginalData): Promise<any> {
+	saveOriginalData(transactionHash: string, originalData: OriginalData): Promise<any> {
 		return axios.post('/api/data', {
 			transactionHash,
 			originalData,
@@ -16,7 +16,8 @@ export class ServiceDataStore implements DataStore {
 	getOriginalData(transactionHash: string): Promise<OriginalData> {
 		return axios.get(`/api/data/${transactionHash}`).then(response => {
 			const { originalData } = response.data;
-			return new OriginalData(originalData.text);
+			const {text} = originalData;
+			return new OriginalData(text);
 		})
 	}
 
@@ -26,7 +27,15 @@ export class ServiceDataStore implements DataStore {
 
 	getModels(afterId?: string, limit?: number): Promise<ModelInformation[]> {
 		return axios.get('/api/models').then(response => {
-			return response.data.models
+			return response.data.models.map((model: any) => new ModelInformation(
+				model.id,
+				model.name,
+				model.address,
+				model.description,
+				model.modelType,
+				model.encoder,
+				model.accuracy,
+			))
 		})
 	}
 

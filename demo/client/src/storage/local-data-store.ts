@@ -9,7 +9,7 @@ export class LocalDataStore implements DataStore {
 	private readonly modelStoreName = 'model';
 
 	constructor() {
-		const openRequest = window.indexedDB.open("database", 1);
+		const openRequest = indexedDB.open("database", 1);
 		openRequest.onerror = (event: any) => {
 			this.errorOpening = true
 			console.error("Could not open the database.")
@@ -47,7 +47,7 @@ export class LocalDataStore implements DataStore {
 		})
 	}
 
-	addOriginalData(transactionHash: string, originalData: OriginalData): Promise<any> {
+	saveOriginalData(transactionHash: string, originalData: OriginalData): Promise<any> {
 		return new Promise(async (resolve, reject) => {
 			await this.checkOpened()
 			const transaction = this.db!.transaction(this.dataStoreName, 'readwrite')
@@ -68,10 +68,12 @@ export class LocalDataStore implements DataStore {
 			const request = dataStore.get(transactionHash)
 			request.onerror = reject
 			request.onsuccess = (event: any) => {
-				if (event.target.result === undefined) {
+				const originalData = event.target.result;
+				if (originalData === undefined) {
 					reject(new Error("Data not found."))
 				} else {
-					resolve(event.target.result)
+					const {text} = originalData;
+					resolve(new OriginalData(text))
 				}
 			}
 		})
@@ -99,8 +101,16 @@ export class LocalDataStore implements DataStore {
 			modelStore.openCursor().onsuccess = (event: any) => {
 				const cursor = event.target.result
 				if (cursor) {
-					// TODO
-					models.push(cursor.value)
+					const model = cursor.value;
+					models.push(new ModelInformation(
+						model.id,
+						model.name,
+						model.address,
+						model.description,
+						model.modelType,
+						model.encoder,
+						model.accuracy,
+					))
 					cursor.continue()
 				} else {
 					resolve(models)
@@ -121,10 +131,19 @@ export class LocalDataStore implements DataStore {
 			const request = modelStore.get(address)
 			request.onerror = reject
 			request.onsuccess = (event: any) => {
-				if (event.target.result === undefined) {
+				const model = event.target.result;
+				if (model === undefined) {
 					reject(new Error("Model not found."))
 				} else {
-					resolve(event.target.result)
+					resolve(new ModelInformation(
+						model.id,
+						model.name,
+						model.address,
+						model.description,
+						model.modelType,
+						model.encoder,
+						model.accuracy,
+					))
 				}
 			}
 		})
