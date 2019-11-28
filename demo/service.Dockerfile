@@ -20,11 +20,8 @@ RUN apt-get update && apt-get install --fix-missing --yes build-essential git lo
 COPY client ./client
 COPY package.json server.js setup.sh setup_libs.sh yarn.lock ./
 
-RUN bash setup.sh
+RUN NODE_ENV='production' bash setup.sh
 
-# Override the port the blockchain uses (just for this command).
-# Test also builds the contracts.
-# FIXME Only build necessary stuff.
-RUN cd client && PORT=7545 yarn test
+RUN cd client && npx --no-install truffle compile
 
 RUN cd client && yarn build
