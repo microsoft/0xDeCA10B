@@ -668,6 +668,9 @@ class Model extends React.Component {
         }
 
         info.hasEnoughTimePassed = this.hasEnoughTimePassed(info, this.state.refundWaitTimeS);
+        // Don't explicitly set hasEnoughTimePassed on the info in case the timing is off on the info
+        // in case the user wants to send the request anyway and hope that by the time the transaction is processed
+        // that the request will be valid. In general these checks should just be done as warnings.
         this.canAttemptRefund(info, false, refundInfo => {
           const {
             canAttemptRefund = false,
@@ -721,7 +724,8 @@ class Model extends React.Component {
 
         info.hasEnoughTimePassed = this.hasEnoughTimePassed(info, this.state.refundWaitTimeS);
         this.canAttemptRefund(info, true, refundInfo => {
-          const { canAttemptRefund = false,
+          const {
+            canAttemptRefund = false,
             claimableAmount = null,
             err = null,
             prediction = null,
@@ -935,7 +939,8 @@ class Model extends React.Component {
             </Typography>
           </div>
           <div className={this.classes.controls}>
-            {renderStorageSelector(this.state.storageType, this.handleInputChange)}
+            {renderStorageSelector("where to store the link between your update and your original unprocessed data",
+              this.state.storageType, this.handleInputChange)}
           </div>
           <div>
             <AppBar position="static" className={this.classes.tabs}>
@@ -1031,18 +1036,20 @@ class Model extends React.Component {
                         </TableCell>
                         <TableCell>{new Date(d.time * 1000).toString()}</TableCell>
                         <TableCell>
+                          {/* Most of these checks should actually just be warnings and not explicitly forbid requesting
+                              because the request might be valid by the time the transaction actually gets processed. */}
                           {d.errorCheckingStatus ?
                             "Error checking status"
-                            : d.canAttemptRefund ?
-                              <Button className={this.classes.button} variant="outlined"
-                                onClick={() => this.refund(d.time)}>Refund {this.getHumanReadableEth(d.claimableAmount)}</Button>
-                              : !d.hasEnoughTimePassed ?
-                                `Wait ${moment.duration(d.time + this.state.refundWaitTimeS - (new Date().getTime() / 1000), 's').humanize()} to refund.`
+                            : d.hasEnoughTimePassed ?
+                              d.canAttemptRefund ?
+                                <Button className={this.classes.button} variant="outlined"
+                                  onClick={() => this.refund(d.time)}>Refund {this.getHumanReadableEth(d.claimableAmount)}</Button>
                                 : d.claimableAmount === 0 || d.claimableAmount === null ?
                                   `Already refunded or completely claimed.`
                                   : d.classification !== d.prediction ?
                                     `Classification doesn't match. Got "${this.getClassificationName(d.prediction)}".`
                                     : `Can't happen?`
+                              : `Wait ${moment.duration(d.time + this.state.refundWaitTimeS - (new Date().getTime() / 1000), 's').humanize()} to refund.`
                           }
                         </TableCell>
                       </TableRow>);

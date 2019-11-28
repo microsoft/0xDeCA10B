@@ -246,12 +246,15 @@ class AddModel extends React.Component {
                 this.renderStakeableOptions()
               }
               <div className={this.classes.selector}>
-                {renderStorageSelector(this.state.storageType, this.handleInputChange)}
+                {renderStorageSelector("where to store the supplied meta-data about this model like its address",
+                  this.state.storageType, this.handleInputChange)}
               </div>
             </div>
           </form>
           <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}
-            disabled={this.state.deploymentInfo.main.address !== undefined}
+            disabled={this.state.deploymentInfo.main.address !== undefined
+              || !(this.state.refundTimeWaitTimeS <= this.state.ownerClaimWaitTimeS)
+              || !(this.state.ownerClaimWaitTimeS <= this.state.anyAddressClaimWaitTimeS)}
           >
             Save
           </Button>
@@ -304,6 +307,7 @@ class AddModel extends React.Component {
           onChange={this.handleInputChange} />
       </Grid>
       <Grid item xs={12} sm={6}>
+        {/* TODO Show error if it is too low. */}
         <TextField name="ownerClaimWaitTimeS" label="Owner claim wait time (seconds)"
           className={this.classes.numberTextField}
           value={this.state.ownerClaimWaitTimeS}
@@ -312,6 +316,7 @@ class AddModel extends React.Component {
           onChange={this.handleInputChange} />
       </Grid>
       <Grid item xs={12} sm={6}>
+        {/* TODO Show error if it is too low. */}
         <TextField name="anyAddressClaimWaitTimeS" label="Any address claim wait time (seconds)"
           className={this.classes.numberTextField}
           value={this.state.anyAddressClaimWaitTimeS}
