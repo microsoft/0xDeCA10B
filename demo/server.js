@@ -91,7 +91,7 @@ initSqlJs().then(SQL => {
   function persistData(data) {
     db.run('INSERT INTO data VALUES (?, ?);', [
       data.transactionHash,
-      data.originalData,
+      data.originalData.text,
     ]);
     fs.writeFile(dbPath, Buffer.from(db.export()), () => { });
   }
@@ -106,10 +106,10 @@ initSqlJs().then(SQL => {
   // Get original training data.
   app.get('/api/data/:transactionHash', (req, res) => {
     const getTextStmt = db.prepare('SELECT text FROM data WHERE transaction_hash == $transactionHash LIMIT 1;');
-    const textResult = getTextStmt.getAsObject({ $transactionHash: req.params.transactionHash });
+    const result = getTextStmt.getAsObject({ $transactionHash: req.params.transactionHash });
     getTextStmt.free();
-    const originalData = textResult.text;
-    res.send({ originalData });
+    const { text } = result;
+    res.send({ originalData: { text } });
   });
 
   app.listen(port, () => console.log(`Listening on port ${port}`));

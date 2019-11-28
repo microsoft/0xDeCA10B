@@ -19,7 +19,6 @@ import Typography from '@material-ui/core/Typography';
 import * as mobilenet from '@tensorflow-models/mobilenet';
 import * as UniversalSentenceEncoder from '@tensorflow-models/universal-sentence-encoder';
 import * as tf from '@tensorflow/tfjs';
-import axios from 'axios';
 import loadImage from 'blueimp-load-image';
 import update from 'immutability-helper';
 import moment from 'moment';
@@ -34,6 +33,9 @@ import CollaborativeTrainer from '../contracts/CollaborativeTrainer64.json';
 import DataHandler from '../contracts/DataHandler64.json';
 import IncentiveMechanism from '../contracts/Stakeable64.json';
 import ImdbVocab from '../data/imdb.json';
+import { OriginalData } from '../storage/data-store';
+import { DataStoreFactory } from '../storage/data-store-factory';
+import { renderStorageSelector } from './storageSelector';
 
 moment.relativeTimeThreshold('ss', 4);
 
@@ -47,6 +49,12 @@ const styles = theme => ({
     paddingBottom: theme.spacing(2),
     display: 'flex',
     flexDirection: 'column'
+  },
+  info: {
+    paddingBottom: theme.spacing(1),
+  },
+  controls: {
+    paddingTop: theme.spacing(1),
   },
   button: {
     marginTop: '20px'
@@ -88,6 +96,9 @@ function areDataEqual(data1, data2) {
 }
 
 function getDisplayableOriginalData(data) {
+  if (data === undefined) {
+    return "<not found>";
+  }
   if (typeof data === 'string') {
     return `"${data}"`;
   }
@@ -119,6 +130,12 @@ class Model extends React.Component {
     this.props = props;
     this.classes = props.classes;
 
+    const storageFactory = new DataStoreFactory();
+    this.storages = {
+      local: storageFactory.create('local'),
+      service: storageFactory.create('service'),
+    }
+
     let tabIndex = 0;
     const currentUrlParams = new URLSearchParams(window.location.search);
     const tab = currentUrlParams.get('tab');
@@ -129,10 +146,14 @@ class Model extends React.Component {
       }
     }
 
+    // Default to local storage for storing original data.
+    const storageType = localStorage.getItem('storageType') || 'local';
+
     this.state = {
       readyForInput: false,
       contractInfo: {},
       modelId: currentUrlParams.get('modelId'),
+      contractAddress: currentUrlParams.get('address'),
       classifications: [],
       tab: tabIndex,
       addedData: [],
@@ -151,7 +172,8 @@ class Model extends React.Component {
       accountScore: undefined,
       numGood: undefined,
       toFloat: undefined,
-      totalGoodDataCount: undefined
+      totalGoodDataCount: undefined,
+      storageType,
     }
 
     this.addDataCost = this.addDataCost.bind(this);
@@ -185,15 +207,15 @@ class Model extends React.Component {
       const fallbackProvider = new Web3.providers.HttpProvider("http://127.0.0.1:7545");
       this.web3 = await getWeb3({ fallbackProvider, requestPermission: true });
 
-      axios.get(`/api/models/${this.state.modelId}`).then(r => {
-        this.setState({ contractInfo: r.data.model },
-          async _ => {
-            await this.setContractInstance();
-          });
-      });
+      const storage = this.state.modelId ? this.storages.service : this.storages.local;
+      const modelInfo = await storage.getModel(this.state.modelId, this.state.contractAddress);
+      this.setState({ contractInfo: modelInfo },
+        async _ => {
+          await this.setContractInstance();
+        });
     } catch (error) {
-      alert(`Failed to load web3, accounts, or contract. Check console for details.`);
       console.error(error);
+      alert(`Failed to load web3, accounts, or contract. Check console for details.`);
     }
   }
 
@@ -215,7 +237,6 @@ class Model extends React.Component {
 
     // Using one `.then` and then awaiting helps with making the page more responsive.
     this.getContractInstance({
-      web3: this.web3,
       abi: CollaborativeTrainer.abi,
       address: contractAddress
     }).then(async contractInstance => {
@@ -226,7 +247,6 @@ class Model extends React.Component {
       ] = await Promise.all([
         contractInstance.methods.dataHandler().call().then(dataHandlerAddress => {
           return this.getContractInstance({
-            web3: this.web3,
             abi: DataHandler.abi,
             address: dataHandlerAddress
           })
@@ -240,14 +260,12 @@ class Model extends React.Component {
             alert("Couldn't determine model ABI.");
           }
           return this.getContractInstance({
-            web3: this.web3,
             abi: modelAbi,
             address: classifierAddress
           });
         }),
         contractInstance.methods.incentiveMechanism().call().then(incentiveMechanismAddress => {
           return this.getContractInstance({
-            web3: this.web3,
             abi: IncentiveMechanism.abi,
             address: incentiveMechanismAddress
           });
@@ -434,15 +452,8 @@ class Model extends React.Component {
       });
   }
 
-  getContractInstance(options) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const instance = new options.web3.eth.Contract(options.abi, options.address);
-        return resolve(instance);
-      } catch (err) {
-        return reject(err);
-      }
-    });
+  async getContractInstance(options) {
+    return new this.web3.eth.Contract(options.abi, options.address);
   }
 
   getDisplayableEncodedData(data) {
@@ -464,15 +475,25 @@ class Model extends React.Component {
     return `Ξ${(amount * 1E-18).toFixed(6)}`;
   }
 
-  // Returns a Promise.
+  /**
+   * 
+   * @param {string} transactionHash The transaction hash for the transacation that added the data.
+   * @returns A representation of the original data. If the storage type is 'none' or the data cannot be found then `undefined` is returned.
+   */
   async getOriginalData(transactionHash) {
-    return axios.get(`/api/data/${transactionHash}`).then(r => {
-      let result = r.data.originalData;
+    if (this.state.storageType === 'none') {
+      return undefined;
+    }
+    return this.storages[this.state.storageType].getOriginalData(transactionHash).then(originalData => {
+      originalData = originalData.text
       if (this.state.inputType === INPUT_TYPE_IMAGE) {
         // Return the encoding.
-        result = JSON.parse(result);
+        originalData = JSON.parse(originalData);
       }
-      return result;
+      return originalData;
+    }).catch(err => {
+      console.warn(`Could not find the original data for ${transactionHash}.`);
+      console.warn(err);
     });
   }
 
@@ -506,6 +527,13 @@ class Model extends React.Component {
     const name = target.name;
     this.setState({
       [name]: value
+    }, _ => {
+      if (name === 'storageType') {
+        localStorage.setItem(name, value);
+        // TODO Just update the original data field.
+        this.updateRefundData();
+        this.updateRewardData();
+      }
     });
   }
 
@@ -595,20 +623,21 @@ class Model extends React.Component {
   }
 
   updateDynamicAccountInfo() {
-    return this.state.incentiveMechanism.methods.numGoodDataPerAddress(this.state.accounts[0]).call()
-      .then(parseInt)
-      .then((numGood) => {
-        if (numGood > 0) {
-          this.state.incentiveMechanism.methods.totalGoodDataCount().call()
-            .then(parseInt)
-            .then((totalGoodDataCount) => {
-              const accountScore = (100 * numGood / totalGoodDataCount).toFixed(2) + "%";
-              this.setState({ accountScore, numGood, totalGoodDataCount });
-            });
-        } else if (this.state.accountScore !== undefined) {
-          this.setState({ accountScore: undefined, numGood: undefined });
-        }
-      });
+    return Promise.all(
+      [this.state.incentiveMechanism.methods.numGoodDataPerAddress(this.state.accounts[0]).call()
+        .then(parseInt),
+      this.state.incentiveMechanism.methods.totalGoodDataCount().call()
+        .then(parseInt),
+      ]
+    ).then(([numGood, totalGoodDataCount]) => {
+      let accountScore;
+      if (totalGoodDataCount > 0) {
+        accountScore = (100 * numGood / totalGoodDataCount).toFixed(2) + "%";
+      } else {
+        accountScore = "0%";
+      }
+      this.setState({ accountScore, numGood, totalGoodDataCount });
+    });
   }
 
   updateRefundData() {
@@ -627,32 +656,38 @@ class Model extends React.Component {
       const initialDeposit = parseInt(d.returnValues.cost);
 
       this.getOriginalData(d.transactionHash).then(originalData => {
-        this.transformInput(originalData).then(encodedData => {
-          const info = {
-            data, classification, initialDeposit, sender, time,
-            dataMatches: areDataEqual(data, encodedData),
-            originalData: getDisplayableOriginalData(originalData),
-          };
-
-          info.hasEnoughTimePassed = this.hasEnoughTimePassed(info, this.state.refundWaitTimeS);
-          this.canAttemptRefund(info, false, refundInfo => {
-            const {
-              canAttemptRefund = false,
-              claimableAmount = null,
-              err = null,
-              prediction = null,
-            } = refundInfo;
-            if (err) {
-              info.errorCheckingStatus = true;
-            } else {
-              info.canAttemptRefund = canAttemptRefund;
-              info.claimableAmount = claimableAmount;
-              info.prediction = prediction;
-            }
-            this.setState({
-              addedData: [...this.state.addedData, info]
-            });
+        const info = {
+          data, classification, initialDeposit, sender, time,
+          originalData: getDisplayableOriginalData(originalData),
+        };
+        if (originalData !== undefined) {
+          // If transforming the input takes a long time then it's possible that flag does not get added to the actual page.
+          this.transformInput(originalData).then(encodedData => {
+            info.dataMatches = areDataEqual(data, encodedData);
           });
+        }
+
+        info.hasEnoughTimePassed = this.hasEnoughTimePassed(info, this.state.refundWaitTimeS);
+        // Don't explicitly set hasEnoughTimePassed on the info in case the timing is off on the info
+        // in case the user wants to send the request anyway and hope that by the time the transaction is processed
+        // that the request will be valid. In general these checks should just be done as warnings.
+        this.canAttemptRefund(info, false, refundInfo => {
+          const {
+            canAttemptRefund = false,
+            claimableAmount = null,
+            err = null,
+            prediction = null,
+          } = refundInfo;
+          if (err) {
+            info.errorCheckingStatus = true;
+          } else {
+            info.canAttemptRefund = canAttemptRefund;
+            info.claimableAmount = claimableAmount;
+            info.prediction = prediction;
+          }
+          this.setState(prevState => ({
+            addedData: prevState.addedData.concat([info])
+          }));
         });
       }).catch(err => {
         console.error(`Error getting original data for transactionHash: ${d.transactionHash}`);
@@ -676,30 +711,35 @@ class Model extends React.Component {
       const time = parseInt(d.returnValues.t);
       const initialDeposit = parseInt(d.returnValues.cost);
       this.getOriginalData(d.transactionHash).then(originalData => {
-        this.transformInput(originalData).then(encodedData => {
-          const info = {
-            data, classification, initialDeposit, sender, time,
-            dataMatches: areDataEqual(data, encodedData),
-            originalData: getDisplayableOriginalData(originalData),
-          };
-          info.hasEnoughTimePassed = this.hasEnoughTimePassed(info, this.state.refundWaitTimeS);
-          this.canAttemptRefund(info, true, refundInfo => {
-            const { canAttemptRefund = false,
-              claimableAmount = null,
-              err = null,
-              prediction = null,
-            } = refundInfo;
-            if (err) {
-              info.errorCheckingStatus = true;
-            } else {
-              info.canAttemptRefund = canAttemptRefund;
-              info.claimableAmount = claimableAmount;
-              info.prediction = prediction;
-            }
-            this.setState({
-              rewardData: [...this.state.rewardData, info]
-            });
+        const info = {
+          data, classification, initialDeposit, sender, time,
+          originalData: getDisplayableOriginalData(originalData),
+        };
+        if (originalData !== undefined) {
+          // If transforming the input takes a long time then it's possible that flag does not get added to the actual page.
+          this.transformInput(originalData).then(encodedData => {
+            info.dataMatches = areDataEqual(data, encodedData);
           });
+        }
+
+        info.hasEnoughTimePassed = this.hasEnoughTimePassed(info, this.state.refundWaitTimeS);
+        this.canAttemptRefund(info, true, refundInfo => {
+          const {
+            canAttemptRefund = false,
+            claimableAmount = null,
+            err = null,
+            prediction = null,
+          } = refundInfo;
+          if (err) {
+            info.errorCheckingStatus = true;
+          } else {
+            info.canAttemptRefund = canAttemptRefund;
+            info.claimableAmount = claimableAmount;
+            info.prediction = prediction;
+          }
+          this.setState(prevState => ({
+            rewardData: prevState.rewardData.concat([info])
+          }));
         });
       }).catch(err => {
         console.error(`Error getting original data for transactionHash: ${d.transactionHash}`);
@@ -823,16 +863,18 @@ class Model extends React.Component {
               // Just store the encoding.
               originalData = JSON.stringify(trainData);
             }
-            return axios.post('/api/data', {
-              originalData,
-              transactionHash,
-            }).then(() => {
-              console.log("Saved info to DB.")
-              return this.updateRefundData().then(this.updateDynamicInfo);
-            }).catch(err => {
-              console.error("Error saving original data to DB.");
-              console.error(err);
-            });
+            if (this.state.storageType !== 'none') {
+              const storage = this.storages[this.state.storageType];
+              return storage.saveOriginalData(transactionHash, new OriginalData(originalData)).then(() => {
+                // TODO Toast.
+                console.log("Saved info to DB.")
+                return this.updateRefundData().then(this.updateDynamicInfo);
+              }).catch(err => {
+                // TODO Toast.
+                console.error("Error saving original data to DB.");
+                console.error(err);
+              });
+            }
           })
           .on('receipt', (receipt) => {
             // Doesn't get triggered through promise after updating to `web3 1.0.0-beta.52`.
@@ -868,30 +910,38 @@ class Model extends React.Component {
           </Typography>
           <br />
           <br />
-          {typeof this.state.accountScore !== 'undefined' &&
+          <div className={this.classes.info}>
             <Typography component="p">
               <b>Your score: </b>
-              {this.state.accountScore} ({this.state.numGood}/{this.state.totalGoodDataCount})
+              {this.state.accountScore !== undefined ? this.state.accountScore : "(loading)"}
+              {this.state.totalGoodDataCount !== undefined ?
+                ` (${this.state.numGood || 0}/${this.state.totalGoodDataCount || 0})`
+                : ""
+              }
             </Typography>
-          }
-          <Typography component="p">
-            <b>Time to wait before requesting a refund: </b>
-            {this.state.refundWaitTimeS ?
-              moment.duration(this.state.refundWaitTimeS, 's').humanize() :
-              "(loading)"}
-          </Typography>
-          <Typography component="p">
-            <b>Time to wait before taking another's deposit: </b>
-            {this.state.ownerClaimWaitTimeS ?
-              moment.duration(this.state.ownerClaimWaitTimeS, 's').humanize() :
-              "(loading)"}
-          </Typography>
-          <Typography component="p" title={`${this.state.depositCost} wei`}>
-            <b>Current Required Deposit: </b>
-            {this.state.depositCost ?
-              this.getHumanReadableEth(this.state.depositCost)
-              : "(loading)"}
-          </Typography>
+            <Typography component="p">
+              <b>Time to wait before requesting a refund: </b>
+              {this.state.refundWaitTimeS ?
+                moment.duration(this.state.refundWaitTimeS, 's').humanize() :
+                "(loading)"}
+            </Typography>
+            <Typography component="p">
+              <b>Time to wait before taking another's deposit: </b>
+              {this.state.ownerClaimWaitTimeS ?
+                moment.duration(this.state.ownerClaimWaitTimeS, 's').humanize() :
+                "(loading)"}
+            </Typography>
+            <Typography component="p" title={`${this.state.depositCost} wei`}>
+              <b>Current Required Deposit: </b>
+              {this.state.depositCost ?
+                this.getHumanReadableEth(this.state.depositCost)
+                : "(loading)"}
+            </Typography>
+          </div>
+          <div className={this.classes.controls}>
+            {renderStorageSelector("where to store the link between your update and your original unprocessed data",
+              this.state.storageType, this.handleInputChange)}
+          </div>
           <div>
             <AppBar position="static" className={this.classes.tabs}>
               <Tabs
@@ -947,7 +997,6 @@ class Model extends React.Component {
                           {classificationName}
                         </MenuItem>;
                       })}
-
                     </Select>
                     {this.renderLoadingContract()}
                     <Button type="submit" className={this.classes.button} variant="outlined"
@@ -979,7 +1028,7 @@ class Model extends React.Component {
                     {this.state.addedData.map(d => {
                       return (<TableRow key={`refund-row-${d.time}`}>
                         <TableCell title={`Encoded data: ${this.getDisplayableEncodedData(d.data)}`}>
-                          {d.originalData}{!d.dataMatches && " ⚠ The actual data doesn't match this!"}
+                          {d.originalData}{d.dataMatches === false && " ⚠ The actual data doesn't match this!"}
                         </TableCell>
                         <TableCell>{this.getClassificationName(d.classification)}</TableCell>
                         <TableCell title={`${d.initialDeposit} wei`}>
@@ -987,18 +1036,20 @@ class Model extends React.Component {
                         </TableCell>
                         <TableCell>{new Date(d.time * 1000).toString()}</TableCell>
                         <TableCell>
+                          {/* Most of these checks should actually just be warnings and not explicitly forbid requesting
+                              because the request might be valid by the time the transaction actually gets processed. */}
                           {d.errorCheckingStatus ?
                             "Error checking status"
-                            : d.canAttemptRefund ?
-                              <Button className={this.classes.button} variant="outlined"
-                                onClick={() => this.refund(d.time)}>Refund {this.getHumanReadableEth(d.claimableAmount)}</Button>
-                              : !d.hasEnoughTimePassed ?
-                                `Wait ${moment.duration(d.time + this.state.refundWaitTimeS - (new Date().getTime() / 1000), 's').humanize()} to refund.`
+                            : d.hasEnoughTimePassed ?
+                              d.canAttemptRefund ?
+                                <Button className={this.classes.button} variant="outlined"
+                                  onClick={() => this.refund(d.time)}>Refund {this.getHumanReadableEth(d.claimableAmount)}</Button>
                                 : d.claimableAmount === 0 || d.claimableAmount === null ?
                                   `Already refunded or completely claimed.`
                                   : d.classification !== d.prediction ?
                                     `Classification doesn't match. Got "${this.getClassificationName(d.prediction)}".`
                                     : `Can't happen?`
+                              : `Wait ${moment.duration(d.time + this.state.refundWaitTimeS - (new Date().getTime() / 1000), 's').humanize()} to refund.`
                           }
                         </TableCell>
                       </TableRow>);
@@ -1032,7 +1083,7 @@ class Model extends React.Component {
                     {this.state.rewardData.map(d => {
                       return (<TableRow key={`reward-row-${d.time}`}>
                         <TableCell title={`Encoded data: ${this.getDisplayableEncodedData(d.data)}`}>
-                          {d.originalData}{!d.dataMatches && " ⚠ The actual data doesn't match this!"}
+                          {d.originalData}{d.dataMatches === false && " ⚠ The actual data doesn't match this!"}
                         </TableCell>
                         <TableCell>{this.getClassificationName(d.classification)}</TableCell>
                         <TableCell title={`${d.initialDeposit} wei`}>

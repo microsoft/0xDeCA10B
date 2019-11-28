@@ -2,7 +2,6 @@ import { CssBaseline } from '@material-ui/core';
 import blue from '@material-ui/core/colors/blue';
 import { createMuiTheme } from '@material-ui/core/styles';
 import { ThemeProvider } from '@material-ui/styles';
-import axios from 'axios';
 import { SnackbarProvider } from 'notistack';
 import React, { Component } from 'react';
 import { BrowserRouter as Router, Route } from "react-router-dom";
@@ -10,10 +9,6 @@ import AddModel from './components/addModel';
 import AppBar from './components/appBar';
 import Model from './components/model';
 import ModelList from './containers/modelList';
-
-if (axios.defaults.baseURL === undefined && process.env.NODE_ENV === 'production' && process.env.BACKEND_URL) {
-  axios.defaults.baseURL = process.env.BACKEND_URL;
-}
 
 const theme = createMuiTheme({
   palette: {

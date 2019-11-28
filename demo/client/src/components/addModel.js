@@ -6,7 +6,6 @@ import Paper from '@material-ui/core/Paper';
 import { withStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import axios from 'axios';
 import update from 'immutability-helper';
 import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
@@ -19,6 +18,8 @@ import DensePerceptron from '../contracts/DensePerceptron.json';
 import SparsePerceptron from '../contracts/SparsePerceptron.json';
 import Stakeable64 from '../contracts/Stakeable64.json';
 import { convertToHex, convertToHexData } from '../float-utils';
+import { DataStoreFactory } from '../storage/data-store-factory';
+import { renderStorageSelector } from './storageSelector';
 
 const styles = theme => ({
   root: {
@@ -43,6 +44,7 @@ const styles = theme => ({
     marginTop: 8,
   },
   selector: {
+    paddingTop: theme.spacing(1),
     marginBottom: 8,
   },
   numberTextField: {
@@ -64,6 +66,12 @@ class AddModel extends React.Component {
 
   constructor(props) {
     super(props);
+
+    this.storageFactory = new DataStoreFactory();
+
+    // Default to local storage for storing original data.
+    const storageType = localStorage.getItem('storageType') || 'local';
+
     this.state = {
       name: "",
       description: "",
@@ -93,8 +101,10 @@ class AddModel extends React.Component {
           transactionHash: undefined,
           address: undefined,
         },
-      }
+      },
+      storageType,
     };
+
     this.modelTypes = {
       'dense perceptron': DensePerceptron,
       'sparse perceptron': SparsePerceptron,
@@ -108,6 +118,9 @@ class AddModel extends React.Component {
 
   componentDidMount = async () => {
     try {
+      // Get rid of a warning about network refreshing.
+      window.ethereum.autoRefreshOnNetworkChange = false;
+
       const fallbackProvider = new Web3.providers.HttpProvider("http://127.0.0.1:7545");
       this.web3 = await getWeb3({ fallbackProvider, requestPermission: true });
     } catch (error) {
@@ -138,6 +151,10 @@ class AddModel extends React.Component {
     const name = target.name;
     this.setState({
       [name]: value
+    }, _ => {
+      if (name === 'storageType') {
+        localStorage.setItem(name, value);
+      }
     });
   }
 
@@ -228,10 +245,16 @@ class AddModel extends React.Component {
               {this.state.incentiveMechanism === "Stakeable64" &&
                 this.renderStakeableOptions()
               }
+              <div className={this.classes.selector}>
+                {renderStorageSelector("where to store the supplied meta-data about this model like its address",
+                  this.state.storageType, this.handleInputChange)}
+              </div>
             </div>
           </form>
           <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}
-            disabled={this.state.deploymentInfo.main.address !== undefined}
+            disabled={this.state.deploymentInfo.main.address !== undefined
+              || !(this.state.refundTimeWaitTimeS <= this.state.ownerClaimWaitTimeS)
+              || !(this.state.ownerClaimWaitTimeS <= this.state.anyAddressClaimWaitTimeS)}
           >
             Save
           </Button>
@@ -284,6 +307,7 @@ class AddModel extends React.Component {
           onChange={this.handleInputChange} />
       </Grid>
       <Grid item xs={12} sm={6}>
+        {/* TODO Show error if it is too low. */}
         <TextField name="ownerClaimWaitTimeS" label="Owner claim wait time (seconds)"
           className={this.classes.numberTextField}
           value={this.state.ownerClaimWaitTimeS}
@@ -292,6 +316,7 @@ class AddModel extends React.Component {
           onChange={this.handleInputChange} />
       </Grid>
       <Grid item xs={12} sm={6}>
+        {/* TODO Show error if it is too low. */}
         <TextField name="anyAddressClaimWaitTimeS" label="Any address claim wait time (seconds)"
           className={this.classes.numberTextField}
           value={this.state.anyAddressClaimWaitTimeS}
@@ -343,14 +368,18 @@ class AddModel extends React.Component {
 
       modelInfo.address = mainContract.options.address;
 
-      // Save to the database.
-      axios.post('/api/models', modelInfo).then(() => {
-        this.notify("Saved", { variant: 'success' });
-        // TODO Redirect.
-      }).catch(err => {
-        console.error(err);
-        console.error(err.response.data.message);
-      });
+
+      if (this.state.storageType !== 'none') {
+        // Save to a database.
+        const storage = this.storageFactory.create(this.state.storageType);
+        storage.saveModelInformation(modelInfo).then(() => {
+          this.notify("Saved", { variant: 'success' });
+          // TODO Redirect.
+        }).catch(err => {
+          console.error(err);
+          console.error(err.response.data.message);
+        });
+      }
     });
   }
 

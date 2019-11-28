@@ -6,10 +6,10 @@ import ListItemText from '@material-ui/core/ListItemText';
 import Paper from '@material-ui/core/Paper';
 import { withStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
-import axios from 'axios';
 import PropTypes from 'prop-types';
 import React from 'react';
 import { Link } from "react-router-dom";
+import { DataStoreFactory } from '../storage/data-store-factory';
 
 const styles = theme => ({
   link: {
@@ -20,26 +20,50 @@ const styles = theme => ({
 class ModelList extends React.Component {
   constructor(props) {
     super(props);
+
+    const storageFactory = new DataStoreFactory();
+    this.storages = {
+      local: storageFactory.create('local'),
+      service: storageFactory.create('service'),
+    }
+
     this.state = {
+      models: [],
     }
   }
+
   componentDidMount() {
-    axios.get('/api/models').then(r => {
-      this.setState({ models: r.data.models });
-    }).catch(console.error);
+    Promise.all(Object.entries(this.storages).map(([key, storage]) => {
+      return storage.getModels().then(newModels => {
+        this.setState(prevState => ({ models: prevState.models.concat(newModels) }));
+      }).catch(err => {
+        // TODO Show warning toast.
+        console.warn(`Could not get ${key} models.`);
+        console.warn(err);
+      });
+    }));
   }
 
   render() {
     let listItems = [];
     if (this.state.models) {
       listItems = this.state.models.map(m => {
+        let key, keyName;
+        if (m.id) {
+          key = m.id;
+          keyName = 'modelId';
+        } else {
+          key = m.address;
+          keyName = 'address'
+        }
+        const url = `/model?${keyName}=${key}&tab=predict`;
         return (
-          <div key={`model-${m.id}`}>
-            <Link to={`/model?modelId=${m.id}&tab=predict`}>
+          <div key={`model-${key}`}>
+            <Link to={url}>
               <ListItem button>
                 <ListItemText primary={m.name}
                   primaryTypographyProps={{ className: this.props.classes.link }}
-                  secondary={(m.accuracy * 100).toFixed(1) + "%"} />
+                  secondary={m.accuracy && (m.accuracy * 100).toFixed(1) + "%"} />
               </ListItem>
             </Link>
             <Divider />

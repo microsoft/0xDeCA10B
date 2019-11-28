@@ -10,5 +10,8 @@ module.exports = class CustomTestEnvironment extends Environment {
             const { TextEncoder } = require('util');
             this.global.TextEncoder = TextEncoder;
         }
+        if (typeof indexedDB === 'undefined') {
+            this.global.indexedDB = require('fake-indexeddb');
+        }
     }
 }
