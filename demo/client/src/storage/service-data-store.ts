@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { DataStore, ModelInformation, OriginalData } from './data-store';
 
-if (process.env.NODE_ENV === 'production' && axios.defaults.baseURL === undefined && process.env.BACKEND_URL) {
-	axios.defaults.baseURL = process.env.BACKEND_URL;
+if (process.env.NODE_ENV === 'production' && axios.defaults.baseURL === undefined && process.env.BACK_END_URL) {
+	axios.defaults.baseURL = process.env.BACK_END_URL;
 }
 
 export class ServiceDataStore implements DataStore {

@@ -861,7 +861,7 @@ class Model extends React.Component {
             }
             if (this.state.storageType !== 'none') {
               const storage = this.storages[this.state.storageType];
-              return storage.addOriginalData(transactionHash, new OriginalData(originalData)).then(() => {
+              return storage.saveOriginalData(transactionHash, new OriginalData(originalData)).then(() => {
                 // TODO Toast.
                 console.log("Saved info to DB.")
                 return this.updateRefundData().then(this.updateDynamicInfo);
