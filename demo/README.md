@@ -77,18 +77,18 @@ Do once:
 * Copy the first private key output.
 * Use that private key to create a new account in MetaMask.
 
-## Server
-Start the server in one terminal.
-Run:
-```bash
-yarn server
-```
-
 ## Client
 Then in another terminal.
 Run:
 ```bash
 yarn client
+```
+
+## Server (Optional)
+If you want to store meta-data in a local database instead of within the browser, then start the server in one terminal.
+Run:
+```bash
+yarn server
 ```
 
 ## Troubleshooting Deployment

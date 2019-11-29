@@ -1,4 +1,4 @@
-import { DataStore, ModelInformation, OriginalData } from './data-store';
+import { DataStore, DataStoreHealthStatus, ModelInformation, OriginalData } from './data-store'
 
 export class LocalDataStore implements DataStore {
 	errorOpening?: boolean
@@ -6,14 +6,14 @@ export class LocalDataStore implements DataStore {
 	db?: IDBDatabase
 
 	private readonly dataStoreName = 'data'
-	private readonly modelStoreName = 'model';
+	private readonly modelStoreName = 'model'
 
 	constructor() {
-		const openRequest = indexedDB.open("database", 1);
+		const openRequest = indexedDB.open("database", 1)
 		openRequest.onerror = (event: any) => {
 			this.errorOpening = true
 			console.error("Could not open the database.")
-			console.error(event);
+			console.error(event)
 			throw new Error("Could not open the database.")
 		}
 
@@ -47,6 +47,12 @@ export class LocalDataStore implements DataStore {
 		})
 	}
 
+	health(): Promise<DataStoreHealthStatus> {
+		return this.checkOpened().then(() => {
+			return new DataStoreHealthStatus(true)
+		})
+	}
+
 	saveOriginalData(transactionHash: string, originalData: OriginalData): Promise<any> {
 		return new Promise(async (resolve, reject) => {
 			await this.checkOpened()
@@ -68,11 +74,11 @@ export class LocalDataStore implements DataStore {
 			const request = dataStore.get(transactionHash)
 			request.onerror = reject
 			request.onsuccess = (event: any) => {
-				const originalData = event.target.result;
+				const originalData = event.target.result
 				if (originalData === undefined) {
 					reject(new Error("Data not found."))
 				} else {
-					const {text} = originalData;
+					const { text } = originalData
 					resolve(new OriginalData(text))
 				}
 			}
@@ -101,7 +107,7 @@ export class LocalDataStore implements DataStore {
 			modelStore.openCursor().onsuccess = (event: any) => {
 				const cursor = event.target.result
 				if (cursor) {
-					const model = cursor.value;
+					const model = cursor.value
 					models.push(new ModelInformation(
 						model.id,
 						model.name,
@@ -131,7 +137,7 @@ export class LocalDataStore implements DataStore {
 			const request = modelStore.get(address)
 			request.onerror = reject
 			request.onsuccess = (event: any) => {
-				const model = event.target.result;
+				const model = event.target.result
 				if (model === undefined) {
 					reject(new Error("Model not found."))
 				} else {

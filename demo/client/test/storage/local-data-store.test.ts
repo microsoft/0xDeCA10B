@@ -1,9 +1,14 @@
 import assert from 'assert'
-import { ModelInformation, OriginalData } from '../../src/storage/data-store'
+import { DataStoreHealthStatus, ModelInformation, OriginalData } from '../../src/storage/data-store'
 import { DataStoreFactory } from '../../src/storage/data-store-factory'
 
 describe("LocalDataStore", () => {
     const db = new DataStoreFactory().create('local')
+    it("should be healthy", async () => {
+        const status = await db.health()
+        assert.deepStrictEqual(status, new DataStoreHealthStatus(true))
+    })
+
     it("should find models", async () => {
         const modelInfo = new ModelInformation('id', 'name', 'address', 'description', 'modelType', 'encoder', 0)
         db.saveModelInformation(modelInfo)

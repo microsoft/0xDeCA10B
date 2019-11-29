@@ -19,7 +19,7 @@ import SparsePerceptron from '../contracts/SparsePerceptron.json';
 import Stakeable64 from '../contracts/Stakeable64.json';
 import { convertToHex, convertToHexData } from '../float-utils';
 import { DataStoreFactory } from '../storage/data-store-factory';
-import { renderStorageSelector } from './storageSelector';
+import { checkStorages, renderStorageSelector } from './storageSelector';
 
 const styles = theme => ({
   root: {
@@ -67,10 +67,9 @@ class AddModel extends React.Component {
   constructor(props) {
     super(props);
 
-    this.storageFactory = new DataStoreFactory();
-
     // Default to local storage for storing original data.
     const storageType = localStorage.getItem('storageType') || 'local';
+    this.storages = DataStoreFactory.getAll()
 
     this.state = {
       name: "",
@@ -103,6 +102,7 @@ class AddModel extends React.Component {
         },
       },
       storageType,
+      permittedStorageTypes: [],
     };
 
     this.modelTypes = {
@@ -117,6 +117,9 @@ class AddModel extends React.Component {
   }
 
   componentDidMount = async () => {
+    checkStorages(this.storages).then(permittedStorageTypes => {
+      this.setState({ permittedStorageTypes })
+    })
     try {
       // Get rid of a warning about network refreshing.
       window.ethereum.autoRefreshOnNetworkChange = false;
@@ -247,7 +250,7 @@ class AddModel extends React.Component {
               }
               <div className={this.classes.selector}>
                 {renderStorageSelector("where to store the supplied meta-data about this model like its address",
-                  this.state.storageType, this.handleInputChange)}
+                  this.state.storageType, this.handleInputChange, this.state.permittedStorageTypes)}
               </div>
             </div>
           </form>
@@ -371,7 +374,7 @@ class AddModel extends React.Component {
 
       if (this.state.storageType !== 'none') {
         // Save to a database.
-        const storage = this.storageFactory.create(this.state.storageType);
+        const storage = this.storages[this.state.storageType];
         storage.saveModelInformation(modelInfo).then(() => {
           this.notify("Saved", { variant: 'success' });
           // TODO Redirect.
