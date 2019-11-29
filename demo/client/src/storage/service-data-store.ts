@@ -49,7 +49,7 @@ export class ServiceDataStore implements DataStore {
 	}
 
 	getModel(modelId?: string, address?: string): Promise<ModelInformation> {
-		return axios.get(`/api/models/${modelId}`).then(response => {
+		return axios.get(`/api/model?modelId=${modelId}&address=${address}`).then(response => {
 			const { model } = response.data
 			if (address !== null && address !== undefined && model.address !== address) {
 				throw new Error("Could not find a model with the matching address.")
