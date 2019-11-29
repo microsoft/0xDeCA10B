@@ -18,7 +18,8 @@ initSqlJs().then(SQL => {
     console.log("Creating a new DB.");
     db = new SQL.Database();
     sqlstr = "CREATE TABLE model (id INTEGER PRIMARY KEY, name TEXT, address TEXT, description TEXT, model_type TEXT, encoder TEXT, accuracy NUMBER);"
-      + "CREATE TABLE data (transaction_hash TEXT PRIMARY KEY, text TEXT);";
+      + "CREATE TABLE data (transaction_hash TEXT PRIMARY KEY, text TEXT);"
+      + "CREATE INDEX index_address ON model(address);";
     db.run(sqlstr);
   }
 
@@ -69,9 +70,10 @@ initSqlJs().then(SQL => {
   });
 
   // Get model with specific ID.
-  app.get('/api/models/:modelId', (req, res) => {
-    const getModelStmt = db.prepare("SELECT * FROM model WHERE id == $modelId LIMIT 1;");
-    const model = getModelStmt.getAsObject({ $modelId: req.params.modelId });
+  app.get('/api/model', (req, res) => {
+    const { modelId, address } = req.query;
+    const getModelStmt = db.prepare("SELECT * FROM model WHERE id == $modelId OR address == $address LIMIT 1;");
+    const model = getModelStmt.getAsObject({ $modelId: modelId, $address: address });
     getModelStmt.free();
     model.modelType = model.model_type;
     delete model.model_type;
