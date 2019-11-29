@@ -21,11 +21,7 @@ class ModelList extends React.Component {
   constructor(props) {
     super(props);
 
-    const storageFactory = new DataStoreFactory();
-    this.storages = {
-      local: storageFactory.create('local'),
-      service: storageFactory.create('service'),
-    }
+    this.storages = DataStoreFactory.getAll()
 
     this.state = {
       models: [],

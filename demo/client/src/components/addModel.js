@@ -69,11 +69,7 @@ class AddModel extends React.Component {
 
     // Default to local storage for storing original data.
     const storageType = localStorage.getItem('storageType') || 'local';
-    const storageFactory = new DataStoreFactory();
-    this.storages = {
-      local: storageFactory.create('local'),
-      service: storageFactory.create('service'),
-    }
+    this.storages = DataStoreFactory.getAll()
 
     this.state = {
       name: "",
