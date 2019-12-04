@@ -20,7 +20,7 @@
     "sql.js": "^1.0.0"
   },
   "devDependencies": {
-    "ethlint": "^1.2.4",
-    "nodemon": "^1.18.11"    
+    "ethlint": "^1.2.5",
+    "nodemon": "^1.18.11"
   }
 }

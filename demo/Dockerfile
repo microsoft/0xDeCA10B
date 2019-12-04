@@ -1,4 +1,4 @@
-FROM node:10.15
+FROM node:10.17
 
 LABEL maintainer="Justin D. Harris (justin.harris@microsoft.com)"
 LABEL org.label-schema.vendor="Microsoft"

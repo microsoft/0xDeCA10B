@@ -1,6 +1,6 @@
 import assert from 'assert'
-import { DataStoreHealthStatus, ModelInformation, OriginalData } from '../../src/storage/data-store'
-import { DataStoreFactory } from '../../src/storage/data-store-factory'
+import { DataStoreHealthStatus, ModelInformation, OriginalData } from '../data-store'
+import { DataStoreFactory } from '../data-store-factory'
 
 describe("LocalDataStore", () => {
     const db = new DataStoreFactory().create('local')
