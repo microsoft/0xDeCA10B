@@ -4,7 +4,8 @@ import { createMuiTheme } from '@material-ui/core/styles';
 import { ThemeProvider } from '@material-ui/styles';
 import { SnackbarProvider } from 'notistack';
 import React, { Component } from 'react';
-import { BrowserRouter as Router, Route } from "react-router-dom";
+import { BrowserRouter as Router, Route } from 'react-router-dom';
+import About from './components/About';
 import AddModel from './components/addModel';
 import AppBar from './components/appBar';
 import Model from './components/model';
@@ -39,8 +40,9 @@ class App extends Component {
               </div>
               <div style={mainDiv}>
                 <Route exact path="/" component={ModelList} />
-                <Route path="/model" component={Model} />
+                <Route path="/about" component={About} />
                 <Route path="/add" component={AddModel} />
+                <Route path="/model" component={Model} />
               </div>
             </div>
           </SnackbarProvider>
