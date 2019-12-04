@@ -32,13 +32,13 @@ class CustomAppBar extends React.Component {
             <Typography variant="h6" color="inherit" className={classes.flex}>
               Decentralized &amp; Collaborative AI on Blockchain
             </Typography>
-            <Link to='/add'>
+            <Link title="Add a new model" to='/add'>
               <Button className={classes.button}>
                 <AddIcon />
               </Button>
             </Link>
-            <Link to="/">
-              <Button>
+            <Link title="Go to the home page" to='/'>
+              <Button className={classes.button}>
                 <HomeIcon />
               </Button>
             </Link>

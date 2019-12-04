@@ -1047,7 +1047,7 @@ class Model extends React.Component {
                                 : d.claimableAmount === 0 || d.claimableAmount === null ?
                                   `Already refunded or completely claimed.`
                                   : d.classification !== d.prediction ?
-                                    `Classification doesn't match. Got "${this.getClassificationName(d.prediction)}".`
+                                    `Classification does not match. Got "${this.getClassificationName(d.prediction)}".`
                                     : `Can't happen?`
                               : `Wait ${moment.duration(d.time + this.state.refundWaitTimeS - (new Date().getTime() / 1000), 's').humanize()} to refund.`
                           }
