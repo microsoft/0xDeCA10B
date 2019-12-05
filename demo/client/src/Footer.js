@@ -19,24 +19,22 @@ class Footer extends React.Component {
     return (
       <footer className={classes.footer}>
         <Typography variant="subtitle1" color="textSecondary" align="center">
-          TODO WARNING About putting data on a public blockchain.
+          {/* TODO Make sure CELA validates this text. */}
+          ⚠ WARNING When you upload a model or data to train a model, that data is added to a public blockchain not controlled by Microsoft.
+          Learn more <Link href='/about'>here</Link>.
         </Typography>
         <Typography variant="body2" color="textSecondary" align="center">
-          <Link to="https://go.microsoft.com/?linkid=2028325">Contact Us</Link>
+          <Link href='https://go.microsoft.com/?linkid=2028325' target='_blank'>Contact Us</Link>
           &nbsp;|&nbsp;
-          <Link to="https://go.microsoft.com/fwlink/?LinkId=521839">{"Privacy & Cookies"}</Link>
+          <Link href='https://go.microsoft.com/fwlink/?LinkId=521839' target='_blank'>Privacy {"&"} Cookies</Link>
           &nbsp;|&nbsp;
-          <Link to="https://go.microsoft.com/fwlink/?LinkID=246338">Terms of Use</Link>
+          <Link href='https://go.microsoft.com/fwlink/?LinkID=246338' target='_blank'>Terms of Use</Link>
           &nbsp;|&nbsp;
-          {/* Waiting for CELA to say if a Code of Conduct is needed. */}
-          {/* <Link>Code of Conduct</Link>
-          &nbsp;|&nbsp; */}
-          <Link to="https://go.microsoft.com/fwlink/?LinkId=506942">Trademarks</Link>
+          <Link href='/about' target='_blank'>Code of Conduct</Link>
+          &nbsp;|&nbsp;
+          <Link href='https://go.microsoft.com/fwlink/?LinkId=506942' target='_blank'>Trademarks</Link>
           &nbsp;|&nbsp;
           © {new Date().getFullYear()} Microsoft
-        </Typography>
-        <Typography variant="body2" color="textSecondary" align="center">
-          {/* TODO Microsoft logo */}
         </Typography>
       </footer>
     )
