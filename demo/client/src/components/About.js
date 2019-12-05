@@ -10,17 +10,13 @@ const styles = theme => ({
 });
 
 class About extends React.Component {
-  constructor(props) {
-    super(props);
-    this.classes = props.classes;
-  }
-
   render() {
+    const { classes } = this.props
     return (<Container maxWidth="lg">
       <Typography variant="h6" component="h6" color="textSecondary">
         TODO Title
       </Typography>
-      <Typography className={this.classes.aboutDescription} component="p">
+      <Typography className={classes.aboutDescription} component="p">
         TODO
       </Typography>
     </Container>);

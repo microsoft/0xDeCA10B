@@ -25,13 +25,15 @@ const styles = {
 
 class CustomAppBar extends React.Component {
   render() {
-    const { classes } = this.props;
+    const { classes } = this.props
+    const name = "Sharing Updatable Models"
     return (
       <div className={classes.root}>
         <AppBar position="static" color="default">
           <Toolbar>
+            {/* TODO Put small logo instead of the name. */}
             <Typography variant="h6" color="inherit" className={classes.flex}>
-              Decentralized &amp; Collaborative AI on Blockchain
+              {name}
             </Typography>
             <Link title="About this site" to='/about'>
               <Button className={classes.button}>

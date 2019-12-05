@@ -10,6 +10,7 @@ import AddModel from './components/addModel';
 import AppBar from './components/appBar';
 import Model from './components/model';
 import ModelList from './containers/modelList';
+import Footer from './Footer';
 
 const theme = createMuiTheme({
   palette: {
@@ -44,6 +45,7 @@ class App extends Component {
                 <Route path="/add" component={AddModel} />
                 <Route path="/model" component={Model} />
               </div>
+              <Footer />
             </div>
           </SnackbarProvider>
         </ThemeProvider>
