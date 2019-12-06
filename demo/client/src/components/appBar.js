@@ -3,12 +3,13 @@ import Button from '@material-ui/core/Button';
 import { withStyles } from '@material-ui/core/styles';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
-import InfoIcon from '@material-ui/icons/Info';
 import AddIcon from '@material-ui/icons/Add';
 import HomeIcon from '@material-ui/icons/Home';
+import InfoIcon from '@material-ui/icons/Info';
 import PropTypes from 'prop-types';
 import React from 'react';
 import { Link } from "react-router-dom";
+import logoImg from '../images/logo_transparent_100x66.png';
 
 const styles = {
   root: {
@@ -21,19 +22,27 @@ const styles = {
     marginLeft: -12,
     marginRight: 20,
   },
+  logoContainer: {
+    marginTop: 10,
+  },
+  logo: {
+    width: 85,
+  }
 };
 
 class CustomAppBar extends React.Component {
   render() {
     const { classes } = this.props
-    const name = "Sharing Updatable Models"
     return (
       <div className={classes.root}>
         <AppBar position="static" color="default">
           <Toolbar>
-            {/* TODO Put small logo instead of the name. */}
+            <div className={classes.logoContainer}>
+              <Link to='/'>
+                <img className={classes.logo} id="logo" alt="Logo" src={logoImg} />
+              </Link>
+            </div>
             <Typography variant="h6" color="inherit" className={classes.flex}>
-              {name}
             </Typography>
             <Link title="About this site" to='/about'>
               <Button className={classes.button}>
