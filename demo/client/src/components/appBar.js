@@ -9,7 +9,7 @@ import InfoIcon from '@material-ui/icons/Info';
 import PropTypes from 'prop-types';
 import React from 'react';
 import { Link } from "react-router-dom";
-import logoImg from '../images/logo_transparent_100x66.png';
+import logoImg from '../images/logo_transparent_100x73.png';
 
 const styles = {
   root: {
