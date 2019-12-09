@@ -8,11 +8,16 @@ if (process.env.NODE_ENV === 'production' && axios.defaults.baseURL === undefine
 }
 
 export class ServiceDataStore implements DataStore {
-	health(): Promise<DataStoreHealthStatus> {
-		return axios.get('/api/health').then(response => {
-			const { healthy } = response.data
-			return new DataStoreHealthStatus(healthy)
-		})
+	async health(): Promise<DataStoreHealthStatus> {
+		if (process.env.REACT_APP_DISABLE_SERVICE_DATA_STORE === undefined
+			|| process.env.REACT_APP_DISABLE_SERVICE_DATA_STORE.toLocaleLowerCase() === 'false') {
+			return axios.get('/api/health').then(response => {
+				const { healthy } = response.data
+				return new DataStoreHealthStatus(healthy)
+			})
+		} else {
+			return new DataStoreHealthStatus(false)
+		}
 	}
 
 	saveOriginalData(transactionHash: string, originalData: OriginalData): Promise<any> {
