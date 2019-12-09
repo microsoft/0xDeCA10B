@@ -33,7 +33,7 @@ class App extends Component {
     }
     const contentWrap = {
       // Pad enough for the footer height.
-      paddingBottom: '5rem',
+      paddingBottom: '18rem',
     }
 
     return (

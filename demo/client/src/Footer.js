@@ -7,10 +7,10 @@ const styles = theme => ({
     backgroundColor: theme.palette.background.paper,
     marginTop: theme.spacing(1),
     padding: theme.spacing(2),
-
     position: 'absolute',
     width: '100%',
-    height: '5rem',
+    maxHeight: '18rem',
+    minHeight: '7rem',
     left: 0,
     bottom: 0,
     right: 0,
@@ -24,7 +24,7 @@ class Footer extends React.Component {
       <footer className={classes.footer}>
         <Typography variant="subtitle1" color="textSecondary" align="center">
           {/* TODO Make sure CELA validates this text. */}
-          ⚠ WARNING When you upload a model or data to train a model, that data is added to a public blockchain not controlled by Microsoft.
+          ⚠ WARNING Uploaded models and data used to train models are added to a decentralized public blockchain not controlled by Microsoft. We strongly encourage not training models using data with personally identifiable information.
           Learn more <Link href='/about'>here</Link>.
         </Typography>
         <Typography variant="body2" color="textSecondary" align="center">
