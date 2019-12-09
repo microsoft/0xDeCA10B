@@ -5,8 +5,12 @@ import React from 'react';
 const styles = theme => ({
   footer: {
     backgroundColor: theme.palette.background.paper,
-    padding: theme.spacing(6),
+    marginTop: theme.spacing(1),
+    padding: theme.spacing(2),
+
     position: 'absolute',
+    width: '100%',
+    height: '5rem',
     left: 0,
     bottom: 0,
     right: 0,
@@ -25,15 +29,15 @@ class Footer extends React.Component {
         </Typography>
         <Typography variant="body2" color="textSecondary" align="center">
           <Link href='https://go.microsoft.com/?linkid=2028325' target='_blank'>Contact Us</Link>
-          &nbsp;|&nbsp;
+          &nbsp;| &nbsp;
           <Link href='https://go.microsoft.com/fwlink/?LinkId=521839' target='_blank'>Privacy {"&"} Cookies</Link>
-          &nbsp;|&nbsp;
+          &nbsp;| &nbsp;
           <Link href='https://go.microsoft.com/fwlink/?LinkID=246338' target='_blank'>Terms of Use</Link>
-          &nbsp;|&nbsp;
+          &nbsp;| &nbsp;
           <Link href='/about' target='_blank'>Code of Conduct</Link>
-          &nbsp;|&nbsp;
+          &nbsp;| &nbsp;
           <Link href='https://go.microsoft.com/fwlink/?LinkId=506942' target='_blank'>Trademarks</Link>
-          &nbsp;|&nbsp;
+          &nbsp;| &nbsp;
           © {new Date().getFullYear()} Microsoft
         </Typography>
       </footer>

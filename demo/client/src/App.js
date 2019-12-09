@@ -25,25 +25,35 @@ const theme = createMuiTheme({
 class App extends Component {
   render() {
     const mainDiv = {
-      'marginTop': '50px'
+      marginTop: '50px'
     };
+    const page = {
+      position: 'relative',
+      minHeight: '100vh',
+    }
+    const contentWrap = {
+      // Pad enough for the footer height.
+      paddingBottom: '5rem',
+    }
 
     return (
       <Router>
         <ThemeProvider theme={theme}>
           <SnackbarProvider maxSnack={5}>
             <CssBaseline />
-            <div className="App">
-              <div className="App-header">
-                <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500" />
-                <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
-                <AppBar />
-              </div>
-              <div style={mainDiv}>
-                <Route exact path="/" component={ModelList} />
-                <Route path="/about" component={About} />
-                <Route path="/add" component={AddModel} />
-                <Route path="/model" component={Model} />
+            <div className="App" style={page}>
+              <div className="content-wrap" style={contentWrap}>
+                <div className="App-header">
+                  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500" />
+                  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+                  <AppBar />
+                </div>
+                <div style={mainDiv}>
+                  <Route exact path="/" component={ModelList} />
+                  <Route path="/about" component={About} />
+                  <Route path="/add" component={AddModel} />
+                  <Route path="/model" component={Model} />
+                </div>
               </div>
               <Footer />
             </div>
