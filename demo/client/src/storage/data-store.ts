@@ -37,9 +37,11 @@ export class OriginalData {
 
 export class DataStoreHealthStatus {
 	healthy: boolean
+	details: any
 
-	constructor(healthy: boolean) {
+	constructor(healthy: boolean, details?: any ) {
 		this.healthy = healthy
+		this.details = details
 	}
 }
 
