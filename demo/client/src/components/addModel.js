@@ -121,8 +121,10 @@ class AddModel extends React.Component {
       this.setState({ permittedStorageTypes })
     })
     try {
-      // Get rid of a warning about network refreshing.
-      window.ethereum.autoRefreshOnNetworkChange = false;
+      if (window.ethereum) {
+        // Get rid of a warning about network refreshing.
+        window.ethereum.autoRefreshOnNetworkChange = false;
+      }
 
       const fallbackProvider = new Web3.providers.HttpProvider("http://127.0.0.1:7545");
       this.web3 = await getWeb3({ fallbackProvider, requestPermission: true });
@@ -188,14 +190,16 @@ class AddModel extends React.Component {
             <div className={this.classes.form} >
               <TextField
                 name="name"
-                label="Name"
+                label="Model name"
+                inputProps={{ 'aria-label': "Model name" }}
                 className={this.classes.textField}
                 margin="normal"
                 onChange={this.handleInputChange}
               />
               <TextField
                 name="description"
-                label="Description"
+                label="Model description"
+                inputProps={{ 'aria-label': "Model description" }}
                 className={this.classes.textField}
                 margin="normal"
                 onChange={this.handleInputChange}
@@ -303,6 +307,7 @@ class AddModel extends React.Component {
     return <Grid container spacing={2}>
       <Grid item xs={12} sm={6}>
         <TextField name="refundTimeWaitTimeS" label="Refund wait time (seconds)"
+          inputProps={{ 'aria-label': "Refund wait time in seconds" }}
           className={this.classes.numberTextField}
           value={this.state.refundTimeWaitTimeS}
           type="number"
@@ -312,6 +317,7 @@ class AddModel extends React.Component {
       <Grid item xs={12} sm={6}>
         {/* TODO Show error if it is too low. */}
         <TextField name="ownerClaimWaitTimeS" label="Owner claim wait time (seconds)"
+          inputProps={{ 'aria-label': "Owner claim wait time in seconds" }}
           className={this.classes.numberTextField}
           value={this.state.ownerClaimWaitTimeS}
           type="number"
@@ -321,6 +327,7 @@ class AddModel extends React.Component {
       <Grid item xs={12} sm={6}>
         {/* TODO Show error if it is too low. */}
         <TextField name="anyAddressClaimWaitTimeS" label="Any address claim wait time (seconds)"
+          inputProps={{ 'aria-label': "Any address claim wait time in seconds" }}
           className={this.classes.numberTextField}
           value={this.state.anyAddressClaimWaitTimeS}
           type="number"
@@ -329,6 +336,7 @@ class AddModel extends React.Component {
       </Grid>
       <Grid item xs={12} sm={6}>
         <TextField name="costWeight" label="Cost weight (in wei)"
+          inputProps={{ 'aria-label': "Cost weight in wei" }}
           className={this.classes.numberTextField}
           value={this.state.costWeight}
           type="number"

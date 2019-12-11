@@ -201,9 +201,12 @@ class Model extends React.Component {
       this.setState({ permittedStorageTypes })
     })
     try {
-      // Get rid of a warning about network refreshing.
-      window.ethereum.autoRefreshOnNetworkChange = false;
+      if (window.ethereum) {
+        // Get rid of a warning about network refreshing.
+        window.ethereum.autoRefreshOnNetworkChange = false;
+      }
 
+      // TODO Fallback to Ethereum mainnet.
       const fallbackProvider = new Web3.providers.HttpProvider("http://127.0.0.1:7545");
       this.web3 = await getWeb3({ fallbackProvider, requestPermission: true });
 
@@ -624,18 +627,25 @@ class Model extends React.Component {
   }
 
   updateDynamicAccountInfo() {
-    return Promise.all(
-      [this.state.incentiveMechanism.methods.numGoodDataPerAddress(this.state.accounts[0]).call()
-        .then(parseInt),
+    return Promise.all([
+      Promise.resolve(this.state.accounts && this.state.accounts[0]).then(account => {
+        if (account) {
+          return this.state.incentiveMechanism.methods.numGoodDataPerAddress(account).call()
+            .then(parseInt)
+        }
+      }),
       this.state.incentiveMechanism.methods.totalGoodDataCount().call()
-        .then(parseInt),
-      ]
-    ).then(([numGood, totalGoodDataCount]) => {
-      let accountScore;
-      if (totalGoodDataCount > 0) {
-        accountScore = (100 * numGood / totalGoodDataCount).toFixed(2) + "%";
+        .then(parseInt)
+    ]).then(([numGood, totalGoodDataCount]) => {
+      let accountScore
+      if (numGood !== undefined) {
+        if (totalGoodDataCount > 0) {
+          accountScore = (100 * numGood / totalGoodDataCount).toFixed(2) + "%";
+        } else {
+          accountScore = "0%";
+        }
       } else {
-        accountScore = "0%";
+        accountScore = "(no account specified in browser)"
       }
       this.setState({ accountScore, numGood, totalGoodDataCount });
     });
@@ -1122,7 +1132,7 @@ class Model extends React.Component {
     return this.state.inputType === undefined ?
       <div></div>
       : this.state.inputType === INPUT_TYPE_TEXT ?
-        <TextField name="input" label="Input" onChange={this.handleInputChange} margin="normal"
+        <TextField inputProps={{ 'aria-label': "Input to the model" }} name="input" label="Input" onChange={this.handleInputChange} margin="normal"
           value={this.state.input}
         />
         : <Dropzone onDrop={this.processUploadedImageInput}>

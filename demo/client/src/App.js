@@ -14,7 +14,10 @@ import Footer from './Footer';
 
 const theme = createMuiTheme({
   palette: {
-    primary: blue,
+    primary: {
+      // Use a lighter color for better contrast and accessibility.
+      main: blue[300]
+    },
     type: 'dark',
   },
   typography: {

@@ -52,7 +52,7 @@ class ModelList extends React.Component {
   render() {
     let listItems = [];
     if (this.state.models) {
-      listItems = this.state.models.map(m => {
+      listItems = this.state.models.map((m, index) => {
         let key, keyName;
         if (m.id) {
           key = m.id;
@@ -63,7 +63,7 @@ class ModelList extends React.Component {
         }
         const url = `/model?${keyName}=${key}&tab=predict`;
         return (
-          <div key={`model-${key}`}>
+          <div key={`model-${index}`}>
             <Link to={url}>
               <ListItem button>
                 <ListItemText primary={m.name}
@@ -71,7 +71,7 @@ class ModelList extends React.Component {
                   secondary={m.accuracy && (m.accuracy * 100).toFixed(1) + "%"} />
               </ListItem>
             </Link>
-            <Divider />
+            {index + 1 !== this.state.models.length && <Divider />}
           </div>
         );
       });
