@@ -19,6 +19,10 @@ export function checkStorages(storages) {
 }
 
 export function renderStorageSelector(detailedDescription, currentValue, handleInputChange, permittedStorageTypes) {
+    if (currentValue !== 'none' && permittedStorageTypes.indexOf(currentValue) < 0) {
+        // `currentValue` is invalid. Avoid a warning.
+        currentValue = ''
+    }
     return <div>
         <InputLabel htmlFor="storage-selector">
             {`Storage (${detailedDescription})`}

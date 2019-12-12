@@ -22,6 +22,7 @@ import * as tf from '@tensorflow/tfjs';
 import loadImage from 'blueimp-load-image';
 import update from 'immutability-helper';
 import moment from 'moment';
+import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
 import React from 'react';
 import Dropzone from 'react-dropzone';
@@ -172,6 +173,8 @@ class Model extends React.Component {
       totalGoodDataCount: undefined,
       storageType,
       permittedStorageTypes: [],
+      // Default to restricting content for safety.
+      restrictContent: true,
     }
 
     this.addDataCost = this.addDataCost.bind(this);
@@ -224,6 +227,14 @@ class Model extends React.Component {
     }
   }
 
+  notify(...args) {
+    return this.props.enqueueSnackbar(...args);
+  }
+
+  dismissNotification(...args) {
+    return this.props.closeSnackbar(...args);
+  }
+
   setContractInstance = async () => {
     const accounts = await this.web3.eth.getAccounts();
 
@@ -240,10 +251,12 @@ class Model extends React.Component {
     }
 
     const validator = new OnlineSafetyValidator(this.web3)
-    if (!await validator.isPermitted(contractAddress)) {
-      // TODO Toast error
-      console.error("NOT VALID")
-      return
+    if (await validator.isPermitted(contractAddress)) {
+      this.setState({ restrictContent: false })
+    } else {
+      this.setState({ restrictContent: true })
+      this.notify("The details for this model cannot be shown because it has not been verified", { variant: 'warning' })
+      console.warn("The details for this model cannot be shown because it has not been verified.")
     }
 
     // Using one `.then` and then awaiting helps with making the page more responsive.
@@ -921,10 +934,16 @@ class Model extends React.Component {
       <Container>
         <Paper className={this.classes.root} elevation={1}>
           <Typography variant="h5" component="h3">
-            {this.state.contractInfo.name}
+            {this.state.contractInfo.name && this.state.restrictContent ?
+              "(name hidden)"
+              : this.state.contractInfo.name
+            }
           </Typography>
           <Typography component="p">
-            {this.state.contractInfo.description}
+            {this.state.contractInfo.description && this.state.restrictContent ?
+              "(description hidden)"
+              : this.state.contractInfo.description
+            }
           </Typography>
           <br />
           <br />
@@ -1161,4 +1180,4 @@ Model.propTypes = {
   classes: PropTypes.object.isRequired,
 };
 
-export default withStyles(styles)(Model);
+export default withSnackbar(withStyles(styles)(Model));

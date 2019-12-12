@@ -6,6 +6,7 @@ import ListItemText from '@material-ui/core/ListItemText';
 import Paper from '@material-ui/core/Paper';
 import { withStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
+import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
 import React from 'react';
 import { Link } from "react-router-dom";
@@ -35,9 +36,9 @@ class ModelList extends React.Component {
           return storage.getModels().then(newModels => {
             this.setState(prevState => ({ models: prevState.models.concat(newModels) }));
           }).catch(err => {
-            // TODO Show error toast.
-            console.error(`Could not get ${key} models.`);
-            console.error(err);
+            this.notify(`Could not get ${key} models`, { variant: 'error' })
+            console.error(`Could not get ${key} models.`)
+            console.error(err)
           });
         } else {
           console.warn(`${key} models are not available.`);
@@ -47,6 +48,14 @@ class ModelList extends React.Component {
         console.warn(err);
       })
     }));
+  }
+
+  notify(...args) {
+    return this.props.enqueueSnackbar(...args);
+  }
+
+  dismissNotification(...args) {
+    return this.props.closeSnackbar(...args);
   }
 
   render() {
@@ -97,4 +106,4 @@ ModelList.propTypes = {
   classes: PropTypes.object.isRequired,
 };
 
-export default withStyles(styles)(ModelList);
+export default withSnackbar(withStyles(styles)(ModelList));
