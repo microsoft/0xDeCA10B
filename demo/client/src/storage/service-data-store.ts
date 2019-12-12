@@ -13,8 +13,8 @@ export class ServiceDataStore implements DataStore {
 	}
 
 	async health(): Promise<DataStoreHealthStatus> {
-		if (process.env.REACT_APP_DISABLE_SERVICE_DATA_STORE === undefined
-			|| process.env.REACT_APP_DISABLE_SERVICE_DATA_STORE.toLocaleLowerCase() === 'false') {
+		if (process.env.REACT_APP_ENABLE_SERVICE_DATA_STORE === undefined
+			|| process.env.REACT_APP_ENABLE_SERVICE_DATA_STORE.toLocaleLowerCase() === 'true') {
 			return axios.get(this.url + '/api/health').then(response => {
 				const { healthy } = response.data
 				return new DataStoreHealthStatus(healthy, { url: this.url })

@@ -33,6 +33,7 @@ import CollaborativeTrainer from '../contracts/CollaborativeTrainer64.json';
 import DataHandler from '../contracts/DataHandler64.json';
 import IncentiveMechanism from '../contracts/Stakeable64.json';
 import ImdbVocab from '../data/imdb.json';
+import { OnlineSafetyValidator } from '../safety/validator';
 import { OriginalData } from '../storage/data-store';
 import { DataStoreFactory } from '../storage/data-store-factory';
 import { checkStorages, renderStorageSelector } from './storageSelector';
@@ -236,7 +237,13 @@ class Model extends React.Component {
       console.warn(`Using found contract address: ${contractAddress}`);
     } else {
       // Use the contract address from the database and assume it conforms to the known interfaces.
-      // TODO Get abi from https://etherscan.io/apis#contracts
+    }
+
+    const validator = new OnlineSafetyValidator(this.web3)
+    if (!await validator.isPermitted(contractAddress)) {
+      // TODO Toast error
+      console.error("NOT VALID")
+      return
     }
 
     // Using one `.then` and then awaiting helps with making the page more responsive.
