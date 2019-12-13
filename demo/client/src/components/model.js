@@ -3,6 +3,7 @@ import AppBar from '@material-ui/core/AppBar';
 import Button from '@material-ui/core/Button';
 import Container from '@material-ui/core/Container';
 import InputLabel from '@material-ui/core/InputLabel';
+import Link from '@material-ui/core/Link';
 import MenuItem from '@material-ui/core/MenuItem';
 import Paper from '@material-ui/core/Paper';
 import Select from '@material-ui/core/Select';
@@ -98,23 +99,6 @@ function areDataEqual(data1, data2) {
   return true;
 }
 
-function getDisplayableOriginalData(data) {
-  if (data === undefined) {
-    return "<not found>";
-  }
-  if (typeof data === 'string') {
-    return `"${data}"`;
-  }
-  if (Array.isArray(data)) {
-    let result = JSON.stringify(data, null, 2);
-    if (result.length > 110) {
-      result = result.slice(0, 100) + "...";
-    }
-    return result;
-  }
-  return data;
-}
-
 class Model extends React.Component {
   PREDICT_TAB = 0;
   TRAIN_TAB = 1;
@@ -174,14 +158,13 @@ class Model extends React.Component {
       storageType,
       permittedStorageTypes: [],
       // Default to restricting content for safety.
+      checkedContentRestriction: false,
       restrictContent: true,
     }
 
     this.addDataCost = this.addDataCost.bind(this);
     this.canAttemptRefund = this.canAttemptRefund.bind(this);
     this.getContractInstance = this.getContractInstance.bind(this);
-    this.getHumanReadableEth = this.getHumanReadableEth.bind(this);
-    this.getSentiment = this.getClassificationName.bind(this);
     this.handleInputChange = this.handleInputChange.bind(this);
     this.handleTabChange = this.handleTabChange.bind(this);
     this.hasEnoughTimePassed = this.hasEnoughTimePassed.bind(this);
@@ -251,12 +234,11 @@ class Model extends React.Component {
     }
 
     const validator = new OnlineSafetyValidator(this.web3)
-    if (await validator.isPermitted(contractAddress)) {
-      this.setState({ restrictContent: false })
-    } else {
-      this.setState({ restrictContent: true })
+    const checkedContentRestriction = true
+    const restrictContent = !await validator.isPermitted(contractAddress)
+    this.setState({ checkedContentRestriction, restrictContent })
+    if (restrictContent) {
       this.notify("The details for this model cannot be shown because it has not been verified", { variant: 'warning' })
-      console.warn("The details for this model cannot be shown because it has not been verified.")
     }
 
     // Using one `.then` and then awaiting helps with making the page more responsive.
@@ -494,6 +476,26 @@ class Model extends React.Component {
     return result;
   }
 
+  getDisplayableOriginalData(data, isForTaking = false) {
+    if (isForTaking && this.state.restrictContent) {
+      return "(hidden)"
+    }
+    if (data === undefined) {
+      return "(not found)";
+    }
+    if (typeof data === 'string') {
+      return `"${data}"`;
+    }
+    if (Array.isArray(data)) {
+      let result = JSON.stringify(data, null, 2);
+      if (result.length > 110) {
+        result = result.slice(0, 100) + "...";
+      }
+      return result;
+    }
+    return data;
+  }
+
   getHumanReadableEth(amount) {
     // Could use web3.fromWei but it returns a string and then truncating would be trickier/less efficient.
     return `Ξ${(amount * 1E-18).toFixed(6)}`;
@@ -689,7 +691,7 @@ class Model extends React.Component {
       this.getOriginalData(d.transactionHash).then(originalData => {
         const info = {
           data, classification, initialDeposit, sender, time,
-          originalData: getDisplayableOriginalData(originalData),
+          originalData: this.getDisplayableOriginalData(originalData),
         };
         if (originalData !== undefined) {
           // If transforming the input takes a long time then it's possible that flag does not get added to the actual page.
@@ -728,6 +730,7 @@ class Model extends React.Component {
   }
 
   updateRewardData() {
+    const isForTaking = true
     this.setState({ rewardData: [] });
     const account = this.state.accounts[0];
     this.handleAddedData(null, d => {
@@ -744,7 +747,7 @@ class Model extends React.Component {
       this.getOriginalData(d.transactionHash).then(originalData => {
         const info = {
           data, classification, initialDeposit, sender, time,
-          originalData: getDisplayableOriginalData(originalData),
+          originalData: this.getDisplayableOriginalData(originalData, isForTaking),
         };
         if (originalData !== undefined) {
           // If transforming the input takes a long time then it's possible that flag does not get added to the actual page.
@@ -754,7 +757,7 @@ class Model extends React.Component {
         }
 
         info.hasEnoughTimePassed = this.hasEnoughTimePassed(info, this.state.refundWaitTimeS);
-        this.canAttemptRefund(info, true, refundInfo => {
+        this.canAttemptRefund(info, isForTaking, refundInfo => {
           const {
             canAttemptRefund = false,
             claimableAmount = null,
@@ -933,16 +936,27 @@ class Model extends React.Component {
     return (
       <Container>
         <Paper className={this.classes.root} elevation={1}>
+          {this.state.checkedContentRestriction && this.state.restrictContent &&
+            <div>
+              ⚠ The details for this model cannot be shown because it has not been verified.
+              In the interest of online safety, text and images that come from other users
+              will not be shown. <Link href='/about' target='_blank'>Learn more</Link>.
+            </div>
+          }
           <Typography variant="h5" component="h3">
-            {this.state.contractInfo.name && this.state.restrictContent ?
-              "(name hidden)"
-              : this.state.contractInfo.name
+            {this.state.checkedContentRestriction ?
+              this.state.contractInfo.name && this.state.restrictContent ?
+                "(name hidden)"
+                : this.state.contractInfo.name
+              : "(loading)"
             }
           </Typography>
           <Typography component="p">
-            {this.state.contractInfo.description && this.state.restrictContent ?
-              "(description hidden)"
-              : this.state.contractInfo.description
+            {this.state.checkedContentRestriction ?
+              this.state.contractInfo.description && this.state.restrictContent ?
+                "(description hidden)"
+                : this.state.contractInfo.description
+              : "(loading)"
             }
           </Typography>
           <br />
@@ -1005,7 +1019,7 @@ class Model extends React.Component {
                     </Button>
                     <br />
                     <Typography component="p" title={this.state.encodedPredictionData}>
-                      <b>Prediction: {this.getClassificationName(this.state.prediction)}</b>
+                      <b>Prediction: {this.state.restrictContent ? this.state.prediction : this.getClassificationName(this.state.prediction)}</b>
                     </Typography>
                     <GridLoader loading={this.state.predicting}
                       size="15"
@@ -1030,8 +1044,8 @@ class Model extends React.Component {
                       }}
                     >
                       {this.state.classifications.map((classificationName, classIndex) => {
-                        return <MenuItem key={`class-select-${classificationName}`} value={classIndex}>
-                          {classificationName}
+                        return <MenuItem key={`class-select-${classIndex}`} value={classIndex}>
+                          {this.state.restrictContent ? classIndex : classificationName}
                         </MenuItem>;
                       })}
                     </Select>
@@ -1067,7 +1081,7 @@ class Model extends React.Component {
                         <TableCell title={`Encoded data: ${this.getDisplayableEncodedData(d.data)}`}>
                           {d.originalData}{d.dataMatches === false && " ⚠ The actual data doesn't match this!"}
                         </TableCell>
-                        <TableCell>{this.getClassificationName(d.classification)}</TableCell>
+                        <TableCell>{this.state.restrictContent ? d.classification : this.getClassificationName(d.classification)}</TableCell>
                         <TableCell title={`${d.initialDeposit} wei`}>
                           {this.getHumanReadableEth(d.initialDeposit)}
                         </TableCell>
@@ -1084,7 +1098,7 @@ class Model extends React.Component {
                                 : d.claimableAmount === 0 || d.claimableAmount === null ?
                                   `Already refunded or completely claimed.`
                                   : d.classification !== d.prediction ?
-                                    `Classification does not match. Got "${this.getClassificationName(d.prediction)}".`
+                                    `Classification does not match. Got "${d.prediction ? this.state.prediction : this.getClassificationName(d.prediction)}".`
                                     : `Can't happen?`
                               : `Wait ${moment.duration(d.time + this.state.refundWaitTimeS - (new Date().getTime() / 1000), 's').humanize()} to refund.`
                           }
@@ -1122,7 +1136,7 @@ class Model extends React.Component {
                         <TableCell title={`Encoded data: ${this.getDisplayableEncodedData(d.data)}`}>
                           {d.originalData}{d.dataMatches === false && " ⚠ The actual data doesn't match this!"}
                         </TableCell>
-                        <TableCell>{this.getClassificationName(d.classification)}</TableCell>
+                        <TableCell>{this.state.restrictContent ? d.classification : this.getClassificationName(d.classification)}</TableCell>
                         <TableCell title={`${d.initialDeposit} wei`}>
                           {this.getHumanReadableEth(d.initialDeposit)}
                         </TableCell>
@@ -1137,7 +1151,7 @@ class Model extends React.Component {
                                 : this.state.numGood === 0 || this.state.numGood === undefined ?
                                   "Validate your own contributions first."
                                   : d.classification === d.prediction ?
-                                    `Classification must be wrong for you to claim this. Got "${this.getClassificationName(d.prediction)}".`
+                                    `Classification must be wrong for you to claim this. Got "${this.state.restrictContent ? d.prediction : this.getClassificationName(d.prediction)}".`
                                     : "Already refunded or completely claimed."
                               : `Wait ${moment.duration(d.time + this.state.refundWaitTimeS - (new Date().getTime() / 1000), 's').humanize()} to claim.`
                           }
