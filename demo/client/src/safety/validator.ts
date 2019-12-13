@@ -1,8 +1,8 @@
 import config from './config'
 
 export class OnlineSafetyValidator {
-    private enabled: boolean = process.env.REACT_APP_ENABLE_ONLINE_SAFETY === undefined
-        || process.env.REACT_APP_ENABLE_ONLINE_SAFETY.toLowerCase() === 'true'
+    private enabled: boolean = process.env.REACT_APP_ENABLE_ONLINE_SAFETY !== undefined
+        && process.env.REACT_APP_ENABLE_ONLINE_SAFETY.toLowerCase() === 'true'
     private verified: Set<string>
 
     constructor() {

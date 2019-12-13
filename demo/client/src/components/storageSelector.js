@@ -8,7 +8,7 @@ export function checkStorages(storages) {
         return storage.health().then(status => {
             if (status.healthy) {
                 return key;
-            } else if(status.details.err) {
+            } else if (status.details.err) {
                 console.warn(`${key} data is not available.`);
                 console.warn(status.details.err)
             }

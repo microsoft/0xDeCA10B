@@ -225,13 +225,13 @@ class Model extends React.Component {
       // Use the contract address from the database and assume it conforms to the known interfaces.
     }
 
-    const validator = new OnlineSafetyValidator(this.web3)
-    const checkedContentRestriction = true
-    const networkType = await this.web3.eth.net.getNetworkType()
-    const restrictContent = !validator.isPermitted(networkType, contractAddress)
-    this.setState({ checkedContentRestriction, restrictContent })
-    if (restrictContent) {
-      this.notify("The details for this model cannot be shown because it has not been verified", { variant: 'warning' })
+    {
+      const validator = new OnlineSafetyValidator(this.web3)
+      const networkType = await this.web3.eth.net.getNetworkType()
+      this.setState({
+        checkedContentRestriction: true,
+        restrictContent: !validator.isPermitted(networkType, contractAddress)
+      })
     }
 
     // Using one `.then` and then awaiting helps with making the page more responsive.
@@ -470,11 +470,11 @@ class Model extends React.Component {
   }
 
   getDisplayableOriginalData(data, isForTaking = false) {
+    if (data === undefined) {
+      return "(not found)"
+    }
     if (isForTaking && this.state.restrictContent) {
       return "(hidden)"
-    }
-    if (data === undefined) {
-      return "(not found)";
     }
     if (typeof data === 'string') {
       return `"${data}"`;
@@ -929,29 +929,26 @@ class Model extends React.Component {
     return (
       <Container>
         <Paper className={this.classes.root} elevation={1}>
-          {this.state.checkedContentRestriction && this.state.restrictContent &&
-            <div>
-              ⚠ The details for this model cannot be shown because it has not been verified.
-              In the interest of online safety, text and images that come from other users
-              will not be shown. <Link href='/about' target='_blank'>Learn more</Link>.
-            </div>
-          }
           <Typography variant="h5" component="h3">
             {this.state.checkedContentRestriction ?
               this.state.contractInfo.name && this.state.restrictContent ?
-                "(name hidden)"
+                "(hidden)"
                 : this.state.contractInfo.name
               : "(loading)"
             }
           </Typography>
-          <Typography component="p">
-            {this.state.checkedContentRestriction ?
-              this.state.contractInfo.description && this.state.restrictContent ?
-                "(description hidden)"
-                : this.state.contractInfo.description
-              : "(loading)"
-            }
-          </Typography>
+
+          {this.state.checkedContentRestriction ?
+            this.state.contractInfo.description && this.state.restrictContent ?
+              <Typography component="p">
+                {"⚠ The details for this model cannot be shown because it has not been verified. \
+                  Text and images from other users will not be shown in order to ensure online safety. "}
+                <Link href='/about' target='_blank'>Learn more</Link>.
+              </Typography>
+              : <Typography component="p">{this.state.contractInfo.description}</Typography>
+            : <Typography component="p">{"(loading)"}</Typography>
+          }
+
           <br />
           <br />
           <div className={this.classes.info}>
