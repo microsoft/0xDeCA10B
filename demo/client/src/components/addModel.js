@@ -1,4 +1,3 @@
-import getWeb3 from "@drizzle-utils/get-web3";
 import { Container, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableHead, TableRow } from '@material-ui/core';
 import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
@@ -11,13 +10,13 @@ import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
 import React from 'react';
 import Dropzone from 'react-dropzone';
-import Web3 from "web3"; // Only required for custom/fallback provider option.
 import CollaborativeTrainer64 from '../contracts/CollaborativeTrainer64.json';
 import DataHandler64 from '../contracts/DataHandler64.json';
 import DensePerceptron from '../contracts/DensePerceptron.json';
 import SparsePerceptron from '../contracts/SparsePerceptron.json';
 import Stakeable64 from '../contracts/Stakeable64.json';
 import { convertToHex, convertToHexData } from '../float-utils';
+import { getWeb3 } from '../getWeb3';
 import { DataStoreFactory } from '../storage/data-store-factory';
 import { checkStorages, renderStorageSelector } from './storageSelector';
 
@@ -121,15 +120,9 @@ class AddModel extends React.Component {
       this.setState({ permittedStorageTypes })
     })
     try {
-      if (window.ethereum) {
-        // Get rid of a warning about network refreshing.
-        window.ethereum.autoRefreshOnNetworkChange = false;
-      }
-
-      const fallbackProvider = new Web3.providers.HttpProvider("http://127.0.0.1:7545");
-      this.web3 = await getWeb3({ fallbackProvider, requestPermission: true });
+      this.web3 = await getWeb3()
     } catch (error) {
-      alert(`Failed to load web3, accounts, or contract. Check console for details.`);
+      this.notify("Failed to load web3, accounts, or contract. Check console for details.", { variant: 'error' })
       console.error(error);
     }
   }
@@ -164,8 +157,9 @@ class AddModel extends React.Component {
   }
 
   processUploadedModel(acceptedFiles) {
-    if (acceptedFiles.length === 0 || acceptedFiles.length > 1) {
-      alert("Please only provide one file.");
+    if (acceptedFiles.length !== 1) {
+      this.notify("Please only provide one file", { variant: 'error' })
+      return
     }
     const reader = new FileReader();
     const file = acceptedFiles[0];

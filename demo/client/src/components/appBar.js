@@ -17,7 +17,7 @@ import MenuIcon from '@material-ui/icons/Menu';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import React from 'react';
-import { Link } from "react-router-dom";
+import { Link } from 'react-router-dom';
 import logoImg from '../images/logo_transparent_100x73.png';
 
 const drawerWidth = 220;
