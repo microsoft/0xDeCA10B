@@ -157,7 +157,7 @@ class AddModel extends React.Component {
   }
 
   processUploadedModel(acceptedFiles) {
-    if (acceptedFiles.length === 0 || acceptedFiles.length > 1) {
+    if (acceptedFiles.length !== 1) {
       this.notify("Please only provide one file", { variant: 'error' })
       return
     }
