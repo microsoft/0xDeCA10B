@@ -10,7 +10,10 @@ import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
 import React from 'react';
 import { Link } from "react-router-dom";
+import { checkStorages } from '../components/storageSelector';
+import { OnlineSafetyValidator } from '../safety/validator';
 import { DataStoreFactory } from '../storage/data-store-factory';
+import { getWeb3 } from '../getWeb3';
 
 const styles = theme => ({
   link: {
@@ -29,25 +32,25 @@ class ModelList extends React.Component {
     }
   }
 
-  componentDidMount() {
-    Promise.all(Object.entries(this.storages).map(([key, storage]) => {
-      return storage.health().then(status => {
-        if (status.healthy) {
-          return storage.getModels().then(newModels => {
-            this.setState(prevState => ({ models: prevState.models.concat(newModels) }));
+  componentDidMount = async () => {
+    const web3 = await getWeb3()
+    const networkType = await web3.eth.net.getNetworkType()
+    const validator = new OnlineSafetyValidator()
+    checkStorages(this.storages).then(permittedStorageTypes => {
+      permittedStorageTypes.filter(storageType => storageType !== undefined)
+        .forEach(storageType => {
+          return this.storages[storageType].getModels().then(newModels => {
+            newModels.forEach(model => {
+              model.restrictContent = !validator.isPermitted(networkType, model.address)
+            })
+            this.setState(prevState => ({ models: prevState.models.concat(newModels) }))
           }).catch(err => {
-            this.notify(`Could not get ${key} models`, { variant: 'error' })
-            console.error(`Could not get ${key} models.`)
+            this.notify(`Could not get ${storageType} models`, { variant: 'error' })
+            console.error(`Could not get ${storageType} models.`)
             console.error(err)
-          });
-        } else {
-          console.warn(`${key} models are not available.`);
-        }
-      }).catch(err => {
-        console.warn(`${key} models are not available.`);
-        console.warn(err);
-      })
-    }));
+          })
+        })
+    })
   }
 
   notify(...args) {
@@ -75,9 +78,9 @@ class ModelList extends React.Component {
           <div key={`model-${index}`}>
             <Link to={url}>
               <ListItem button>
-                <ListItemText primary={m.name}
+                <ListItemText primary={m.restrictContent ? `(name hidden) Address: ${m.address}` : m.name}
                   primaryTypographyProps={{ className: this.props.classes.link }}
-                  secondary={m.accuracy && (m.accuracy * 100).toFixed(1) + "%"} />
+                  secondary={m.accuracy && `Accuracy: ${(m.accuracy * 100).toFixed(1)}%`} />
               </ListItem>
             </Link>
             {index + 1 !== this.state.models.length && <Divider />}

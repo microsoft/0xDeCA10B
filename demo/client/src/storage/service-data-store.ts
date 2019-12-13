@@ -15,12 +15,14 @@ export class ServiceDataStore implements DataStore {
 	async health(): Promise<DataStoreHealthStatus> {
 		if (process.env.REACT_APP_ENABLE_SERVICE_DATA_STORE === undefined
 			|| process.env.REACT_APP_ENABLE_SERVICE_DATA_STORE.toLocaleLowerCase() === 'true') {
-			return axios.get(this.url + '/api/health').then(response => {
+			return axios.get(this.url + '/api/health', { timeout: 1000 }).then(response => {
 				const { healthy } = response.data
 				return new DataStoreHealthStatus(healthy, { url: this.url })
+			}).catch(err => {
+				return new DataStoreHealthStatus(false, { err })
 			})
 		} else {
-			return new DataStoreHealthStatus(false, { reason: "disabled" })
+			return new DataStoreHealthStatus(false, { reason: "Disabled" })
 		}
 	}
 

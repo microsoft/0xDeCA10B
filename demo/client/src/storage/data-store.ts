@@ -39,9 +39,12 @@ export class DataStoreHealthStatus {
 	healthy: boolean
 	details: any
 
-	constructor(healthy: boolean, details?: any ) {
+	constructor(healthy: boolean, details?: any) {
 		this.healthy = healthy
 		this.details = details
+		if (this.details === undefined) {
+			this.details = {}
+		}
 	}
 }
 

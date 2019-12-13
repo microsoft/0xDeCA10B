@@ -1,4 +1,3 @@
-import getWeb3 from '@drizzle-utils/get-web3';
 import AppBar from '@material-ui/core/AppBar';
 import Button from '@material-ui/core/Button';
 import Container from '@material-ui/core/Container';
@@ -29,12 +28,12 @@ import React from 'react';
 import Dropzone from 'react-dropzone';
 import ClipLoader from 'react-spinners/ClipLoader';
 import GridLoader from 'react-spinners/GridLoader';
-import Web3 from "web3"; // Only required for custom/fallback provider option.
 import Classifier from "../contracts/Classifier64.json";
 import CollaborativeTrainer from '../contracts/CollaborativeTrainer64.json';
 import DataHandler from '../contracts/DataHandler64.json';
 import IncentiveMechanism from '../contracts/Stakeable64.json';
 import ImdbVocab from '../data/imdb.json';
+import { getWeb3 } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
 import { OriginalData } from '../storage/data-store';
 import { DataStoreFactory } from '../storage/data-store-factory';
@@ -188,14 +187,7 @@ class Model extends React.Component {
       this.setState({ permittedStorageTypes })
     })
     try {
-      if (window.ethereum) {
-        // Get rid of a warning about network refreshing.
-        window.ethereum.autoRefreshOnNetworkChange = false;
-      }
-
-      // TODO Fallback to Ethereum mainnet.
-      const fallbackProvider = new Web3.providers.HttpProvider("http://127.0.0.1:7545");
-      this.web3 = await getWeb3({ fallbackProvider, requestPermission: true });
+      this.web3 = await getWeb3()
 
       const storage = this.state.modelId ? this.storages.service : this.storages.local;
       const modelInfo = await storage.getModel(this.state.modelId, this.state.contractAddress);
@@ -235,7 +227,8 @@ class Model extends React.Component {
 
     const validator = new OnlineSafetyValidator(this.web3)
     const checkedContentRestriction = true
-    const restrictContent = !await validator.isPermitted(contractAddress)
+    const networkType = await this.web3.eth.net.getNetworkType()
+    const restrictContent = !validator.isPermitted(networkType, contractAddress)
     this.setState({ checkedContentRestriction, restrictContent })
     if (restrictContent) {
       this.notify("The details for this model cannot be shown because it has not been verified", { variant: 'warning' })
