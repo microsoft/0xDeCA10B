@@ -27,7 +27,8 @@ export class LocalDataStore implements DataStore {
 			// Index by transaction hash.
 			db.createObjectStore(this.dataStoreName, { keyPath: 'tx' })
 
-			db.createObjectStore(this.modelStoreName, { keyPath: 'address' })
+			const modelStore = db.createObjectStore(this.modelStoreName, { keyPath: 'address' })
+			modelStore.createIndex('address', 'address')
 		}
 	}
 
@@ -97,26 +98,25 @@ export class LocalDataStore implements DataStore {
 		})
 	}
 
-	getModels(_afterId?: string, _limit?: number): Promise<ModelInformation[]> {
+	getModels(afterAddress?: string, limit?: number): Promise<ModelInformation[]> {
 		return new Promise(async (resolve, reject) => {
 			await this.checkOpened()
-			const transaction = this.db!.transaction(this.modelStoreName, 'readwrite')
+			const transaction = this.db!.transaction(this.modelStoreName, 'readonly')
 			transaction.onerror = reject
 			const modelStore = transaction.objectStore(this.modelStoreName)
+			const index = modelStore.index('address')
 			const models: ModelInformation[] = []
-			modelStore.openCursor().onsuccess = (event: any) => {
+			let range
+			if (afterAddress !== null && afterAddress !== undefined) {
+				range = IDBKeyRange.lowerBound(afterAddress)
+			} else {
+				range = null
+			}
+			let count = 0
+			index.openCursor(range).onsuccess = (event: any) => {
 				const cursor = event.target.result
-				if (cursor) {
-					const model = cursor.value
-					models.push(new ModelInformation(
-						model.id,
-						model.name,
-						model.address,
-						model.description,
-						model.modelType,
-						model.encoder,
-						model.accuracy,
-					))
+				if (cursor && (limit == null || ++count < limit)) {
+					models.push(new ModelInformation(cursor.value))
 					cursor.continue()
 				} else {
 					resolve(models)
@@ -125,13 +125,13 @@ export class LocalDataStore implements DataStore {
 		})
 	}
 
-	getModel(_modelId?: string, address?: string): Promise<ModelInformation> {
+	getModel(_modelId?: number, address?: string): Promise<ModelInformation> {
 		if (address === null || address === undefined) {
 			throw new Error("An address is required.")
 		}
 		return new Promise(async (resolve, reject) => {
 			await this.checkOpened()
-			const transaction = this.db!.transaction(this.modelStoreName, 'readwrite')
+			const transaction = this.db!.transaction(this.modelStoreName, 'readonly')
 			transaction.onerror = reject
 			const modelStore = transaction.objectStore(this.modelStoreName)
 			const request = modelStore.get(address)
@@ -141,15 +141,7 @@ export class LocalDataStore implements DataStore {
 				if (model === undefined) {
 					reject(new Error("Model not found."))
 				} else {
-					resolve(new ModelInformation(
-						model.id,
-						model.name,
-						model.address,
-						model.description,
-						model.modelType,
-						model.encoder,
-						model.accuracy,
-					))
+					resolve(new ModelInformation(model))
 				}
 			}
 		})

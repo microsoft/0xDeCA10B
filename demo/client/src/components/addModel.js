@@ -17,6 +17,7 @@ import SparsePerceptron from '../contracts/SparsePerceptron.json';
 import Stakeable64 from '../contracts/Stakeable64.json';
 import { convertToHex, convertToHexData } from '../float-utils';
 import { getWeb3 } from '../getWeb3';
+import { ModelInformation } from '../storage/data-store';
 import { DataStoreFactory } from '../storage/data-store-factory';
 import { checkStorages, renderStorageSelector } from './storageSelector';
 
@@ -343,9 +344,7 @@ class AddModel extends React.Component {
   async save() {
     // TODO Keep track of contract addresses of whatever has been deployed so far so that the process can be recovered.
     const { name, description, model, modelType, encoder } = this.state;
-    const modelInfo = {
-      name, description, modelType, encoder,
-    };
+    const modelInfo = new ModelInformation({ name, description, modelType, encoder })
 
     // Validate
     if (!name) {

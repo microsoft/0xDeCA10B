@@ -64,6 +64,8 @@ initSqlJs().then(SQL => {
 
   // Get all models.
   app.get('/api/models', (req, res) => {
+    const { afterAddress, limit } = req.query;
+    // TODO Use params.
     const results = db.exec("SELECT * FROM model");
     const models = marshalResults(results);
     res.send({ models });

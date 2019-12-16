@@ -11,9 +11,9 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import { Link } from "react-router-dom";
 import { checkStorages } from '../components/storageSelector';
+import { getWeb3 } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
 import { DataStoreFactory } from '../storage/data-store-factory';
-import { getWeb3 } from '../getWeb3';
 
 const styles = theme => ({
   link: {
@@ -26,6 +26,7 @@ class ModelList extends React.Component {
     super(props);
 
     this.storages = DataStoreFactory.getAll()
+    this.storageAfterAddress = {}
 
     this.state = {
       models: [],
@@ -36,13 +37,19 @@ class ModelList extends React.Component {
     const web3 = await getWeb3()
     const networkType = await web3.eth.net.getNetworkType()
     const validator = new OnlineSafetyValidator()
+    // TODO Change to 10 before merging.
+    const limit = 1
     checkStorages(this.storages).then(permittedStorageTypes => {
       permittedStorageTypes.filter(storageType => storageType !== undefined)
         .forEach(storageType => {
-          return this.storages[storageType].getModels().then(newModels => {
+          const afterId = this.storageAfterAddress[storageType]
+          return this.storages[storageType].getModels(afterId, limit).then(newModels => {
             newModels.forEach(model => {
               model.restrictContent = !validator.isPermitted(networkType, model.address)
             })
+            if (newModels.length > 0) {
+              this.storageAfterAddress[storageType] = newModels[newModels.length - 1].address
+            }
             this.setState(prevState => ({ models: prevState.models.concat(newModels) }))
           }).catch(err => {
             this.notify(`Could not get ${storageType} models`, { variant: 'error' })
