@@ -803,6 +803,7 @@ class Model extends React.Component {
 
   /* MAIN CONTRACT FUNCTIONS */
   predict(data) {
+    // IMPORTANT: Use .call to not create a transaction as explained in the about page.
     return this.state.classifier.methods.predict(data).call().then(parseInt);
   }
 
