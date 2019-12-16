@@ -46,7 +46,15 @@ export class ServiceDataStore implements DataStore {
 	}
 
 	getModels(afterAddress?: string, limit?: number): Promise<ModelInformation[]> {
-		return axios.get(`${this.url}/api/models?afterAddress=${afterAddress}&limit=${limit}`).then(response => {
+		const params = []
+		if (afterAddress != null) {
+			params.push(`afterAddress=${afterAddress}`)
+		}
+		if (limit != null) {
+			params.push(`limit=${limit}`)
+		}
+		const url = `${this.url}/api/models?${params.join('&')}`
+		return axios.get(url).then(response => {
 			return response.data.models.map((model: any) => new ModelInformation(model))
 		})
 	}

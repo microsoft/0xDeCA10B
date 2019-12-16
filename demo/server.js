@@ -41,22 +41,6 @@ initSqlJs().then(SQL => {
     fs.writeFileSync(dbPath, Buffer.from(db.export()));
   }
 
-  function marshalResults(res) {
-    if (!res[0]) {
-      return [];
-    }
-
-    return res[0].values.map(v => ({
-      'id': v[0],
-      'name': v[1],
-      'address': v[2],
-      'description': v[3],
-      'modelType': v[4],
-      'encoder': v[5],
-      'accuracy': v[6]
-    }));
-  }
-
   // Health
   app.get('/api/health', (req, res) => {
     res.send({ healthy: true });
@@ -64,10 +48,26 @@ initSqlJs().then(SQL => {
 
   // Get all models.
   app.get('/api/models', (req, res) => {
-    const { afterAddress, limit } = req.query;
-    // TODO Use params.
-    const results = db.exec("SELECT * FROM model");
-    const models = marshalResults(results);
+    const { afterAddress, limit } = req.query
+    const getStmt = db.prepare('SELECT * FROM model WHERE address > $afterAddress LIMIT $limit;',
+      {
+        $afterAddress: afterAddress || '',
+        $limit: limit || 10
+      });
+    const models = []
+    while (getStmt.step()) {
+      const model = getStmt.get()
+      models.push({
+        'id': model[0],
+        'name': model[1],
+        'address': model[2],
+        'description': model[3],
+        'modelType': model[4],
+        'encoder': model[5],
+        'accuracy': model[6]
+      });
+    }
+    getStmt.free();
     res.send({ models });
   });
 

@@ -108,7 +108,8 @@ export class LocalDataStore implements DataStore {
 			const models: ModelInformation[] = []
 			let range
 			if (afterAddress !== null && afterAddress !== undefined) {
-				range = IDBKeyRange.lowerBound(afterAddress)
+				const open = true
+				range = IDBKeyRange.lowerBound(afterAddress, open)
 			} else {
 				range = null
 			}
