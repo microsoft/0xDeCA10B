@@ -114,7 +114,7 @@ export class LocalDataStore implements DataStore {
 			let count = 0
 			index.openCursor(range).onsuccess = (event: any) => {
 				const cursor = event.target.result
-				if (cursor && (limit == null || ++count < limit)) {
+				if (cursor && (limit == null || count++ < limit)) {
 					models.push(new ModelInformation(cursor.value))
 					cursor.continue()
 				} else {

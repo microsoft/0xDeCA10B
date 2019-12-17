@@ -77,8 +77,7 @@ class ModelList extends React.Component {
 
   updateModels() {
     // TODO Also get valid contracts that the account has already interacted with.
-    // TODO Change to 10 before merging.
-    const limit = 1
+    const limit = 6
     Promise.all(this.state.permittedStorageTypes.map(storageType => {
       const afterId = this.storageAfterAddress[storageType]
       return this.storages[storageType].getModels(afterId, limit).then(response => {

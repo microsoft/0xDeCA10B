@@ -561,8 +561,10 @@ class Model extends React.Component {
 
     // Change URL.
     const currentUrlParams = new URLSearchParams(window.location.search);
-    currentUrlParams.set('tab', tab);
-    this.props.history.push(window.location.pathname + "?" + currentUrlParams.toString())
+    if (currentUrlParams.get('tab') !== tab) {
+      currentUrlParams.set('tab', tab);
+      this.props.history.push(window.location.pathname + "?" + currentUrlParams.toString())
+    }
     this.setState({ tab: value });
 
     if (this.PREDICT_TAB === value || this.TRAIN_TAB === value) {
