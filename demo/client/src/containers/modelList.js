@@ -51,12 +51,20 @@ class ModelList extends React.Component {
 
   componentDidMount = async () => {
     const web3 = await getWeb3()
-    this.networkType = await web3.eth.net.getNetworkType()
     this.validator = new OnlineSafetyValidator()
+    this.networkType = await web3.eth.net.getNetworkType()
     checkStorages(this.storages).then(permittedStorageTypes => {
       permittedStorageTypes = permittedStorageTypes.filter(storageType => storageType !== undefined)
       this.setState({ permittedStorageTypes }, this.updateModels)
     })
+    if (typeof window !== "undefined" && window.ethereum) {
+      window.ethereum.on('accountsChanged', _ => {
+        window.location.reload()
+      });
+      window.ethereum.on('networkChanged', _ => {
+        window.location.reload()
+      })
+    }
   }
 
   notify(...args) {
