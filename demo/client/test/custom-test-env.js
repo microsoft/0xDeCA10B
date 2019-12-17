@@ -13,5 +13,8 @@ module.exports = class CustomTestEnvironment extends Environment {
         if (typeof indexedDB === 'undefined') {
             this.global.indexedDB = require('fake-indexeddb');
         }
+        if (typeof IDBKeyRange === 'undefined') {
+            this.global.IDBKeyRange = require("fake-indexeddb/lib/FDBKeyRange")
+        }
     }
 }

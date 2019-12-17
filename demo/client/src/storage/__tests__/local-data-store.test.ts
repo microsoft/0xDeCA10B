@@ -12,9 +12,10 @@ describe("LocalDataStore", () => {
     it("should find models", async () => {
         const modelInfo = new ModelInformation({
             name: 'name', address: 'address',
-            description: 'description', modelType: 'modelType', encoder: 'encoder')
+            description: 'description', modelType: 'modelType', encoder: 'encoder'
+        })
         db.saveModelInformation(modelInfo)
-        const response = await db.getModels('address', 1)
+        const response = await db.getModels(undefined, 1)
         const { models, remaining } = response
         assert.deepStrictEqual(models, [modelInfo])
         assert(0 === remaining)
