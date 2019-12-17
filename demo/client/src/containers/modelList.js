@@ -34,6 +34,7 @@ class ModelList extends React.Component {
     this.storageAfterAddress = {}
 
     this.state = {
+      loadingModels: true,
       models: [],
     }
 
@@ -59,14 +60,14 @@ class ModelList extends React.Component {
   }
 
   nextModels() {
-    this.setState({ models: [] }, this.updateModels)
+    this.setState({ models: [], loadingModels: true, }, this.updateModels)
   }
 
   updateModels() {
     // TODO Also get valid contracts that the account has already interacted with.
     // TODO Change to 10 before merging.
     const limit = 1
-    this.state.permittedStorageTypes.forEach(storageType => {
+    Promise.all(this.state.permittedStorageTypes.map(storageType => {
       const afterId = this.storageAfterAddress[storageType]
       return this.storages[storageType].getModels(afterId, limit).then(newModels => {
         newModels.forEach(model => {
@@ -81,6 +82,8 @@ class ModelList extends React.Component {
         console.error(`Could not get ${storageType} models.`)
         console.error(err)
       })
+    })).finally(_ => {
+      this.setState({ loadingModels: false })
     })
   }
 
