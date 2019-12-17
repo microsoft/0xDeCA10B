@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { DataStore, DataStoreHealthStatus, ModelInformation, OriginalData } from './data-store'
+import { DataStore, DataStoreHealthStatus, ModelInformation, ModelsResponse, OriginalData } from './data-store'
 
 export class ServiceDataStore implements DataStore {
 	url: string = ''
@@ -45,35 +45,29 @@ export class ServiceDataStore implements DataStore {
 		return axios.post(this.url + '/api/models', modelInformation)
 	}
 
-	getModels(afterId?: string, limit?: number): Promise<ModelInformation[]> {
-		return axios.get(this.url + '/api/models').then(response => {
-			return response.data.models.map((model: any) => new ModelInformation(
-				model.id,
-				model.name,
-				model.address,
-				model.description,
-				model.modelType,
-				model.encoder,
-				model.accuracy,
-			))
+	getModels(afterAddress?: string, limit?: number): Promise<ModelsResponse> {
+		const params = []
+		if (afterAddress != null) {
+			params.push(`afterAddress=${afterAddress}`)
+		}
+		if (limit != null) {
+			params.push(`limit=${limit}`)
+		}
+		const url = `${this.url}/api/models?${params.join('&')}`
+		return axios.get(url).then(response => {
+			const models = response.data.models.map((model: any) => new ModelInformation(model))
+			const { remaining } = response.data
+			return new ModelsResponse(models, remaining)
 		})
 	}
 
-	getModel(modelId?: string, address?: string): Promise<ModelInformation> {
+	getModel(modelId?: number, address?: string): Promise<ModelInformation> {
 		return axios.get(`${this.url}/api/model?modelId=${modelId}&address=${address}`).then(response => {
 			const { model } = response.data
 			if (address !== null && address !== undefined && model.address !== address) {
 				throw new Error("Could not find a model with the matching address.")
 			}
-			return new ModelInformation(
-				model.id,
-				model.name,
-				model.address,
-				model.description,
-				model.modelType,
-				model.encoder,
-				model.accuracy,
-			)
+			return new ModelInformation(model)
 		})
 	}
 }

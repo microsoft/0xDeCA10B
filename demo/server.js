@@ -41,22 +41,6 @@ initSqlJs().then(SQL => {
     fs.writeFileSync(dbPath, Buffer.from(db.export()));
   }
 
-  function marshalResults(res) {
-    if (!res[0]) {
-      return [];
-    }
-
-    return res[0].values.map(v => ({
-      'id': v[0],
-      'name': v[1],
-      'address': v[2],
-      'description': v[3],
-      'modelType': v[4],
-      'encoder': v[5],
-      'accuracy': v[6]
-    }));
-  }
-
   // Health
   app.get('/api/health', (req, res) => {
     res.send({ healthy: true });
@@ -64,10 +48,41 @@ initSqlJs().then(SQL => {
 
   // Get all models.
   app.get('/api/models', (req, res) => {
-    const results = db.exec("SELECT * FROM model");
-    const models = marshalResults(results);
-    res.send({ models });
-  });
+    const { afterAddress, limit } = req.query
+    const getStmt = db.prepare('SELECT * FROM model WHERE address > $afterAddress LIMIT $limit;',
+      {
+        $afterAddress: afterAddress || '',
+        $limit: limit == null ? 10 : limit,
+      })
+    const models = []
+    while (getStmt.step()) {
+      const model = getStmt.get()
+      models.push({
+        id: model[0],
+        name: model[1],
+        address: model[2],
+        description: model[3],
+        modelType: model[4],
+        encoder: model[5],
+        accuracy: model[6]
+      });
+    }
+    getStmt.free()
+
+    let lastAddress = ''
+    if (models.length > 0) {
+      lastAddress = models[models.length - 1].address
+    }
+
+    const remainingCountStmt = db.prepare('SELECT COUNT(id) FROM model WHERE address > $afterAddress;',
+      {
+        $afterAddress: lastAddress,
+      })
+    remainingCountStmt.step()
+    const remaining = remainingCountStmt.get()[0]
+    remainingCountStmt.free()
+    res.send({ models, remaining })
+  })
 
   // Get model with specific ID.
   app.get('/api/model', (req, res) => {
