@@ -56,6 +56,7 @@ contract('CollaborativeTrainer with Perceptron', function (accounts) {
           console.log(`  Deployed classifier to ${classifier.address}.`);
           console.log(`Deploying collaborative trainer.`);
           return CollaborativeTrainer64.new(
+            "name", "description", "encoder",
             dataHandler.address,
             incentiveMechanism.address,
             classifier.address

@@ -14,12 +14,15 @@ module.exports = async function (deployer) {
     return;
   }
   // Information to persist to the DB.
+  const name = "IMDB Review Sentiment Classifier"
+  const description = "A simple IMDB sentiment analysis model."
+  const encoder = 'IMDB vocab'
   const modelInfo = {
-    name: "IMDB Review Sentiment Classifier",
-    description: "A simple IMDB sentiment analysis model.",
+    name,
+    description,
     accuracy: '0.829',
     modelType: 'Classifier64',
-    encoder: 'IMDB vocab',
+    encoder,
   };
 
   const toFloat = 1E9;
@@ -65,6 +68,7 @@ module.exports = async function (deployer) {
 
           console.log(`Deploying collaborative trainer contract.`);
           return deployer.deploy(CollaborativeTrainer64,
+            name, description, encoder,
             dataHandler.address,
             incentiveMechanism.address,
             classifier.address
