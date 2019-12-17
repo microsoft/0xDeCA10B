@@ -1,4 +1,5 @@
 import Button from '@material-ui/core/Button';
+import CircularProgress from '@material-ui/core/CircularProgress';
 import Container from '@material-ui/core/Container';
 import Divider from '@material-ui/core/Divider';
 import List from '@material-ui/core/List';
@@ -24,6 +25,12 @@ const styles = theme => ({
     marginTop: 20,
     marginBottom: 20,
   },
+  spinnerContainer: {
+    textAlign: 'center',
+  },
+  nextButtonContainer: {
+    textAlign: 'end',
+  }
 });
 
 class ModelList extends React.Component {
@@ -35,6 +42,7 @@ class ModelList extends React.Component {
 
     this.state = {
       loadingModels: true,
+      numModelsRemaining: 0,
       models: [],
     }
 
@@ -60,7 +68,11 @@ class ModelList extends React.Component {
   }
 
   nextModels() {
-    this.setState({ models: [], loadingModels: true, }, this.updateModels)
+    this.setState({
+      loadingModels: true,
+      models: [],
+      numModelsRemaining: 0
+    }, this.updateModels)
   }
 
   updateModels() {
@@ -69,14 +81,20 @@ class ModelList extends React.Component {
     const limit = 1
     Promise.all(this.state.permittedStorageTypes.map(storageType => {
       const afterId = this.storageAfterAddress[storageType]
-      return this.storages[storageType].getModels(afterId, limit).then(newModels => {
+      return this.storages[storageType].getModels(afterId, limit).then(response => {
+        const newModels = response.models
+        const { remaining } = response
         newModels.forEach(model => {
           model.restrictContent = !this.validator.isPermitted(this.networkType, model.address)
         })
         if (newModels.length > 0) {
           this.storageAfterAddress[storageType] = newModels[newModels.length - 1].address
         }
-        this.setState(prevState => ({ models: prevState.models.concat(newModels) }))
+
+        this.setState(prevState => ({
+          models: prevState.models.concat(newModels),
+          numModelsRemaining: prevState.numModelsRemaining + remaining
+        }))
       }).catch(err => {
         this.notify(`Could not get ${storageType} models`, { variant: 'error' })
         console.error(`Could not get ${storageType} models.`)
@@ -117,27 +135,40 @@ class ModelList extends React.Component {
 
     return (
       <Container>
-        {/* TODO Only show if there are more models. */}
-        <Button className={this.props.classes.button} variant="outlined" color="primary"
-          onClick={this.nextModels}
-        >
-          Next
-        </Button>
-        <Paper>
-          <List component="nav" className={this.props.classes.list}>
-            {listItems ? listItems :
-              <Typography component="p">
-                There are currently no models available.
+        {this.state.loadingModels ?
+          <div className={this.props.classes.spinnerContainer}>
+            <CircularProgress size={100} />
+          </div>
+          : listItems.length > 0 ?
+            <div>
+              {this.state.numModelsRemaining > 0 &&
+                <div className={this.props.classes.nextButtonContainer}>
+                  <Button className={this.props.classes.button} variant="outlined" color="primary"
+                    onClick={this.nextModels}
+                  >
+                    Next
+                </Button>
+                </div>
+              }
+              <Paper>
+                <List component="nav" className={this.props.classes.list}>
+                  {listItems}
+                </List>
+              </Paper>
+              {this.state.numModelsRemaining > 0 &&
+                <div className={this.props.classes.nextButtonContainer}>
+                  <Button className={this.props.classes.button} variant="outlined" color="primary"
+                    onClick={this.nextModels}
+                  >
+                    Next
+                </Button>
+                </div>
+              }
+            </div>
+            : <Typography component="p">
+              No models found.
             </Typography>
-            }
-          </List>
-        </Paper>
-        {/* TODO Only show if there are more models. */}
-        <Button className={this.props.classes.button} variant="outlined" color="primary"
-          onClick={this.nextModels}
-        >
-          Next
-        </Button>
+        }
       </Container>
     );
   }

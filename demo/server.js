@@ -52,24 +52,37 @@ initSqlJs().then(SQL => {
     const getStmt = db.prepare('SELECT * FROM model WHERE address > $afterAddress LIMIT $limit;',
       {
         $afterAddress: afterAddress || '',
-        $limit: limit || 10
-      });
+        $limit: limit == null ? 10 : limit,
+      })
     const models = []
     while (getStmt.step()) {
       const model = getStmt.get()
       models.push({
-        'id': model[0],
-        'name': model[1],
-        'address': model[2],
-        'description': model[3],
-        'modelType': model[4],
-        'encoder': model[5],
-        'accuracy': model[6]
+        id: model[0],
+        name: model[1],
+        address: model[2],
+        description: model[3],
+        modelType: model[4],
+        encoder: model[5],
+        accuracy: model[6]
       });
     }
-    getStmt.free();
-    res.send({ models });
-  });
+    getStmt.free()
+
+    let lastAddress = ''
+    if (models.length > 0) {
+      lastAddress = models[models.length - 1].address
+    }
+
+    const remainingCountStmt = db.prepare('SELECT COUNT(id) FROM model WHERE address > $afterAddress;',
+      {
+        $afterAddress: lastAddress,
+      })
+    remainingCountStmt.step()
+    const remaining = remainingCountStmt.get()[0]
+    remainingCountStmt.free()
+    res.send({ models, remaining })
+  })
 
   // Get model with specific ID.
   app.get('/api/model', (req, res) => {

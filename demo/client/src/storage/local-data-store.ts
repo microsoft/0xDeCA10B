@@ -1,4 +1,4 @@
-import { DataStore, DataStoreHealthStatus, ModelInformation, OriginalData } from './data-store'
+import { DataStore, DataStoreHealthStatus, ModelInformation, ModelsResponse, OriginalData } from './data-store'
 
 export class LocalDataStore implements DataStore {
 	errorOpening?: boolean
@@ -98,7 +98,7 @@ export class LocalDataStore implements DataStore {
 		})
 	}
 
-	getModels(afterAddress?: string, limit?: number): Promise<ModelInformation[]> {
+	getModels(afterAddress?: string, limit?: number): Promise<ModelsResponse> {
 		return new Promise(async (resolve, reject) => {
 			await this.checkOpened()
 			const transaction = this.db!.transaction(this.modelStoreName, 'readonly')
@@ -106,13 +106,11 @@ export class LocalDataStore implements DataStore {
 			const modelStore = transaction.objectStore(this.modelStoreName)
 			const index = modelStore.index('address')
 			const models: ModelInformation[] = []
-			let range
-			if (afterAddress !== null && afterAddress !== undefined) {
-				const open = true
-				range = IDBKeyRange.lowerBound(afterAddress, open)
-			} else {
-				range = null
+			if (afterAddress == null) {
+				afterAddress = ''
 			}
+			const open = true
+			const range = IDBKeyRange.lowerBound(afterAddress, open)
 			let count = 0
 			index.openCursor(range).onsuccess = (event: any) => {
 				const cursor = event.target.result
@@ -120,7 +118,11 @@ export class LocalDataStore implements DataStore {
 					models.push(new ModelInformation(cursor.value))
 					cursor.continue()
 				} else {
-					resolve(models)
+					const countRequest = index.count(range)
+					countRequest.onsuccess = () =>{
+						const remaining = countRequest.result - models.length
+						resolve(new ModelsResponse(models, remaining))
+					}
 				}
 			}
 		})

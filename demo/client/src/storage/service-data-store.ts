@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { DataStore, DataStoreHealthStatus, ModelInformation, OriginalData } from './data-store'
+import { DataStore, DataStoreHealthStatus, ModelInformation, ModelsResponse, OriginalData } from './data-store'
 
 export class ServiceDataStore implements DataStore {
 	url: string = ''
@@ -45,7 +45,7 @@ export class ServiceDataStore implements DataStore {
 		return axios.post(this.url + '/api/models', modelInformation)
 	}
 
-	getModels(afterAddress?: string, limit?: number): Promise<ModelInformation[]> {
+	getModels(afterAddress?: string, limit?: number): Promise<ModelsResponse> {
 		const params = []
 		if (afterAddress != null) {
 			params.push(`afterAddress=${afterAddress}`)
@@ -55,7 +55,9 @@ export class ServiceDataStore implements DataStore {
 		}
 		const url = `${this.url}/api/models?${params.join('&')}`
 		return axios.get(url).then(response => {
-			return response.data.models.map((model: any) => new ModelInformation(model))
+			const models = response.data.models.map((model: any) => new ModelInformation(model))
+			const { remaining } = response.data
+			return new ModelsResponse(models, remaining)
 		})
 	}
 

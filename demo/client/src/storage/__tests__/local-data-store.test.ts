@@ -14,8 +14,10 @@ describe("LocalDataStore", () => {
             name: 'name', address: 'address',
             description: 'description', modelType: 'modelType', encoder: 'encoder')
         db.saveModelInformation(modelInfo)
-        const models = await db.getModels('address', 1)
+        const response = await db.getModels('address', 1)
+        const { models, remaining } = response
         assert.deepStrictEqual(models, [modelInfo])
+        assert(0 === remaining)
 
         const model = await db.getModel(modelInfo.id, modelInfo.address)
         assert.deepStrictEqual(model, modelInfo)

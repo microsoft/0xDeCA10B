@@ -21,6 +21,26 @@ export class ModelInformation {
 	}
 }
 
+/**
+ * A response when getting models.
+ */
+export class ModelsResponse {
+	/**
+	 * The models matching the request.
+	 */
+	models: ModelInformation[]
+
+	/**
+	 * The number of remaining models for the query. This does not count the models in `models`.
+	 */
+	remaining: number
+
+	constructor(models: ModelInformation[], remaining: number) {
+		this.models = models
+		this.remaining = remaining
+	}
+}
+
 export class OriginalData {
 	text?: string
 
@@ -53,6 +73,6 @@ export interface DataStore {
 
 	saveModelInformation(modelInformation: ModelInformation): Promise<any>
 
-	getModels(afterAddress?: string, limit?: number): Promise<ModelInformation[]>
+	getModels(afterAddress?: string, limit?: number): Promise<ModelsResponse>
 	getModel(modelId?: number, address?: string): Promise<ModelInformation>
 }
