@@ -5,6 +5,24 @@ import "./libs/SafeMath.sol";
 import {Classifier64} from "./classification/Classifier.sol";
 import {DataHandler64} from "./data/DataHandler.sol";
 import {IncentiveMechanism64} from "./incentive/IncentiveMechanism.sol";
+/**
+ * The main interface to sharing updatable models on the blockchain.
+ */
+contract CollaborativeTrainer {
+    string public name;
+    string public description;
+    string public encoder;
+
+    constructor (
+        string memory _name,
+        string memory _description,
+        string memory _encoder
+    ) public {
+        name = _name;
+        description = _description;
+        encoder = _encoder;
+    }
+}
 
 /**
  * The main interface to Decentralized & Collaborative AI on the Blockchain.
@@ -13,7 +31,7 @@ import {IncentiveMechanism64} from "./incentive/IncentiveMechanism.sol";
 // Using IoC even though it's more expensive, it's easier to work with.
 // Those wishing to optimize can change the code to use inheritance and do other optimizations before deploying.
 // We can also make a script that generates the required files based on several parameters.
-contract CollaborativeTrainer64 {
+contract CollaborativeTrainer64 is CollaborativeTrainer {
 
     using SafeMath for uint256;
 
@@ -43,10 +61,13 @@ contract CollaborativeTrainer64 {
     Classifier64 public classifier;
 
     constructor(
+        string memory _name,
+        string memory _description,
+        string memory _encoder,
         DataHandler64 _dataHandler,
         IncentiveMechanism64 _incentiveMechanism,
         Classifier64 _classifier
-    ) public {
+    ) CollaborativeTrainer(_name, _description, _encoder) public {
         dataHandler = _dataHandler;
         incentiveMechanism = _incentiveMechanism;
         classifier = _classifier;

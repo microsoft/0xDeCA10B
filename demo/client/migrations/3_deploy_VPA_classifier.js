@@ -14,12 +14,15 @@ module.exports = function (deployer) {
     return;
   }
   // Information to persist to the DB.
+  const name = "VPA Classifier"
+  const description = "Supports multiple domains."
+  const encoder = 'universal sentence encoder'
   const modelInfo = {
-    name: "VPA Classifier",
-    description: "Supports multiple domains.",
+    name,
+    description,
     accuracy: '0.88',
     modelType: 'Classifier64',
-    encoder: 'universal sentence encoder',
+    encoder,
   };
 
   const toFloat = 1E9;
@@ -67,6 +70,7 @@ module.exports = function (deployer) {
         }
         console.log(`Deploying main entry point.`);
         return deployer.deploy(CollaborativeTrainer64,
+          name, description, encoder,
           dataHandler.address,
           incentiveMechanism.address,
           classifier.address
@@ -81,7 +85,7 @@ module.exports = function (deployer) {
             return axios.post(`${pjson.proxy}api/models`, modelInfo).then(() => {
               console.log("Added model to DB.");
             }).catch(err => {
-              if (process.env.CI !== "true") {
+              if (process.env.CI !== "true" && process.env.REACT_APP_ENABLE_SERVICE_DATA_STORE === 'true') {
                 console.error("Error adding model to DB.");
                 console.error(err);
                 throw err;

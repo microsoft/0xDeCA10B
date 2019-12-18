@@ -16,12 +16,15 @@ module.exports = function (deployer) {
   const toFloat = 1E9;
 
   // Information to persist to the DB.
+  const name = "Hot Dog Classifier"
+  const description = "Classifies pictures as hot dog or not hot dog."
+  const encoder = 'MobileNetv2'
   const modelInfo = {
-    name: "Hot Dog Classifier",
-    description: "Classifies pictures as hot dog or not hot dog.",
+    name,
+    description,
     accuracy: '0.63',
     modelType: 'Classifier64',
-    encoder: 'MobileNetv2',
+    encoder,
   };
 
   // Low default times for testing.
@@ -79,6 +82,7 @@ module.exports = function (deployer) {
 
     console.log(`Deploying main entry point.`);
     const instance = await deployer.deploy(CollaborativeTrainer64,
+      name, description, encoder,
       dataHandler.address,
       incentiveMechanism.address,
       classifier.address
@@ -89,11 +93,10 @@ module.exports = function (deployer) {
     await classifier.transferOwnership(instance.address);
 
     modelInfo.address = instance.address;
-
     return axios.post(`${pjson.proxy}api/models`, modelInfo).then(() => {
       console.log("Added model to DB.");
     }).catch(err => {
-      if (process.env.CI !== "true") {
+      if (process.env.CI !== "true" && process.env.REACT_APP_ENABLE_SERVICE_DATA_STORE === 'true') {
         console.error("Error adding model to DB.");
         console.error(err);
         throw err;

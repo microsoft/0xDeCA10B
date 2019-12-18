@@ -90,6 +90,7 @@ contract('VpaClassifier', function (accounts) {
     }
     console.log(`  Deploying main entry point.`);
     instance = await CollaborativeTrainer64.new(
+      "name", "description", "encoder",
       dataHandler.address,
       incentiveMechanism.address,
       classifier.address

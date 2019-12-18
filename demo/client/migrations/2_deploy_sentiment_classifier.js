@@ -1,8 +1,8 @@
-const axios = require('axios');
-const fs = require('fs');
-const pjson = require('../package.json');
+const axios = require('axios')
+const fs = require('fs')
 
-const { convertData, convertNum } = require('../src/float-utils-node.js');
+const pjson = require('../package.json')
+const { convertData, convertNum } = require('../src/float-utils-node.js')
 
 const CollaborativeTrainer64 = artifacts.require("./CollaborativeTrainer64");
 const DataHandler64 = artifacts.require("./data/DataHandler64");
@@ -14,12 +14,15 @@ module.exports = async function (deployer) {
     return;
   }
   // Information to persist to the DB.
+  const name = "IMDB Review Sentiment Classifier"
+  const description = "A simple IMDB sentiment analysis model."
+  const encoder = 'IMDB vocab'
   const modelInfo = {
-    name: "IMDB Review Sentiment Classifier",
-    description: "A simple IMDB sentiment analysis model.",
+    name,
+    description,
     accuracy: '0.829',
     modelType: 'Classifier64',
-    encoder: 'IMDB vocab',
+    encoder,
   };
 
   const toFloat = 1E9;
@@ -65,6 +68,7 @@ module.exports = async function (deployer) {
 
           console.log(`Deploying collaborative trainer contract.`);
           return deployer.deploy(CollaborativeTrainer64,
+            name, description, encoder,
             dataHandler.address,
             incentiveMechanism.address,
             classifier.address
@@ -79,7 +83,8 @@ module.exports = async function (deployer) {
               return axios.post(`${pjson.proxy}api/models`, modelInfo).then(() => {
                 console.log("Added model to DB.");
               }).catch(err => {
-                if (process.env.CI !== "true") {
+                if (process.env.CI !== "true" && process.env.REACT_APP_ENABLE_SERVICE_DATA_STORE === 'true') {
+                  // It is okay to fail adding the model in CI but otherwise it should work.
                   console.error("Error adding model to DB.");
                   console.error(err);
                   throw err;

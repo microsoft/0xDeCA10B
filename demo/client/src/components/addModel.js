@@ -575,7 +575,10 @@ class AddModel extends React.Component {
     });
     return collaborativeTrainer64Contract.deploy({
       data: CollaborativeTrainer64.bytecode,
-      arguments: [dataHandler.options.address, incentiveMechanism.options.address, model.options.address],
+      arguments: [
+        this.state.name, this.state.description, this.state.encoder,
+        dataHandler.options.address, incentiveMechanism.options.address, model.options.address
+      ],
     }).send({
     }).on('transactionHash', transactionHash => {
       this.dismissNotification(pleaseAcceptKey);
