@@ -1,4 +1,14 @@
-const path = require("path");
+const path = require('path')
+
+// Use NODE_ENVIRONMENT if set but remove . before it if production.
+const env = process.env.NODE_ENVIRONMENT;
+let suffix = '.development';
+if (env === 'production') {
+  suffix = ''
+} else if (env !== undefined) {
+  suffix = `.${env}`
+}
+require('dotenv').config({ debug: true, path: path.resolve(__dirname, `.env${suffix}`) })
 
 module.exports = {
   // See <https://truffleframework.com/docs/truffle/reference/configuration>

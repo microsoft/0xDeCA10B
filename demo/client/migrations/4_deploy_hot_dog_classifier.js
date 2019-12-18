@@ -94,14 +94,17 @@ module.exports = function (deployer) {
 
     modelInfo.address = instance.address;
 
-    return axios.post(`${pjson.proxy}api/models`, modelInfo).then(() => {
-      console.log("Added model to DB.");
-    }).catch(err => {
-      if (process.env.CI !== "true") {
-        console.error("Error adding model to DB.");
-        console.error(err);
-        throw err;
-      }
-    });
+    if (process.env.REACT_APP_ENABLE_SERVICE_DATA_STORE === undefined
+      || process.env.REACT_APP_ENABLE_SERVICE_DATA_STORE.toLocaleLowerCase() === 'true') {
+      return axios.post(`${pjson.proxy}api/models`, modelInfo).then(() => {
+        console.log("Added model to DB.");
+      }).catch(err => {
+        if (process.env.CI !== "true") {
+          console.error("Error adding model to DB.");
+          console.error(err);
+          throw err;
+        }
+      });
+    }
   });
 };

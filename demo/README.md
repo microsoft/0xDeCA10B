@@ -85,7 +85,9 @@ yarn client
 ```
 
 ## Server (Optional)
-If you want to store meta-data in a local database instead of within the browser, then start the server in one terminal.
+If you want to store meta-data in a local database file instead of just within the browser, then start the server in one terminal.
+This step allows you to see models listed when you open the dashboard for the first time.
+If you do not want to use the database file then you should have `REACT_APP_ENABLE_SERVICE_DATA_STORE=false` in your `client/.env.development` file (this is the default).
 Run:
 ```bash
 yarn server
