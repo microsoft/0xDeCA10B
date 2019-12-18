@@ -82,18 +82,15 @@ module.exports = function (deployer) {
             classifier.transferOwnership(instance.address),
           ].concat(addClassPromises)).then(() => {
             modelInfo.address = instance.address;
-            if (process.env.REACT_APP_ENABLE_SERVICE_DATA_STORE === undefined
-              || process.env.REACT_APP_ENABLE_SERVICE_DATA_STORE.toLocaleLowerCase() === 'true') {
-              return axios.post(`${pjson.proxy}api/models`, modelInfo).then(() => {
-                console.log("Added model to DB.");
-              }).catch(err => {
-                if (process.env.CI !== "true") {
-                  console.error("Error adding model to DB.");
-                  console.error(err);
-                  throw err;
-                }
-              });
-            }
+            return axios.post(`${pjson.proxy}api/models`, modelInfo).then(() => {
+              console.log("Added model to DB.");
+            }).catch(err => {
+              if (process.env.CI !== "true" && process.env.REACT_APP_ENABLE_SERVICE_DATA_STORE === 'true') {
+                console.error("Error adding model to DB.");
+                console.error(err);
+                throw err;
+              }
+            });
           });
         });
       });
