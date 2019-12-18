@@ -8,7 +8,7 @@ if (env === 'production') {
 } else if (env !== undefined) {
   suffix = `.${env}`
 }
-require('dotenv').config({ debug: true, path: path.resolve(__dirname, `.env${suffix}`) })
+require('dotenv').config({ path: path.resolve(__dirname, `.env${suffix}`) })
 
 module.exports = {
   // See <https://truffleframework.com/docs/truffle/reference/configuration>

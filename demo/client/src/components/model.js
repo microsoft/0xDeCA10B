@@ -629,7 +629,7 @@ class Model extends React.Component {
         .then(parseInt)
         .then(refundWaitTimeS => {
           this.setState({ refundWaitTimeS });
-        })
+        }),
     ]);
   }
 
