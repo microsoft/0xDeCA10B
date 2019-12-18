@@ -134,6 +134,7 @@ class Model extends React.Component {
       readyForInput: false,
       contractInfo: {},
       modelId: currentUrlParams.get('modelId'),
+      metaDataLocation: currentUrlParams.get('metaDataLocation') || 'local',
       contractAddress: currentUrlParams.get('address'),
       classifications: [],
       tab: tabIndex,
@@ -189,9 +190,9 @@ class Model extends React.Component {
     try {
       this.web3 = await getWeb3()
 
-      const storage = this.state.modelId ? this.storages.service : this.storages.local;
-      const modelInfo = await storage.getModel(this.state.modelId, this.state.contractAddress);
-      this.setState({ contractInfo: modelInfo },
+      const storage = this.storages[this.state.metaDataLocation];
+      const contractInfo = await storage.getModel(this.state.modelId, this.state.contractAddress);
+      this.setState({ contractInfo },
         async _ => {
           await this.setContractInstance();
         });

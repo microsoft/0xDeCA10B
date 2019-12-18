@@ -41,6 +41,14 @@ export class ModelsResponse {
 	}
 }
 
+export class RemoveResponse {
+	success: boolean
+
+	constructor(success: boolean) {
+		this.success = success
+	}
+}
+
 export class OriginalData {
 	text?: string
 
@@ -75,4 +83,6 @@ export interface DataStore {
 
 	getModels(afterAddress?: string, limit?: number): Promise<ModelsResponse>
 	getModel(modelId?: number, address?: string): Promise<ModelInformation>
+
+	removeModel(modelInformation: ModelInformation): Promise<RemoveResponse>
 }

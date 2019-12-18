@@ -26,7 +26,8 @@ initSqlJs().then(SQL => {
   // MODEL MANAGEMENT
 
   function isBodyValid(body) {
-    return body && body.name && body.address;
+    return body && body.name
+      && body.address && typeof body.address === 'string' && body.address.startWith('0x');
   }
 
   function persistModel(model) {
@@ -87,12 +88,26 @@ initSqlJs().then(SQL => {
   // Get model with specific ID.
   app.get('/api/model', (req, res) => {
     const { modelId, address } = req.query;
-    const getModelStmt = db.prepare("SELECT * FROM model WHERE id == $modelId OR address == $address LIMIT 1;");
-    const model = getModelStmt.getAsObject({ $modelId: modelId, $address: address });
-    getModelStmt.free();
-    model.modelType = model.model_type;
-    delete model.model_type;
-    res.send({ model });
+    // Prefer searching by modelId since an address can exist on two different blockchains.
+    // There's probably a more pure SQL way to do this but it was unclear how exactly.
+    let model;
+    if (modelId != null) {
+      const getModelStmt = db.prepare('SELECT * FROM model WHERE id == $modelId LIMIT 1')
+      model = getModelStmt.getAsObject({ $modelId: modelId })
+      getModelStmt.free()
+    } else if (address != null) {
+      const getModelStmt = db.prepare('SELECT * FROM model WHERE address == $address LIMIT 1')
+      model = getModelStmt.getAsObject({ $address: address })
+      getModelStmt.free()
+    }
+
+    if (model && model.id) {
+      model.modelType = model.model_type;
+      delete model.model_type;
+      res.send({ model });
+    } else {
+      return res.status(400).send({ message: "Not found." });
+    }
   });
 
   // Insert a new model.

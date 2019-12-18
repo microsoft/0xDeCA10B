@@ -1,4 +1,4 @@
-import { DataStore, DataStoreHealthStatus, ModelInformation, ModelsResponse, OriginalData } from './data-store'
+import { DataStore, DataStoreHealthStatus, ModelInformation, ModelsResponse, OriginalData, RemoveResponse } from './data-store'
 
 export class LocalDataStore implements DataStore {
 	errorOpening?: boolean
@@ -119,7 +119,7 @@ export class LocalDataStore implements DataStore {
 					cursor.continue()
 				} else {
 					const countRequest = index.count(range)
-					countRequest.onsuccess = () =>{
+					countRequest.onsuccess = () => {
 						const remaining = countRequest.result - models.length
 						resolve(new ModelsResponse(models, remaining))
 					}
@@ -146,6 +146,21 @@ export class LocalDataStore implements DataStore {
 				} else {
 					resolve(new ModelInformation(model))
 				}
+			}
+		})
+	}
+
+	removeModel(modelInformation: ModelInformation): Promise<RemoveResponse> {
+		return new Promise(async (resolve, reject) => {
+			await this.checkOpened()
+			const transaction = this.db!.transaction(this.modelStoreName, 'readwrite')
+			transaction.onerror = reject
+			const modelStore = transaction.objectStore(this.modelStoreName)
+			const request = modelStore.delete(modelInformation.address)
+			request.onerror = reject
+			request.onsuccess = (event: any) => {
+				const success = true
+				resolve(new RemoveResponse(success))
 			}
 		})
 	}
