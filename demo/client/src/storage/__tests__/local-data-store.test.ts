@@ -22,6 +22,9 @@ describe("LocalDataStore", () => {
 
         const model = await db.getModel(modelInfo.id, modelInfo.address)
         assert.deepStrictEqual(model, modelInfo)
+
+        await db.removeModel(modelInfo)
+        assert((await db.getModels()).models.length === 0)
     })
 
     it("should find original data", async () => {

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { DataStore, DataStoreHealthStatus, ModelInformation, ModelsResponse, OriginalData } from './data-store'
+import { DataStore, DataStoreHealthStatus, ModelInformation, ModelsResponse, OriginalData, RemoveResponse } from './data-store'
 
 export class ServiceDataStore implements DataStore {
 	url: string = ''
@@ -62,12 +62,24 @@ export class ServiceDataStore implements DataStore {
 	}
 
 	getModel(modelId?: number, address?: string): Promise<ModelInformation> {
-		return axios.get(`${this.url}/api/model?modelId=${modelId}&address=${address}`).then(response => {
+		const params = []
+		if (modelId != null) {
+			params.push(`modelId=${modelId}`)
+		}
+		if (address != null) {
+			params.push(`address=${address}`)
+		}
+		return axios.get(`${this.url}/api/model?${params.join('&')}`).then(response => {
 			const { model } = response.data
 			if (address !== null && address !== undefined && model.address !== address) {
 				throw new Error("Could not find a model with the matching address.")
 			}
 			return new ModelInformation(model)
 		})
+	}
+
+	removeModel(modelInformation: ModelInformation): Promise<RemoveResponse> {
+		// Requires permission validation from the server.
+		throw new Error("Not implemented")
 	}
 }

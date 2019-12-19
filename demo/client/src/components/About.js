@@ -1,5 +1,7 @@
-import { Container, Link, Typography } from '@material-ui/core';
+import Container from '@material-ui/core/Container';
+import Link from '@material-ui/core/Link';
 import { withStyles } from '@material-ui/core/styles';
+import Typography from '@material-ui/core/Typography';
 import React from 'react';
 
 const styles = theme => ({
@@ -17,7 +19,7 @@ class About extends React.Component {
     const name = "Sharing Updatable Models"
     const { classes } = this.props
     return (<Container maxWidth="lg">
-      <Typography variant="h4" component="h4" color="textSecondary">
+      <Typography variant="h4" component="h4">
         {name}
       </Typography>
       <Typography className={classes.section} component="p">
@@ -26,7 +28,7 @@ class About extends React.Component {
         Your internet browser allows you to create transactions directly with a public blockchain.
         Microsoft has no control over these transaction since the request is not sent to Microsoft machines before being sent directly to the blockchain by your browser.
       </Typography>
-      <Typography className={classes.sectionTitle} variant="h5" component="h5" color="textSecondary">
+      <Typography className={classes.sectionTitle} variant="h5" component="h5">
         <Link color='inherit' href='#code-of-conduct' name='code-of-conduct'>Code of Conduct</Link>
       </Typography>
       <Typography className={classes.section} component="p">
@@ -37,8 +39,8 @@ class About extends React.Component {
         In our example smart contracts, getting predictions from models when you give data should not save the data to a public blockchain.
         You can tell if an action you take is saving data to a public blockchain because your browser should pop-up a notification asking you to confirm the transaction using something like <Link href='https://metamask.io/' target='_blank' rel="noopener">MetaMask</Link>.
       </Typography>
-      <Typography className={classes.sectionTitle} variant="h5" component="h5" color="textSecondary">
-        Learn More
+      <Typography className={classes.sectionTitle} variant="h5" component="h5">
+        <Link color='inherit' href='#learn-more' name='learn-more'>Learn More</Link>
       </Typography>
       <Typography className={classes.section} component="p">
         The source code for this project can be found <Link href='https://aka.ms/0xDeCA10B' target="_blank">here</Link>.
