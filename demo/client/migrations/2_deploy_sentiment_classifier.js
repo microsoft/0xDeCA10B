@@ -13,7 +13,7 @@ module.exports = async function (deployer) {
   if (deployer.network === 'skipMigrations') {
     return;
   }
-  // Information to persist to the DB.
+  // Information to persist to the database.
   const name = "IMDB Review Sentiment Classifier"
   const description = "A simple IMDB sentiment analysis model."
   const encoder = 'IMDB vocab'
@@ -81,11 +81,11 @@ module.exports = async function (deployer) {
             ]).then(() => {
               modelInfo.address = instance.address;
               return axios.post(`${pjson.proxy}api/models`, modelInfo).then(() => {
-                console.log("Added model to DB.");
+                console.log("Added model to the database.");
               }).catch(err => {
                 if (process.env.CI !== "true" && process.env.REACT_APP_ENABLE_SERVICE_DATA_STORE === 'true') {
                   // It is okay to fail adding the model in CI but otherwise it should work.
-                  console.error("Error adding model to DB.");
+                  console.error("Error adding model to the database.");
                   console.error(err);
                   throw err;
                 }
