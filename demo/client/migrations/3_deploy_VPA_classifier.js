@@ -13,7 +13,7 @@ module.exports = function (deployer) {
   if (deployer.network === 'skipMigrations') {
     return;
   }
-  // Information to persist to the DB.
+  // Information to persist to the database.
   const name = "VPA Classifier"
   const description = "Supports multiple domains."
   const encoder = 'universal sentence encoder'
@@ -83,10 +83,10 @@ module.exports = function (deployer) {
           ].concat(addClassPromises)).then(() => {
             modelInfo.address = instance.address;
             return axios.post(`${pjson.proxy}api/models`, modelInfo).then(() => {
-              console.log("Added model to DB.");
+              console.log("Added model to the database.");
             }).catch(err => {
               if (process.env.CI !== "true" && process.env.REACT_APP_ENABLE_SERVICE_DATA_STORE === 'true') {
-                console.error("Error adding model to DB.");
+                console.error("Error adding model to the database.");
                 console.error(err);
                 throw err;
               }

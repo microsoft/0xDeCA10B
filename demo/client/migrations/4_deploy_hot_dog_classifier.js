@@ -15,7 +15,7 @@ module.exports = function (deployer) {
   }
   const toFloat = 1E9;
 
-  // Information to persist to the DB.
+  // Information to persist to the database.
   const name = "Hot Dog Classifier"
   const description = "Classifies pictures as hot dog or not hot dog."
   const encoder = 'MobileNetv2'
@@ -94,10 +94,10 @@ module.exports = function (deployer) {
 
     modelInfo.address = instance.address;
     return axios.post(`${pjson.proxy}api/models`, modelInfo).then(() => {
-      console.log("Added model to DB.");
+      console.log("Added model to the database.");
     }).catch(err => {
       if (process.env.CI !== "true" && process.env.REACT_APP_ENABLE_SERVICE_DATA_STORE === 'true') {
-        console.error("Error adding model to DB.");
+        console.error("Error adding model to the database.");
         console.error(err);
         throw err;
       }

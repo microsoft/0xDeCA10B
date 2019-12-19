@@ -17,7 +17,7 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import update from 'react-addons-update';
 import { checkStorages } from '../components/storageSelector';
-import { getWeb3 } from '../getWeb3';
+import { getNetworkType } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
 import { DataStoreFactory } from '../storage/data-store-factory';
 
@@ -74,9 +74,9 @@ class ModelList extends React.Component {
   }
 
   componentDidMount = async () => {
-    const web3 = await getWeb3()
     this.validator = new OnlineSafetyValidator()
-    this.networkType = await web3.eth.net.getNetworkType()
+    this.networkType = await getNetworkType()
+
     checkStorages(this.storages).then(permittedStorageTypes => {
       permittedStorageTypes = permittedStorageTypes.filter(storageType => storageType !== undefined)
       this.setState({ permittedStorageTypes }, this.updateModels)

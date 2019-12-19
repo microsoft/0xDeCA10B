@@ -33,7 +33,7 @@ import CollaborativeTrainer from '../contracts/CollaborativeTrainer64.json';
 import DataHandler from '../contracts/DataHandler64.json';
 import IncentiveMechanism from '../contracts/Stakeable64.json';
 import ImdbVocab from '../data/imdb.json';
-import { getWeb3 } from '../getWeb3';
+import { getNetworkType, getWeb3 } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
 import { OriginalData } from '../storage/data-store';
 import { DataStoreFactory } from '../storage/data-store-factory';
@@ -198,8 +198,7 @@ class Model extends React.Component {
         });
     } catch (error) {
       console.error(error);
-      // TODO Toast error.
-      alert(`Failed to load web3, accounts, or contract. Check console for details.`);
+      this.notify("Failed to load web3, accounts, or contract. Check console for details.", { variant: 'error' })
     }
   }
 
@@ -228,7 +227,7 @@ class Model extends React.Component {
 
     {
       const validator = new OnlineSafetyValidator(this.web3)
-      const networkType = await this.web3.eth.net.getNetworkType()
+      const networkType = await getNetworkType()
       this.setState({
         checkedContentRestriction: true,
         restrictContent: !validator.isPermitted(networkType, contractAddress)
@@ -881,8 +880,7 @@ class Model extends React.Component {
         return this.state.contractInstance.methods.addData(trainData, classification)
           .send({ from: this.state.accounts[0], value })
           .on('transactionHash', (transactionHash) => {
-            // TODO Pop up confirmation that data was sent.
-            // console.log(`Data sent. status:${status}\nevents:`);
+            this.notify("Data was sent but has not been confirmed yet")
 
             // Save original training data.
             // We don't really need to save it to the blockchain
@@ -897,23 +895,21 @@ class Model extends React.Component {
             if (this.state.storageType !== 'none') {
               const storage = this.storages[this.state.storageType];
               return storage.saveOriginalData(transactionHash, new OriginalData(originalData)).then(() => {
-                // TODO Toast.
-                console.log("Saved info to DB.")
+                this.notify("Saved info to database.")
                 return this.updateRefundData().then(this.updateDynamicInfo);
               }).catch(err => {
-                // TODO Toast.
-                console.error("Error saving original data to DB.");
+                this.notify("Error saving original data to the database.", { variant: 'error' })
+                console.error("Error saving original data to the database.");
                 console.error(err);
               });
             }
           })
-          .on('receipt', (receipt) => {
+          .on('receipt', (_receipt) => {
             // Doesn't get triggered through promise after updating to `web3 1.0.0-beta.52`.
+            // Some helpful fields:
             // const { events, /* status */ } = receipt;
-            // console.log(events);
             // const vals = events.AddData.returnValues;
-            const { transactionHash } = receipt;
-            console.log(`transactionHash: ${transactionHash}`);
+            // const { transactionHash } = receipt;
           })
           .on('error', err => {
             console.error(err);
