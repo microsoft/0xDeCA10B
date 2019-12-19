@@ -162,14 +162,14 @@ class ModelList extends React.Component {
           removeItemIndex: undefined,
           models: update(this.state.models, { $splice: [[removeItemIndex, 1]] }),
         });
-        this.props.enqueueSnackbar("Removed", { variant: "success" });
+        this.notify("Removed", { variant: "success" });
       } else {
         throw new Error("Error removing.");
       }
     }).catch(err => {
       console.error("Error removing.");
       console.error(err);
-      this.props.enqueueSnackbar("Error while removing", { variant: "error" });
+      this.notify("Error while removing", { variant: "error" });
     });
   }
 
