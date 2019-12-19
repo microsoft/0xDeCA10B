@@ -1,7 +1,6 @@
 import Button from '@material-ui/core/Button';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Container from '@material-ui/core/Container';
-import Divider from '@material-ui/core/Divider';
 import IconButton from '@material-ui/core/IconButton';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
@@ -17,24 +16,28 @@ import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
 import React from 'react';
 import update from 'react-addons-update';
-import { Link } from "react-router-dom";
 import { checkStorages } from '../components/storageSelector';
 import { getWeb3 } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
 import { DataStoreFactory } from '../storage/data-store-factory';
 
 const styles = theme => ({
-  link: {
-    color: theme.palette.primary.main,
-    // TODO Remove underline.
+  descriptionDiv: {
+    // Indent a bit to better align with text in the list.
+    marginLeft: theme.spacing(1),
+    marginRight: theme.spacing(1),
   },
   button: {
     marginTop: 20,
     marginBottom: 20,
     marginLeft: 10,
   },
-  spinnerContainer: {
+  spinnerDiv: {
     textAlign: 'center',
+    marginTop: theme.spacing(2),
+  },
+  listDiv: {
+    marginTop: theme.spacing(2),
   },
   nextButtonContainer: {
     textAlign: 'end',
@@ -62,14 +65,12 @@ class ModelList extends React.Component {
       loadingModels: true,
       numModelsRemaining: 0,
       models: [],
+      permittedStorageTypes: [],
     }
 
     this.nextModels = this.nextModels.bind(this)
 
     this.RemoveItemModal = this.RemoveItemModal.bind(this);
-    // this.handleStartRemove = this.handleStartRemove.bind(this);
-    // this.handleCancelRemove = this.handleCancelRemove.bind(this);
-    // this.handleRemove = this.handleRemove.bind(this);
   }
 
   componentDidMount = async () => {
@@ -198,45 +199,49 @@ class ModelList extends React.Component {
   }
 
   render() {
-    let listItems = [];
-    if (this.state.models) {
-      listItems = this.state.models.map((m, index) => {
-        const url = `/model?${m.id ? `modelId=${m.id}&` : ''}address=${m.address}&metaDataLocation=${m.metaDataLocation}&tab=predict`;
-        return (
-          <ListItem key={`model-${index}`} button>
-            <Link to={url}>
-              <ListItemText primary={m.restrictContent ? `(name hidden) Address: ${m.address}` : m.name}
-                primaryTypographyProps={{ className: this.props.classes.link }}
-                secondary={m.accuracy && `Accuracy: ${(m.accuracy * 100).toFixed(1)}%`} />
-              {m.metaDataLocation === 'local' &&
-                <ListItemSecondaryAction>
-                  <IconButton edge="end" aria-label="delete" onClick={(event) => {
-                    this.handleStartRemove(m, index); event.preventDefault()
-                  }} >
-                    <DeleteIcon />
-                  </IconButton>
-                </ListItemSecondaryAction>
-              }
-            </Link>
-          </ListItem>
-          
-          // TODO Find a way to make the division between items clear
-          // Can't use Divider because the items might not be in <li> in a list as required for accessibility.
-          // {index + 1 !== this.state.models.length && <Divider />}
-        );
-      });
-    }
+    const listItems = this.state.models.map((m, index) => {
+      const url = `/model?${m.id ? `modelId=${m.id}&` : ''}address=${m.address}&metaDataLocation=${m.metaDataLocation}&tab=predict`
+      const allowRemoval = m.metaDataLocation === 'local'
+      return (
+        <ListItem key={`model-${index}`} button component="a" href={url}>
+          <ListItemText primary={m.restrictContent ? `(name hidden) Address: ${m.address}` : m.name}
+            secondary={m.accuracy && `Accuracy: ${(m.accuracy * 100).toFixed(1)}%`} />
+          {/* For accessibility: keep secondary action even when disabled so that the <li> is used. */}
+          <ListItemSecondaryAction>
+            {allowRemoval &&
+              <IconButton edge="end" aria-label="delete" onClick={(event) => {
+                this.handleStartRemove(m, index); event.preventDefault()
+              }} >
+                <DeleteIcon />
+              </IconButton>
+            }
+          </ListItemSecondaryAction>
+        </ListItem>
+      );
+    });
+
+    const serviceStorageEnabled = this.state.permittedStorageTypes.indexOf('service') > 0
 
     return (
       <div>
         <this.RemoveItemModal />
         <Container>
+          <div className={this.props.classes.descriptionDiv}>
+            <Typography variant="h5" component="h5">
+              Welcome to Sharing Updatable Models
+            </Typography>
+            <Typography component="p">
+              Here you will find models stored on a blockchain that you can interact with.
+              Models are added to this list if you have recorded them locally in this browser
+              {serviceStorageEnabled && " or if they are listed on a centralized server"}.
+            </Typography>
+          </div>
           {this.state.loadingModels ?
-            <div className={this.props.classes.spinnerContainer}>
+            <div className={this.props.classes.spinnerDiv}>
               <CircularProgress size={100} />
             </div>
             : listItems.length > 0 ?
-              <div>
+              <div className={this.props.classes.listDiv}>
                 {this.state.numModelsRemaining > 0 &&
                   <div className={this.props.classes.nextButtonContainer}>
                     <Button className={this.props.classes.button} variant="outlined" color="primary"

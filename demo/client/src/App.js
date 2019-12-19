@@ -1,5 +1,5 @@
-import { CssBaseline } from '@material-ui/core';
 import blue from '@material-ui/core/colors/blue';
+import CssBaseline from '@material-ui/core/CssBaseline';
 import { createMuiTheme } from '@material-ui/core/styles';
 import { ThemeProvider } from '@material-ui/styles';
 import { SnackbarProvider } from 'notistack';
