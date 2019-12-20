@@ -74,6 +74,13 @@ class AddModel extends React.Component {
 
   constructor(props) {
     super(props);
+    this.classes = props.classes;
+
+    this.modelTypes = {
+      'dense perceptron': DensePerceptron,
+      'sparse perceptron': SparsePerceptron,
+    };
+    this.web3 = null;
 
     // Default to local storage for storing original data.
     const storageType = localStorage.getItem('storageType') || 'local';
@@ -113,12 +120,6 @@ class AddModel extends React.Component {
       permittedStorageTypes: [],
     };
 
-    this.modelTypes = {
-      'dense perceptron': DensePerceptron,
-      'sparse perceptron': SparsePerceptron,
-    };
-    this.classes = props.classes;
-    this.web3 = null;
     this.save = this.save.bind(this);
     this.handleInputChange = this.handleInputChange.bind(this);
     this.processUploadedModel = this.processUploadedModel.bind(this);
@@ -177,7 +178,11 @@ class AddModel extends React.Component {
     reader.onload = () => {
       const binaryStr = reader.result
       const model = JSON.parse(binaryStr);
-      this.setState({ model, modelFileName: file.path });
+      if (!(model.type in this.modelTypes)) {
+        this.notify(`The "type" of the model must be one of ${JSON.stringify(Object.keys(this.modelTypes))}`, { variant: 'error' })
+      } else {
+        this.setState({ model, modelFileName: file.path });
+      }
     };
     reader.readAsBinaryString(file);
   }
@@ -249,8 +254,8 @@ class AddModel extends React.Component {
                   name: 'incentiveMechanism',
                 }}
               >
-                {/* TODO <MenuItem value={"Points"}>Points</MenuItem> */}
-                <MenuItem value={"Stakeable64"}>Stakeable64</MenuItem>
+                <MenuItem value={"Points"}>Points</MenuItem>
+                <MenuItem value={"Stakeable64"}>Stakeable</MenuItem>
               </Select>
               {this.state.incentiveMechanism === "Stakeable64" &&
                 this.renderStakeableOptions()
