@@ -157,13 +157,23 @@ class AddModel extends React.Component {
     const target = event.target;
     const value = target.type === "checkbox" ? target.checked : target.value;
     const name = target.name;
-    this.setState({
-      [name]: value
-    }, _ => {
-      if (name === 'storageType') {
-        localStorage.setItem(name, value);
+
+    let valid = true
+    if (['costWeight', 'refundTimeWaitTimeS', 'ownerClaimWaitTimeS', 'anyAddressClaimWaitTimeS'].indexOf(name) >= 0) {
+      if (value < 0) {
+        this.notify(`The value for ${name} but be at least 0`, { variant: 'error' })
+        valid = false
       }
-    });
+    }
+    if (valid) {
+      this.setState({
+        [name]: value
+      }, _ => {
+        if (name === 'storageType') {
+          localStorage.setItem(name, value);
+        }
+      });
+    }
   }
 
   processUploadedModel(acceptedFiles) {
@@ -188,6 +198,10 @@ class AddModel extends React.Component {
   }
 
   render() {
+    const disableSave = this.state.deploymentInfo.main.address !== undefined
+      || !(this.state.refundTimeWaitTimeS <= this.state.ownerClaimWaitTimeS)
+      || !(this.state.ownerClaimWaitTimeS <= this.state.anyAddressClaimWaitTimeS)
+      || this.state.costWeight < 0;
     return (
       <Container>
         <Paper className={this.classes.root} elevation={1}>
@@ -267,9 +281,7 @@ class AddModel extends React.Component {
             </div>
           </form>
           <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}
-            disabled={this.state.deploymentInfo.main.address !== undefined
-              || !(this.state.refundTimeWaitTimeS <= this.state.ownerClaimWaitTimeS)
-              || !(this.state.ownerClaimWaitTimeS <= this.state.anyAddressClaimWaitTimeS)}
+            disabled={disableSave}
           >
             Save
           </Button>
@@ -342,7 +354,14 @@ class AddModel extends React.Component {
           margin="normal"
           onChange={this.handleInputChange} />
       </Grid>
-      <Grid item xs={12} sm={6}>
+      <Grid item xs={12} sm={12}>
+        <Typography component="h4">
+          Deposit Weight
+        </Typography>
+        <Typography component="p">
+          A multiplicative factor to the required deposit.
+          Setting this to 0 will mean that no deposit is required but will allow you to stil use the IM to track "good" and "bad" contributions.
+        </Typography>
         <TextField name="costWeight" label="Cost weight (in wei)"
           inputProps={{ 'aria-label': "Cost weight in wei" }}
           className={this.classes.numberTextField}
@@ -526,7 +545,8 @@ class AddModel extends React.Component {
     switch (incentiveMechanism) {
       case 'Points':
         // TODO
-        break;
+        throw new Error(`Unsupported incentive mechanism: "${incentiveMechanism}"`);
+      // break;
       case 'Stakeable64':
         const stakeableContract = new this.web3.eth.Contract(Stakeable64.abi, {
           from: account,

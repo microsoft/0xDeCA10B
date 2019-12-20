@@ -264,6 +264,7 @@ class Model extends React.Component {
           });
         }),
         contractInstance.methods.incentiveMechanism().call().then(incentiveMechanismAddress => {
+          // TODO Support different IM types.
           return this.getContractInstance({
             abi: IncentiveMechanism.abi,
             address: incentiveMechanismAddress

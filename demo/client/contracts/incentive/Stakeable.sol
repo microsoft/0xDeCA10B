@@ -106,6 +106,9 @@ contract Stakeable is Ownable, IncentiveMechanism {
      * @return The amount of wei required to add data at `currentTimeS`.
      */
     function getNextAddDataCost(uint currentTimeS) public view returns (uint) {
+        if (costWeight == 0) {
+            return 0;
+        }
         // Value sent is in wei (1E18 wei = 1 ether).
         require(lastUpdateTimeS <= currentTimeS, "The last update time is after the current time.");
         // No SafeMath check needed because already done above.
