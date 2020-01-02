@@ -11,7 +11,7 @@ SignedSafeMath.sol
 blockchain_db
 
 # Generated contract configs
-client/src/contracts/*.json
+client/src/contracts/compiled/*.json
 
 # Training
 embedding_cache.json

@@ -20,7 +20,7 @@ node_modules/
 client/node_modules/
 
 # Generated contract configs
-client/src/contracts/*.json
+client/src/contracts/compiled/*.json
 
 # Training
 **/embedding_cache.json

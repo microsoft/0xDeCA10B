@@ -101,10 +101,10 @@ Run `yarn clean` to delete your local blockchain and cached contracts. This will
 
 ### Errors about a contract not found at a certain address
 If you get errors about calling a contract then it's probably because you restarted your blockchain (Ganache) and the contract doesn't exist anymore on the blockchain.
-This would happen if you restarted your computer.
+This could happen if you restarted your computer.
 You have to delete the generated .json files that keep track of contract addresses:
 ```bash
-rm -f client/{build,src}/contracts/*.json
+rm -f client/{build,src}/contracts/compiled/*.json
 ```
 Then you should be able to deploy normally.
 

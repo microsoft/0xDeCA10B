@@ -1,5 +1,5 @@
 node_modules
 client/node_modules
 
-client/contracts/libs/SafeMath.sol
-client/contracts/libs/SignedSafeMath.sol
+client/lib/SafeMath.sol
+client/lib/SignedSafeMath.sol

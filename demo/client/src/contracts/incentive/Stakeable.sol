@@ -1,8 +1,8 @@
 pragma solidity ^0.5.8;
 
-import "../libs/Math.sol";
-import "../libs/SafeMath.sol";
-import "../libs/SignedSafeMath.sol";
+import "../../../lib/Math.sol";
+import "../../../lib/SafeMath.sol";
+import "../../../lib/SignedSafeMath.sol";
 
 import {IncentiveMechanism, IncentiveMechanism64} from "./IncentiveMechanism.sol";
 import {Ownable} from "../ownership/Ownable.sol";
@@ -69,7 +69,7 @@ contract Stakeable is Ownable, IncentiveMechanism {
     /**
      * The total number of samples that have been determined to be good.
      */
-    uint128 public totalGoodDataCount = 0;
+    uint public totalGoodDataCount = 0;
 
     constructor(
         // Parameters in chronological order.
@@ -160,7 +160,7 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
         require(prediction == classification, "The model doesn't agree with your contribution.");
 
         numGoodDataPerAddress[submitter] += 1;
-        totalGoodDataCount += 1;
+        totalGoodDataCount = totalGoodDataCount.add(1);
         emit Refund(submitter, refundAmount);
     }
 
@@ -184,7 +184,7 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
         } else {
             // Don't allow someone to claim back their own deposit if their data was wrong.
             // They can still claim it from another address but they will have had to have sent good data from that address.
-            require(reporter != originalAuthor, "Cannot take your own deposit. Ask for a refund instead.");
+            require(reporter != originalAuthor, "Cannot take your own deposit.");
 
             require(!claimedByReporter, "Deposit already claimed by reporter.");
             require(timeSinceAddedS >= refundWaitTimeS, "Not enough time has passed.");

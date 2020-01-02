@@ -1,7 +1,7 @@
 pragma solidity ^0.5.8;
 pragma experimental ABIEncoderV2;
 
-import "../libs/Math.sol";
+import "../../../lib/Math.sol";
 
 import {Classifier64} from "./Classifier.sol";
 

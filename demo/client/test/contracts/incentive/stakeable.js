@@ -100,17 +100,17 @@ contract('Stakeable64', function (accounts) {
       data, classification,
       addedTime, ownerAddress,
       cost, cost, false,
-      prediction).then((r) => {
-        assert.fail("Reporting should have failed because \"Cannot take your own deposit. Ask for a refund instead.\".");
+      prediction).then(_ => {
+        assert.fail("Reporting should have failed because \"Cannot take your own deposit.\".");
       }).catch(err => {
-        assert.equal(err.message, "Returned error: VM Exception while processing transaction: revert Cannot take your own deposit. Ask for a refund instead. -- Reason given: Cannot take your own deposit. Ask for a refund instead..");
+        assert.equal(err.message, "Returned error: VM Exception while processing transaction: revert Cannot take your own deposit. -- Reason given: Cannot take your own deposit..");
       });
 
     rewardAmount = await stakeable.handleReport.call(otherAddress,
       data, classification,
       addedTime, ownerAddress,
       cost, cost, false,
-      // Predict the wrong classification.
+      // Prediction was the wrong classification.
       classification + 1).then(parseBN);
     assert.equal(rewardAmount, Math.floor(cost * numGoodForOther / totalGoodDataCount), "The reward amount should be split amongst those with \"verified\" data contributions.");
 

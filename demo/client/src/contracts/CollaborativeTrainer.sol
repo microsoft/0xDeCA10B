@@ -1,6 +1,6 @@
 pragma solidity ^0.5.8;
 
-import "./libs/SafeMath.sol";
+import "../../lib/SafeMath.sol";
 
 import {Classifier64} from "./classification/Classifier.sol";
 import {DataHandler64} from "./data/DataHandler.sol";
@@ -123,7 +123,6 @@ contract CollaborativeTrainer64 is CollaborativeTrainer {
      */
     function report(int64[] memory data, uint64 classification, uint addedTime, address originalAuthor)
             public {
-        // TODO Handle any address taking and owner taking depending on the amount of time that has passed.
         (uint initialDeposit, uint claimableAmount, bool claimedByReporter, bytes32 dataKey) = dataHandler.handleReport(
             msg.sender, data, classification, addedTime, originalAuthor);
         uint64 prediction = classifier.predict(data);
