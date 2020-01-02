@@ -66,16 +66,15 @@ contract Points64 is IncentiveMechanism64, Points {
         int64[] memory /* data */, uint64 classification,
         uint /* addedTime */,
         uint claimableAmount, bool claimedBySubmitter,
-        uint64 prediction)
+        uint64 prediction,
+        uint numClaims)
         public onlyOwner
         returns (uint refundAmount) {
-        // FIXME Mark as already claimed.
-
         // `claimableAmount` should be 0.
         refundAmount = claimableAmount;
 
-        // Make sure deposit can be taken.
-        require(!claimedBySubmitter, "Deposit already claimed by submitter.");
+        require(numClaims == 0, "Already claimed.");
+        require(!claimedBySubmitter, "Already claimed by submitter.");
         require(prediction == classification, "The model doesn't agree with your contribution.");
 
         addressStats[submitter].numValidated += 1;
@@ -88,17 +87,17 @@ contract Points64 is IncentiveMechanism64, Points {
         int64[] memory /* data */, uint64 classification,
         uint /* addedTime */, address originalAuthor,
         uint /* initialDeposit */, uint claimableAmount, bool claimedByReporter,
-        uint64 prediction)
+        uint64 prediction,
+        uint numClaims)
         public onlyOwner
         returns (uint rewardAmount) {
-        // FIXME Mark as already claimed.
-
         // `claimableAmount` should be 0.
         rewardAmount = claimableAmount;
 
+        require(numClaims == 0, "Already claimed.");
         require(reporter != originalAuthor, "Cannot report yourself.");
 
-        require(!claimedByReporter, "Deposit already claimed by reporter.");
+        require(!claimedByReporter, "Already claimed by reporter.");
         require(prediction != classification, "The model should not agree with the contribution.");
 
         emit Report(reporter);

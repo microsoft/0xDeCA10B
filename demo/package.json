@@ -8,7 +8,7 @@
     "clean": "rm -rf blockchain_db db.sqlite client/src/contracts/compiled/*.json",
     "client": "cd client && yarn start",
     "prod-client": "cd client && yarn start-prod",
-    "lint": "solium --dir client/contracts/ --fix-dry-run",
+    "lint": "solium --dir client/src/contracts/ --fix-dry-run",
     "server": "nodemon server.js --ignore client/",
     "start-prod-back-end": "node server.js",
     "test": "cd client && yarn test"

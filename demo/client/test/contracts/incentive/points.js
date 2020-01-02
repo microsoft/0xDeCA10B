@@ -37,12 +37,12 @@ contract('Points64', function (accounts) {
 
     const refundAmount = await im.handleRefund.call(otherAddress, data, classification,
       addedTime, claimableAmount, claimedBySubmitter,
-      prediction, { from: ownerAddress })
+      prediction, 0, { from: ownerAddress })
     assert.equal(refundAmount, 0)
 
     let refundResponse = await im.handleRefund(ownerAddress, data, classification,
       addedTime, claimableAmount, claimedBySubmitter,
-      prediction, { from: ownerAddress })
+      prediction, 0, { from: ownerAddress })
     let e = refundResponse.logs.filter(e => e.event == 'Refund')[0]
     assert.equal(e.args.recipient, ownerAddress)
     totalGoodDataCount += 1
@@ -53,7 +53,7 @@ contract('Points64', function (accounts) {
       addedTime, ownerAddress,
       cost, cost, false,
       // Prediction was the wrong classification.
-      classification + 1).then(parseBN)
+      classification + 1, 0).then(parseBN)
     assert.equal(rewardAmount, 0)
 
     let reportResponse = await im.handleReport(otherAddress,
@@ -61,7 +61,7 @@ contract('Points64', function (accounts) {
       addedTime, ownerAddress,
       cost, cost, false,
       // Prediction was the wrong classification.
-      classification + 1)
+      classification + 1, 0)
     e = reportResponse.logs.filter(e => e.event == 'Report')[0]
     assert.equal(e.args.recipient, otherAddress)
   })
@@ -81,7 +81,7 @@ contract('Points64', function (accounts) {
 
     const refundResponse = await im.handleRefund(ownerAddress, data, classification,
       addedTime, claimableAmount, claimedBySubmitter,
-      prediction, { from: ownerAddress })
+      prediction, 0, { from: ownerAddress })
     let e = refundResponse.logs.filter(e => e.event == 'Refund')[0]
     assert.equal(e.args.recipient, ownerAddress)
     totalGoodDataCount += 1
@@ -89,7 +89,7 @@ contract('Points64', function (accounts) {
 
     await im.handleRefund(otherAddress, data, classification,
       addedTime, claimableAmount, claimedBySubmitter,
-      prediction).then(_ => {
+      prediction, 1).then(_ => {
         assert.fail("The second refund should have failed.")
       }).catch(err => {
         const msg = "Already claimed.";
@@ -114,16 +114,16 @@ contract('Points64', function (accounts) {
       data, classification,
       addedTime, ownerAddress,
       cost, cost, false,
-      prediction)
+      prediction, 0)
 
     await im.handleReport(anotherAddress,
       data, classification,
       addedTime, ownerAddress,
       cost, cost, false,
-      prediction).then(_ => {
+      prediction, 1).then(_ => {
         assert.fail("The second report should have failed.")
       }).catch(err => {
-        const msg = "Already reported.";
+        const msg = "Already claimed.";
         assert.equal(err.message, `Returned error: VM Exception while processing transaction: revert ${msg} -- Reason given: ${msg}.`);
       })
   })

@@ -103,13 +103,14 @@ contract CollaborativeTrainer64 is CollaborativeTrainer {
      * @param addedTime The time when the data was added.
      */
     function refund(int64[] memory data, uint64 classification, uint addedTime) public {
-        (uint claimableAmount, bool claimedBySubmitter) = dataHandler.handleRefund(
+        (uint claimableAmount, bool claimedBySubmitter, uint numClaims) = dataHandler.handleRefund(
             msg.sender, data, classification, addedTime);
         uint64 prediction = classifier.predict(data);
         uint refundAmount = incentiveMechanism.handleRefund(msg.sender,
             data, classification, addedTime,
             claimableAmount, claimedBySubmitter,
-            prediction);
+            prediction,
+            numClaims);
         msg.sender.transfer(refundAmount);
     }
 
@@ -123,13 +124,14 @@ contract CollaborativeTrainer64 is CollaborativeTrainer {
      */
     function report(int64[] memory data, uint64 classification, uint addedTime, address originalAuthor)
             public {
-        (uint initialDeposit, uint claimableAmount, bool claimedByReporter, bytes32 dataKey) = dataHandler.handleReport(
+        (uint initialDeposit, uint claimableAmount, bool claimedByReporter, uint numClaims, bytes32 dataKey) = dataHandler.handleReport(
             msg.sender, data, classification, addedTime, originalAuthor);
         uint64 prediction = classifier.predict(data);
         uint rewardAmount = incentiveMechanism.handleReport(msg.sender,
             data, classification, addedTime, originalAuthor,
             initialDeposit, claimableAmount, claimedByReporter,
-            prediction);
+            prediction,
+            numClaims);
         dataHandler.updateClaimableAmount(dataKey, rewardAmount);
 
         msg.sender.transfer(rewardAmount);

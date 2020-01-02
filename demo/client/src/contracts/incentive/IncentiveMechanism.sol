@@ -57,6 +57,7 @@ contract IncentiveMechanism64 is Ownable, IncentiveMechanism {
      * @param claimableAmount The amount that can be claimed for the refund.
      * @param claimedBySubmitter True if the data has already been claimed by `submitter`, otherwise false.
      * @param prediction The current prediction of the model for data.
+     * @param numClaims The number of claims that have been made for the contribution before this request.
      * @return The amount to refund to `submitter`.
      */
     function handleRefund(
@@ -64,7 +65,8 @@ contract IncentiveMechanism64 is Ownable, IncentiveMechanism {
         int64[] memory data, uint64 classification,
         uint addedTime,
         uint claimableAmount, bool claimedBySubmitter,
-        uint64 prediction)
+        uint64 prediction,
+        uint numClaims)
         public
         returns (uint refundAmount);
 
@@ -80,6 +82,7 @@ contract IncentiveMechanism64 is Ownable, IncentiveMechanism {
      * @param claimableAmount The amount of the deposit that can still be claimed.
      * @param claimedByReporter True if the data has already been claimed by `reporter`, otherwise false.
      * @param prediction The current prediction of the model for data.
+     * @param numClaims The number of claims that have been made for the contribution before this request.
      * @return The amount to reward to `reporter`.
      */
     function handleReport(
@@ -87,7 +90,8 @@ contract IncentiveMechanism64 is Ownable, IncentiveMechanism {
         int64[] memory data, uint64 classification,
         uint addedTime, address originalAuthor,
         uint initialDeposit, uint claimableAmount, bool claimedByReporter,
-        uint64 prediction)
+        uint64 prediction,
+        uint numClaims)
         public
         returns (uint rewardAmount);
 }

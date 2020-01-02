@@ -46,7 +46,7 @@ contract('Stakeable64', function (accounts) {
     claimableAmount = cost;
     let refundResponse = await stakeable.handleRefund(ownerAddress, data, classification,
       addedTime, claimableAmount, claimedBySubmitter,
-      prediction, { from: ownerAddress });
+      prediction, 0, { from: ownerAddress });
     let e = refundResponse.logs.filter(e => e.event == 'Refund')[0];
     refundAmount = parseBN(e.args.amount);
     assert.equal(refundAmount, claimableAmount);
@@ -62,11 +62,11 @@ contract('Stakeable64', function (accounts) {
     claimableAmount = cost;
     refundAmount = await stakeable.handleRefund.call(otherAddress, data, classification,
       addedTime, claimableAmount, claimedBySubmitter,
-      prediction, { from: ownerAddress });
+      prediction, 0, { from: ownerAddress });
     assert.equal(refundAmount, claimableAmount);
     await stakeable.handleRefund(otherAddress, data, classification,
       addedTime, claimableAmount, claimedBySubmitter,
-      prediction, { from: ownerAddress });
+      prediction, 0, { from: ownerAddress });
   });
 
   it("...should get full deposit", async () => {
@@ -100,7 +100,7 @@ contract('Stakeable64', function (accounts) {
       data, classification,
       addedTime, ownerAddress,
       cost, cost, false,
-      prediction).then(_ => {
+      prediction, 0).then(_ => {
         assert.fail("Reporting should have failed because \"Cannot take your own deposit.\".");
       }).catch(err => {
         assert.equal(err.message, "Returned error: VM Exception while processing transaction: revert Cannot take your own deposit. -- Reason given: Cannot take your own deposit..");
@@ -111,7 +111,7 @@ contract('Stakeable64', function (accounts) {
       addedTime, ownerAddress,
       cost, cost, false,
       // Prediction was the wrong classification.
-      classification + 1).then(parseBN);
+      classification + 1, 1).then(parseBN);
     assert.equal(rewardAmount, Math.floor(cost * numGoodForOther / totalGoodDataCount), "The reward amount should be split amongst those with \"verified\" data contributions.");
 
     // Again check that we are still in the refund period and not the any take period.
@@ -126,7 +126,7 @@ contract('Stakeable64', function (accounts) {
       data, classification,
       addedTime, ownerAddress,
       cost, cost, false,
-      prediction);
+      prediction, 2);
     let e = reportResponse.logs.filter(e => e.event == 'Report')[0];
     rewardAmount = parseBN(e.args.amount);
     assert.equal(rewardAmount, cost, "The reward amount should be the entire initial deposit.");
@@ -141,7 +141,7 @@ contract('Stakeable64', function (accounts) {
       data, classification,
       addedTime, ownerAddress,
       cost, cost, false,
-      prediction);
+      prediction, 3);
     e = reportResponse.logs.filter(e => e.event == 'Report')[0];
     rewardAmount = parseBN(e.args.amount);
     assert.equal(rewardAmount, cost, "The reward amount should be the entire initial deposit.");

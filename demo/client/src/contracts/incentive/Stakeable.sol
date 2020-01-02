@@ -148,7 +148,8 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
         int64[] memory /* data */, uint64 classification,
         uint addedTime,
         uint claimableAmount, bool claimedBySubmitter,
-        uint64 prediction)
+        uint64 prediction,
+        uint /* numClaims */)
         public onlyOwner
         returns (uint refundAmount) {
         refundAmount = claimableAmount;
@@ -169,7 +170,8 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
         int64[] memory /* data */, uint64 classification,
         uint addedTime, address originalAuthor,
         uint initialDeposit, uint claimableAmount, bool claimedByReporter,
-        uint64 prediction)
+        uint64 prediction,
+        uint /* numClaims */)
         public onlyOwner
         returns (uint rewardAmount) {
         // Make sure deposit can be taken.

@@ -47,6 +47,11 @@ contract DataHandler64 is Ownable, DataHandler {
          */
         uint claimableAmount;
         /**
+         * The number of claims that have been made for refunds or reports.
+         * This should be the size of `claimedBy`.
+         */
+        uint numClaims;
+        /**
          * The set of addresses that claimed a refund or reward on this data.
          */
         mapping(address => bool) claimedBy;
@@ -122,7 +127,8 @@ contract DataHandler64 is Ownable, DataHandler {
             t: time,
             sender: msgSender,
             initialDeposit: cost,
-            claimableAmount: cost
+            claimableAmount: cost,
+            numClaims: 0
         });
     }
 
@@ -134,11 +140,12 @@ contract DataHandler64 is Ownable, DataHandler {
      * @param classification The label originally submitted for `data`.
      * @param addedTime The time in seconds for which the data was added.
      * @return The amount that can be claimed for the refund.
-     * @return True if the data has already been claimed by `submitter`, otherwise false.
+     * @return `true` if the data has already been claimed by `submitter`, otherwise `false`.
+     * @return The number of claims that have been made for the contribution before this request.
      */
     function handleRefund(address submitter, int64[] memory data, uint64 classification, uint addedTime)
         public onlyOwner
-        returns (uint claimableAmount, bool claimedBySubmitter) {
+        returns (uint claimableAmount, bool claimedBySubmitter, uint numClaims) {
         bytes32 key = keccak256(abi.encodePacked(data, classification, addedTime, submitter));
         StoredData storage existingData = addedData[key];
         // Validate found value.
@@ -150,10 +157,12 @@ contract DataHandler64 is Ownable, DataHandler {
 
         claimableAmount = existingData.claimableAmount;
         claimedBySubmitter = existingData.claimedBy[submitter];
+        numClaims = existingData.numClaims;
 
         // Upon successful completion of the refund the values will be claimed.
         existingData.claimableAmount = 0;
         existingData.claimedBy[submitter] = true;
+        existingData.numClaims = numClaims.add(1);
     }
 
     /**
@@ -164,14 +173,17 @@ contract DataHandler64 is Ownable, DataHandler {
      * @param classification The label submitted for `data`.
      * @param addedTime The time in seconds for which the data was added.
      * @param originalAuthor The address that originally added the data.
-     * @return True if the data has already been claimed by `submitter`, otherwise false.
-     * @return The stored data.
+     * @return The amount that was initially deposited when the data contribution was submitted.
+     * @return The amount remainining that can be claimed.
+     * @return `true` if the data has already been claimed by `reporter`, otherwise `false`.
+     * @return The number of claims that have been made for the contribution before this request.
+     * @return The key to the stored data.
      */
     function handleReport(
         address reporter,
         int64[] memory data, uint64 classification, uint addedTime, address originalAuthor)
         public onlyOwner
-        returns (uint initialDeposit, uint claimableAmount, bool claimedByReporter, bytes32 dataKey) {
+        returns (uint initialDeposit, uint claimableAmount, bool claimedByReporter, uint numClaims, bytes32 dataKey) {
         dataKey = keccak256(abi.encodePacked(data, classification, addedTime, originalAuthor));
         StoredData storage existingData = addedData[dataKey];
         // Validate found value.
@@ -184,10 +196,15 @@ contract DataHandler64 is Ownable, DataHandler {
         initialDeposit = existingData.initialDeposit;
         claimableAmount = existingData.claimableAmount;
         claimedByReporter = existingData.claimedBy[reporter];
+        numClaims = existingData.numClaims;
 
         existingData.claimedBy[reporter] = true;
+        existingData.numClaims = numClaims.add(1);
     }
 
+    /**
+     * @return `true` if the contribution has already been claimed by `claimer`, otherwise `false`.
+     */
     function hasClaimed(
         int64[] memory data, uint64 classification,
         uint addedTime, address originalAuthor,
