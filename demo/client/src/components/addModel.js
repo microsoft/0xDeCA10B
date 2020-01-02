@@ -21,6 +21,7 @@ import Dropzone from 'react-dropzone';
 import CollaborativeTrainer64 from '../contracts/compiled/CollaborativeTrainer64.json';
 import DataHandler64 from '../contracts/compiled/DataHandler64.json';
 import DensePerceptron from '../contracts/compiled/DensePerceptron.json';
+import Points64 from '../contracts/compiled/Points64.json';
 import SparsePerceptron from '../contracts/compiled/SparsePerceptron.json';
 import Stakeable64 from '../contracts/compiled/Stakeable64.json';
 import { convertToHex, convertToHexData } from '../float-utils';
@@ -93,7 +94,7 @@ class AddModel extends React.Component {
       modelType: 'Classifier64',
       modelFileName: undefined,
       encoder: 'none',
-      incentiveMechanism: 'Stakeable64',
+      incentiveMechanism: 'Points',
       refundTimeWaitTimeS: 60,
       ownerClaimWaitTimeS: 120,
       anyAddressClaimWaitTimeS: 300,
@@ -539,41 +540,46 @@ class AddModel extends React.Component {
   }
 
   async deployIncentiveMechanism(account) {
-    let result;
-    const { refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS, costWeight, incentiveMechanism } = this.state;
-    const pleaseAcceptKey = this.notify("Please accept to deploy the incentive mechanism contract");
+    let contractInfo;
+    let args = undefined
+    const { incentiveMechanism } = this.state;
     switch (incentiveMechanism) {
       case 'Points':
-        // TODO
-        throw new Error(`Unsupported incentive mechanism: "${incentiveMechanism}"`);
-      // break;
+        contractInfo = Points64
+        break;
       case 'Stakeable64':
-        const stakeableContract = new this.web3.eth.Contract(Stakeable64.abi, {
-          from: account,
-        });
-        result = stakeableContract.deploy({
-          data: Stakeable64.bytecode,
-          arguments: [refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS, costWeight],
-        }).send({
-        }).on('transactionHash', transactionHash => {
-          this.dismissNotification(pleaseAcceptKey);
-          this.notify(`Submitted the incentive mechanism with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
-          this.saveTransactionHash('incentiveMechanism', transactionHash);
-        }).on('receipt', receipt => {
-          this.notify(`The incentive mechanism contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
-          this.saveAddress('incentiveMechanism', receipt.contractAddress);
-        }).on('error', err => {
-          this.dismissNotification(pleaseAcceptKey);
-          console.error(err);
-          this.notify("Error deploying the incentive mechanism", { variant: 'error' });
-          throw err;
-        });
+        contractInfo = Stakeable64
+        const { refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS, costWeight } = this.state;
+        args = [refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS, costWeight]
         break;
       default:
         // Should not happen.
-        this.dismissNotification(pleaseAcceptKey);
+        this.notify(`Unrecognized incentive mechanism: "${incentiveMechanism}"`, { variant: 'error' });
         throw new Error(`Unrecognized incentive mechanism: "${incentiveMechanism}"`);
     }
+
+    const imContract = new this.web3.eth.Contract(contractInfo.abi, {
+      from: account,
+    })
+
+    const pleaseAcceptKey = this.notify("Please accept to deploy the incentive mechanism contract");
+    const result = imContract.deploy({
+      data: contractInfo.bytecode,
+      arguments: args,
+    }).send({
+    }).on('transactionHash', transactionHash => {
+      this.dismissNotification(pleaseAcceptKey);
+      this.notify(`Submitted the incentive mechanism with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+      this.saveTransactionHash('incentiveMechanism', transactionHash);
+    }).on('receipt', receipt => {
+      this.notify(`The incentive mechanism contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
+      this.saveAddress('incentiveMechanism', receipt.contractAddress);
+    }).on('error', err => {
+      this.dismissNotification(pleaseAcceptKey);
+      console.error(err);
+      this.notify("Error deploying the incentive mechanism", { variant: 'error' });
+      throw err;
+    });
 
     return result;
   }

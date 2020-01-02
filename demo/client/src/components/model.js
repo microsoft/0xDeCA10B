@@ -625,11 +625,17 @@ class Model extends React.Component {
         .then(parseInt)
         .then(costWeight => {
           this.setState({ costWeight });
+        }).catch(err => {
+          console.error("Couldn't get costWeight value from IM.");
+          console.error(err);
         }),
       this.state.incentiveMechanism.methods.refundWaitTimeS().call()
         .then(parseInt)
         .then(refundWaitTimeS => {
           this.setState({ refundWaitTimeS });
+        }).catch(err => {
+          console.error("Couldn't get refundWaitTimeS value from IM.");
+          console.error(err);
         }),
     ]);
   }

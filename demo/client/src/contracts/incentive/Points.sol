@@ -48,6 +48,8 @@ contract Points is Ownable, IncentiveMechanism {
 }
 
 contract Points64 is IncentiveMechanism64, Points {
+    // TODO Make more like Stakeable64 or make model.js use the abstract IncentiveMechanism64
+    // or update model.js so that both contracts work in there.
 
     using SafeMath for uint256;
     using SignedSafeMath for int256;
