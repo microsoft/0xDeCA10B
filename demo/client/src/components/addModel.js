@@ -95,9 +95,9 @@ class AddModel extends React.Component {
       modelFileName: undefined,
       encoder: 'none',
       incentiveMechanism: 'Points',
-      refundTimeWaitTimeS: 60,
-      ownerClaimWaitTimeS: 120,
-      anyAddressClaimWaitTimeS: 300,
+      refundTimeWaitTimeS: 0,
+      ownerClaimWaitTimeS: 0,
+      anyAddressClaimWaitTimeS: 0,
       costWeight: 1E15,
       deploymentInfo: {
         dataHandler: {
@@ -275,7 +275,7 @@ class AddModel extends React.Component {
               {this.state.incentiveMechanism === "Stakeable64" &&
                 this.renderStakeableOptions()
               }
-              {this.state.incentiveMechanism === "Points64" &&
+              {this.state.incentiveMechanism === "Points" &&
                 this.renderPointsOptions()
               }
               <div className={this.classes.selector}>
@@ -447,8 +447,12 @@ class AddModel extends React.Component {
         // Save to a database.
         const storage = this.storages[this.state.storageType];
         storage.saveModelInformation(modelInfo).then(() => {
-          this.notify("Saved", { variant: 'success' });
-          // TODO Redirect.
+          // Redirect
+          const redirectWaitS = 5
+          this.notify(`Saved. Will redirect in ${redirectWaitS} seconds.`, { variant: 'success' })
+          setTimeout(_ => {
+            this.props.history.push(`/model?address=${mainContract.options.address}&metaDataLocation=${this.state.storageType}`)
+          }, redirectWaitS * 1000)
         }).catch(err => {
           console.error(err);
           console.error(err.response.data.message);
@@ -579,16 +583,16 @@ class AddModel extends React.Component {
   async deployIncentiveMechanism(account) {
     let contractInfo;
     let args = undefined
-    const { incentiveMechanism } = this.state;
+    const { incentiveMechanism,
+      refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS,
+      costWeight } = this.state;
     switch (incentiveMechanism) {
       case 'Points':
         contractInfo = Points64
-        const { refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS } = this.state;
         args = [refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS]
         break;
       case 'Stakeable64':
         contractInfo = Stakeable64
-        const { refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS, costWeight } = this.state;
         args = [refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS, costWeight]
         break;
       default:

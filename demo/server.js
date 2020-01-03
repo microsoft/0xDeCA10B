@@ -27,7 +27,7 @@ initSqlJs().then(SQL => {
 
   function isBodyValid(body) {
     return body && body.name
-      && body.address && typeof body.address === 'string' && body.address.startWith('0x');
+      && body.address && typeof body.address === 'string' && body.address.startsWith('0x');
   }
 
   function persistModel(model) {

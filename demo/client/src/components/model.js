@@ -256,7 +256,7 @@ class Model extends React.Component {
             modelAbi = Classifier.abi;
           } else {
             // TODO Get abi from https://etherscan.io/apis#contracts
-            alert("Couldn't determine model ABI.");
+            this.notify("Couldn't determine model ABI", { variant: 'error' })
           }
           return this.getContractInstance({
             abi: modelAbi,
@@ -264,7 +264,6 @@ class Model extends React.Component {
           });
         }),
         contractInstance.methods.incentiveMechanism().call().then(incentiveMechanismAddress => {
-          // TODO Support different IM types.
           return this.getContractInstance({
             abi: IncentiveMechanism.abi,
             address: incentiveMechanismAddress
@@ -417,6 +416,7 @@ class Model extends React.Component {
     // This will help with giving better error messages and avoid trying to create new transactions.
     this.state.dataHandler.methods.hasClaimed(dataSample, data.classification, data.time, data.sender, claimer).call()
       .then(hasClaimed => {
+        data.alreadyClaimed = hasClaimed;
         if (hasClaimed) {
           canAttemptRefund = false;
           cb({ canAttemptRefund });
@@ -424,9 +424,10 @@ class Model extends React.Component {
         }
         this.state.dataHandler.methods.getClaimableAmount(dataSample, data.classification, data.time, data.sender).call()
           .then(parseInt)
-          .then(claimableAmount => {
-            if (claimableAmount <= 0) {
+          .then(claimableAmount => {            
+            if (claimableAmount <= 0 && data.initialDeposit > 0) {
               canAttemptRefund = false;
+              data.alreadyClaimed = true;
               cb({ canAttemptRefund, claimableAmount });
             } else {
               this.predict(dataSample).then(prediction => {
@@ -492,7 +493,13 @@ class Model extends React.Component {
 
   getHumanReadableEth(amount) {
     // Could use web3.fromWei but it returns a string and then truncating would be trickier/less efficient.
-    return `Ξ${(amount * 1E-18).toFixed(6)}`;
+    let result
+    if (amount !== 0) {
+      result = (amount * 1E-18).toFixed(6)
+    } else {
+      result = 0
+    }
+    return `Ξ${result}`
   }
 
   /**
@@ -779,7 +786,7 @@ class Model extends React.Component {
   processUploadedImageInput(acceptedFiles) {
     this.setState({ prediction: undefined });
     if (acceptedFiles.length === 0 || acceptedFiles.length > 1) {
-      alert("Please only provide one image.");
+      this.notify("Please only provide one image", { variant: 'warning' })
     }
     const file = acceptedFiles[0];
     this.setState({ acceptedFiles: [file] });
@@ -875,11 +882,12 @@ class Model extends React.Component {
       .then(trainData => {
         // TODO Pass around BN's and avoid rounding issues.
         // Add extra wei to help with rounding issues. Extra gets returned right away by the contract.
-        const value = this.state.depositCost + 1E14;
+        const value = this.state.depositCost + (this.state.depositCost > 0 ? 1E14 : 0)
+        let sentNotificationKey;
         return this.state.contractInstance.methods.addData(trainData, classification)
           .send({ from: this.state.accounts[0], value })
           .on('transactionHash', (transactionHash) => {
-            this.notify("Data was sent but has not been confirmed yet")
+            sentNotificationKey = this.notify("Data was sent but has not been confirmed yet")
 
             // Save original training data.
             // We don't really need to save it to the blockchain
@@ -894,7 +902,7 @@ class Model extends React.Component {
             if (this.state.storageType !== 'none') {
               const storage = this.storages[this.state.storageType];
               return storage.saveOriginalData(transactionHash, new OriginalData(originalData)).then(() => {
-                this.notify("Saved info to database.")
+                this.notify("Saved info to database", { variant: 'success' })
                 return this.updateRefundData().then(this.updateDynamicInfo);
               }).catch(err => {
                 this.notify("Error saving original data to the database.", { variant: 'error' })
@@ -909,10 +917,13 @@ class Model extends React.Component {
             // const { events, /* status */ } = receipt;
             // const vals = events.AddData.returnValues;
             // const { transactionHash } = receipt;
+            if (sentNotificationKey) {
+              this.dismissNotification(sentNotificationKey)
+            }
           })
           .on('error', err => {
             console.error(err);
-            alert("Error adding data. See the console for details.")
+            this.notify("Error adding data. See the console for details.", { variant: 'error' })
           });
       });
   }
@@ -961,19 +972,23 @@ class Model extends React.Component {
             </Typography>
             <Typography component="p">
               <b>Time to wait before requesting a refund: </b>
-              {this.state.refundWaitTimeS ?
-                moment.duration(this.state.refundWaitTimeS, 's').humanize() :
-                "(loading)"}
+              {this.state.refundWaitTimeS !== undefined ?
+                this.state.refundWaitTimeS !== 0 ?
+                  moment.duration(this.state.refundWaitTimeS, 's').humanize()
+                  : "0 seconds"
+                : "(loading)"}
             </Typography>
             <Typography component="p">
               <b>Time to wait before taking another's deposit: </b>
-              {this.state.ownerClaimWaitTimeS ?
-                moment.duration(this.state.ownerClaimWaitTimeS, 's').humanize() :
-                "(loading)"}
+              {this.state.ownerClaimWaitTimeS !== undefined ?
+                this.state.ownerClaimWaitTimeS !== 0 ?
+                  moment.duration(this.state.ownerClaimWaitTimeS, 's').humanize()
+                  : "0 seconds"
+                : "(loading)"}
             </Typography>
             <Typography component="p" title={`${this.state.depositCost} wei`}>
               <b>Current Required Deposit: </b>
-              {this.state.depositCost ?
+              {this.state.depositCost !== undefined ?
                 this.getHumanReadableEth(this.state.depositCost)
                 : "(loading)"}
             </Typography>
@@ -1084,11 +1099,11 @@ class Model extends React.Component {
                               d.canAttemptRefund ?
                                 <Button className={this.classes.button} variant="outlined"
                                   onClick={() => this.refund(d.time)}>Refund {this.getHumanReadableEth(d.claimableAmount)}</Button>
-                                : d.claimableAmount === 0 || d.claimableAmount === null ?
-                                  `Already refunded or completely claimed.`
+                                : d.alreadyClaimed ?
+                                  "Already refunded or completely claimed."
                                   : d.classification !== d.prediction ?
-                                    `Classification does not match. Got "${d.prediction ? this.state.prediction : this.getClassificationName(d.prediction)}".`
-                                    : `Can't happen?`
+                                    `Classification does not match. Got "${this.state.restrictContent ? d.prediction : this.getClassificationName(d.prediction)}".`
+                                    : "Can't happen?"
                               : `Wait ${moment.duration(d.time + this.state.refundWaitTimeS - (new Date().getTime() / 1000), 's').humanize()} to refund.`
                           }
                         </TableCell>
@@ -1139,9 +1154,11 @@ class Model extends React.Component {
                                   onClick={() => this.takeDeposit(d.time)}>Take {this.getHumanReadableEth(d.claimableAmount)}</Button>
                                 : this.state.numGood === 0 || this.state.numGood === undefined ?
                                   "Validate your own contributions first."
-                                  : d.classification === d.prediction ?
-                                    `Classification must be wrong for you to claim this. Got "${this.state.restrictContent ? d.prediction : this.getClassificationName(d.prediction)}".`
-                                    : "Already refunded or completely claimed."
+                                  : d.alreadyClaimed ?
+                                    "Already refunded or completely claimed."
+                                    : d.classification === d.prediction ?
+                                      `Classification must be wrong for you to claim this. Got "${this.state.restrictContent ? d.prediction : this.getClassificationName(d.prediction)}".`
+                                      : "Can't happen?"
                               : `Wait ${moment.duration(d.time + this.state.refundWaitTimeS - (new Date().getTime() / 1000), 's').humanize()} to claim.`
                           }
                         </TableCell>
