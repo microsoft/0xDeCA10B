@@ -44,12 +44,15 @@ contract('Stakeable64', function (accounts) {
     await stakeable.handleAddData(cost, data, classification);
     await utils.setTimeoutPromise(refundTimeS * 1000);
     claimableAmount = cost;
+    let numValidBefore = await stakeable.numValidForAddress.call(ownerAddress).then(parseBN)
+    assert.equal(numValidBefore, 0)
     let refundResponse = await stakeable.handleRefund(ownerAddress, data, classification,
       addedTime, claimableAmount, claimedBySubmitter,
       prediction, 0, { from: ownerAddress });
     let e = refundResponse.logs.filter(e => e.event == 'Refund')[0];
     refundAmount = parseBN(e.args.amount);
     assert.equal(refundAmount, claimableAmount);
+    assert.equal(await stakeable.numValidForAddress.call(ownerAddress).then(parseBN), numValidBefore + 1)
 
     // Add data as someone else.
     cost = await stakeable.getNextAddDataCost().then(parseBN);
@@ -64,9 +67,12 @@ contract('Stakeable64', function (accounts) {
       addedTime, claimableAmount, claimedBySubmitter,
       prediction, 0, { from: ownerAddress });
     assert.equal(refundAmount, claimableAmount);
+    numValidBefore = await stakeable.numValidForAddress.call(otherAddress).then(parseBN)
+    assert.equal(numValidBefore, 0)
     await stakeable.handleRefund(otherAddress, data, classification,
       addedTime, claimableAmount, claimedBySubmitter,
       prediction, 0, { from: ownerAddress });
+    assert.equal(await stakeable.numValidForAddress.call(otherAddress).then(parseBN), numValidBefore + 1)
   });
 
   it("...should get full deposit", async () => {
@@ -76,7 +82,7 @@ contract('Stakeable64', function (accounts) {
     const prediction = classification = 0;
 
     const totalGoodDataCount = await stakeable.totalGoodDataCount.call().then(parseBN);
-    const numGoodForOther = await stakeable.numGoodDataPerAddress.call(otherAddress).then(parseBN);
+    const numGoodForOther = await stakeable.numValidForAddress.call(otherAddress).then(parseBN);
 
     const addedTime = Math.floor(new Date().getTime() / 1000);
 

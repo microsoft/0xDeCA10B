@@ -13,36 +13,38 @@ import {Ownable} from "../ownership/Ownable.sol";
 contract Points is Ownable, IncentiveMechanism {
     using SafeMath for uint256;
 
+    /**
+     * A data contribution has been validated.
+     */
     event Refund(
+        /**
+         * The recipient of the refund which is the one who originally submitted the data contribution.
+         */
         address recipient
     );
 
+    /**
+     * An award for reporting data has been issued.
+     */
     event Report(
+        /**
+         * The one who submitted the report.
+         */
         address recipient
     );
-
-    struct AddressStats {
-        uint128 numSubmitted;
-        uint128 numValidated;
-    }
-
-    mapping(address => AddressStats) public addressStats;
-
-    /**
-     * The total number of samples that have been submitted.
-     */
-    uint public totalSubmitted = 0;
-
-    /**
-     * The total number of samples that have been determined to be good.
-     */
-    uint public totalGoodDataCount = 0;
 
     constructor(
-    ) Ownable() public {
+        uint32 _refundWaitTimeS,
+        uint32 _ownerClaimWaitTimeS,
+        uint32 _anyAddressClaimWaitTimeS
+    ) Ownable() IncentiveMechanism(_refundWaitTimeS, _ownerClaimWaitTimeS, _anyAddressClaimWaitTimeS) public {
     }
 
     function getNextAddDataCost() public view returns (uint) {
+        return 0;
+    }
+
+    function getNextAddDataCost(uint /* currentTimeS */) public view returns (uint) {
         return 0;
     }
 }
@@ -55,7 +57,10 @@ contract Points64 is IncentiveMechanism64, Points {
     using SignedSafeMath for int256;
 
     constructor(
-    ) Points() public {
+        uint32 _refundWaitTimeS,
+        uint32 _ownerClaimWaitTimeS,
+        uint32 _anyAddressClaimWaitTimeS
+    ) Points(_refundWaitTimeS, _ownerClaimWaitTimeS, _anyAddressClaimWaitTimeS) public {
     }
 
     function handleAddData(uint /* msgValue */, int64[] memory /* data */, uint64 /* classification */) public onlyOwner returns (uint cost) {
@@ -66,7 +71,7 @@ contract Points64 is IncentiveMechanism64, Points {
     function handleRefund(
         address submitter,
         int64[] memory /* data */, uint64 classification,
-        uint /* addedTime */,
+        uint addedTime,
         uint claimableAmount, bool claimedBySubmitter,
         uint64 prediction,
         uint numClaims)
@@ -77,9 +82,10 @@ contract Points64 is IncentiveMechanism64, Points {
 
         require(numClaims == 0, "Already claimed.");
         require(!claimedBySubmitter, "Already claimed by submitter.");
+        require(now - addedTime >= refundWaitTimeS, "Not enough time has passed."); // solium-disable-line security/no-block-members
         require(prediction == classification, "The model doesn't agree with your contribution.");
 
-        addressStats[submitter].numValidated += 1;
+        addressStats[submitter].numValid += 1;
         totalGoodDataCount = totalGoodDataCount.add(1);
         emit Refund(submitter);
     }
@@ -87,7 +93,7 @@ contract Points64 is IncentiveMechanism64, Points {
     function handleReport(
         address reporter,
         int64[] memory /* data */, uint64 classification,
-        uint /* addedTime */, address originalAuthor,
+        uint addedTime, address originalAuthor,
         uint /* initialDeposit */, uint claimableAmount, bool claimedByReporter,
         uint64 prediction,
         uint numClaims)
@@ -95,6 +101,13 @@ contract Points64 is IncentiveMechanism64, Points {
         returns (uint rewardAmount) {
         // `claimableAmount` should be 0.
         rewardAmount = claimableAmount;
+
+        uint timeSinceAddedS = now - addedTime; // solium-disable-line security/no-block-members
+        require(
+            timeSinceAddedS >= refundWaitTimeS ||
+            timeSinceAddedS >= anyAddressClaimWaitTimeS ||
+            (timeSinceAddedS >= ownerClaimWaitTimeS && reporter == owner),
+            "Cannot be claimed yet.");
 
         require(numClaims == 0, "Already claimed.");
         require(reporter != originalAuthor, "Cannot report yourself.");

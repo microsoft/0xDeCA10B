@@ -275,6 +275,9 @@ class AddModel extends React.Component {
               {this.state.incentiveMechanism === "Stakeable64" &&
                 this.renderStakeableOptions()
               }
+              {this.state.incentiveMechanism === "Points64" &&
+                this.renderPointsOptions()
+              }
               <div className={this.classes.selector}>
                 {renderStorageSelector("where to store the supplied meta-data about this model like its address",
                   this.state.storageType, this.handleInputChange, this.state.permittedStorageTypes)}
@@ -367,6 +370,40 @@ class AddModel extends React.Component {
           inputProps={{ 'aria-label': "Cost weight in wei" }}
           className={this.classes.numberTextField}
           value={this.state.costWeight}
+          type="number"
+          margin="normal"
+          onChange={this.handleInputChange} />
+      </Grid>
+    </Grid>;
+  }
+
+  renderPointsOptions() {
+    return <Grid container spacing={2}>
+      <Grid item xs={12} sm={6}>
+        <TextField name="refundTimeWaitTimeS" label="Refund wait time (seconds)"
+          inputProps={{ 'aria-label': "Refund wait time in seconds" }}
+          className={this.classes.numberTextField}
+          value={this.state.refundTimeWaitTimeS}
+          type="number"
+          margin="normal"
+          onChange={this.handleInputChange} />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        {/* TODO Show error if it is too low. */}
+        <TextField name="ownerClaimWaitTimeS" label="Owner claim wait time (seconds)"
+          inputProps={{ 'aria-label': "Owner claim wait time in seconds" }}
+          className={this.classes.numberTextField}
+          value={this.state.ownerClaimWaitTimeS}
+          type="number"
+          margin="normal"
+          onChange={this.handleInputChange} />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        {/* TODO Show error if it is too low. */}
+        <TextField name="anyAddressClaimWaitTimeS" label="Any address claim wait time (seconds)"
+          inputProps={{ 'aria-label': "Any address claim wait time in seconds" }}
+          className={this.classes.numberTextField}
+          value={this.state.anyAddressClaimWaitTimeS}
           type="number"
           margin="normal"
           onChange={this.handleInputChange} />
@@ -546,6 +583,8 @@ class AddModel extends React.Component {
     switch (incentiveMechanism) {
       case 'Points':
         contractInfo = Points64
+        const { refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS } = this.state;
+        args = [refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS]
         break;
       case 'Stakeable64':
         contractInfo = Stakeable64

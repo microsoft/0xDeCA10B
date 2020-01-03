@@ -13,7 +13,7 @@ contract('Points64', function (accounts) {
   }
 
   before("deploy Points", async () => {
-    im = await Points64.new()
+    im = await Points64.new(0, 0, 0)
   })
 
   it("...should be free", async () => {
@@ -40,6 +40,8 @@ contract('Points64', function (accounts) {
       prediction, 0, { from: ownerAddress })
     assert.equal(refundAmount, 0)
 
+    const numValidBefore = await im.numValidForAddress.call(ownerAddress).then(parseBN)
+    assert.equal(numValidBefore, 0)
     let refundResponse = await im.handleRefund(ownerAddress, data, classification,
       addedTime, claimableAmount, claimedBySubmitter,
       prediction, 0, { from: ownerAddress })
@@ -47,6 +49,7 @@ contract('Points64', function (accounts) {
     assert.equal(e.args.recipient, ownerAddress)
     totalGoodDataCount += 1
     assert.equal(await im.totalGoodDataCount.call().then(parseBN), totalGoodDataCount)
+    assert.equal(await im.numValidForAddress.call(ownerAddress).then(parseBN), numValidBefore + 1)
 
     const rewardAmount = await im.handleReport.call(otherAddress,
       data, classification,
@@ -79,6 +82,8 @@ contract('Points64', function (accounts) {
     const addedTime = Math.floor(new Date().getTime() / 1000)
     const claimedBySubmitter = false
 
+    const numValidBefore = await im.numValidForAddress.call(ownerAddress).then(parseBN)
+    assert.equal(numValidBefore, 1)
     const refundResponse = await im.handleRefund(ownerAddress, data, classification,
       addedTime, claimableAmount, claimedBySubmitter,
       prediction, 0, { from: ownerAddress })
@@ -86,6 +91,7 @@ contract('Points64', function (accounts) {
     assert.equal(e.args.recipient, ownerAddress)
     totalGoodDataCount += 1
     assert.equal(await im.totalGoodDataCount.call().then(parseBN), totalGoodDataCount)
+    assert.equal(await im.numValidForAddress.call(ownerAddress).then(parseBN), numValidBefore + 1)
 
     await im.handleRefund(otherAddress, data, classification,
       addedTime, claimableAmount, claimedBySubmitter,

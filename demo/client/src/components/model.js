@@ -31,7 +31,7 @@ import GridLoader from 'react-spinners/GridLoader';
 import Classifier from "../contracts/compiled/Classifier64.json";
 import CollaborativeTrainer from '../contracts/compiled/CollaborativeTrainer64.json';
 import DataHandler from '../contracts/compiled/DataHandler64.json';
-import IncentiveMechanism from '../contracts/compiled/Stakeable64.json';
+import IncentiveMechanism from '../contracts/compiled/IncentiveMechanism.json';
 import ImdbVocab from '../data/imdb.json';
 import { getNetworkType, getWeb3 } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
@@ -621,14 +621,6 @@ class Model extends React.Component {
           console.error("Couldn't get ownerClaimWaitTimeS value from IM.");
           console.error(err);
         }),
-      this.state.incentiveMechanism.methods.costWeight().call()
-        .then(parseInt)
-        .then(costWeight => {
-          this.setState({ costWeight });
-        }).catch(err => {
-          console.error("Couldn't get costWeight value from IM.");
-          console.error(err);
-        }),
       this.state.incentiveMechanism.methods.refundWaitTimeS().call()
         .then(parseInt)
         .then(refundWaitTimeS => {
@@ -654,7 +646,7 @@ class Model extends React.Component {
     return Promise.all([
       Promise.resolve(this.state.accounts && this.state.accounts[0]).then(account => {
         if (account) {
-          return this.state.incentiveMechanism.methods.numGoodDataPerAddress(account).call()
+          return this.state.incentiveMechanism.methods.numValidForAddress(account).call()
             .then(parseInt)
         }
       }),
