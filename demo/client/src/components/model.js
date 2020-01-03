@@ -422,6 +422,9 @@ class Model extends React.Component {
           cb({ canAttemptRefund });
           return;
         }
+        // FIXME For points-based check if numClaims > 0 and don't allow reporting.
+        // FIXME For points-based check if numClaims > 0 and don't allow refunding.
+
         this.state.dataHandler.methods.getClaimableAmount(dataSample, data.classification, data.time, data.sender).call()
           .then(parseInt)
           .then(claimableAmount => {            
