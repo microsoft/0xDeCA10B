@@ -60,6 +60,12 @@ contract Points64 is IncentiveMechanism64, Points {
     ) Points(_refundWaitTimeS, _ownerClaimWaitTimeS, _anyAddressClaimWaitTimeS) public {
     }
 
+    function getNextAddDataCost(int64[] memory /* data */, uint64 /* classification */)
+        public view
+        returns (uint) {
+        return 0;
+    }
+
     function handleAddData(uint /* msgValue */, int64[] memory /* data */, uint64 /* classification */) public onlyOwner returns (uint cost) {
         cost = 0;
         totalSubmitted = totalSubmitted.add(1);

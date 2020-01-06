@@ -87,18 +87,18 @@ contract IncentiveMechanism {
  */
 contract IncentiveMechanism64 is Ownable, IncentiveMechanism {
 
-    // Documenting parameters without "@" to avoid compilation errors since the parameters are not used.
     /**
-     * param data A single sample of training data for the model.
-     * param classification The label for `data`.
+     * This method allows contracts to change the required deposit depending on the specific data being added.
+     * For example, one may want to enforce a higher deposit on outlier (different) data because it could be spam,
+     * or they might want a lower deposit on it data because it could be important unique data.
+     *
+     * @param data A single sample of training data for the model.
+     * @param classification The label for `data`.
      * @return The current cost to update a model with a specific sample of training data.
      */
-    function getNextAddDataCost(int64[] memory /* data */, uint64 /* classification */)
+    function getNextAddDataCost(int64[] memory data, uint64 classification)
         public view
-        returns (uint) {
-        // Default implementation.
-        return getNextAddDataCost();
-    }
+        returns (uint);
 
     /**
      * Determine if the request to add data is acceptable.

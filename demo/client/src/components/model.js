@@ -404,55 +404,59 @@ class Model extends React.Component {
       .then(parseInt);
   }
 
-  canAttemptRefund(data, isForTaking, cb) {
-    var canAttemptRefund = false;
-    var claimer = this.state.accounts[0];
-    if (isForTaking && (this.state.numGood === 0 || this.state.numGood === undefined)) {
-      cb({ canAttemptRefund });
-      return;
-    }
+  async canAttemptRefund(data, isForTaking) {
     // TODO Duplicate more of the contract's logic here.
-    const dataSample = data.data;
     // This will help with giving better error messages and avoid trying to create new transactions.
-    this.state.dataHandler.methods.hasClaimed(dataSample, data.classification, data.time, data.sender, claimer).call()
-      .then(hasClaimed => {
-        data.alreadyClaimed = hasClaimed;
-        if (hasClaimed) {
-          canAttemptRefund = false;
-          cb({ canAttemptRefund });
-          return;
-        }
-        // FIXME For points-based check if numClaims > 0 and don't allow reporting.
-        // FIXME For points-based check if numClaims > 0 and don't allow refunding.
 
-        this.state.dataHandler.methods.getClaimableAmount(dataSample, data.classification, data.time, data.sender).call()
-          .then(parseInt)
-          .then(claimableAmount => {            
-            if (claimableAmount <= 0 && data.initialDeposit > 0) {
-              canAttemptRefund = false;
-              data.alreadyClaimed = true;
-              cb({ canAttemptRefund, claimableAmount });
-            } else {
-              this.predict(dataSample).then(prediction => {
-                if (isForTaking) {
-                  // Prediction must be wrong.
-                  canAttemptRefund = prediction !== data.classification;
-                  // Take the floor since that is what Solidity will do.      
-                  var amountShouldGet = Math.floor(data.initialDeposit * this.state.numGood / this.state.totalGoodDataCount);
-                  if (amountShouldGet !== 0) {
-                    claimableAmount = amountShouldGet;
-                  }
-                } else {
-                  canAttemptRefund = prediction === data.classification;
-                }
-                cb({ canAttemptRefund, claimableAmount, prediction });
-              });
-            }
-          });
+    let canAttemptRefund = false
+    if (isForTaking && (this.state.numGood === 0 || this.state.numGood === undefined)) {
+      return { canAttemptRefund }
+    }
+    const claimer = this.state.accounts[0]
+    const dataSample = data.data
+    return this.state.dataHandler.methods.hasClaimed(dataSample, data.classification, data.time, data.sender, claimer).call()
+      .then(async hasClaimed => {
+        data.alreadyClaimed = hasClaimed
+        if (hasClaimed) {
+          canAttemptRefund = false
+          return { canAttemptRefund }
+        }
+
+        let claimableAmount = await this.state.dataHandler.methods.getClaimableAmount(dataSample, data.classification, data.time, data.sender).call().then(parseInt)
+
+        if (data.initialDeposit === 0) {
+          // This was likely for a points-based IM.
+          // A refund/report can only be done if no one else has made one yet.
+          const numClaims = await this.state.dataHandler.methods.getNumClaims(dataSample, data.classification, data.time, data.sender).call().then(parseInt)
+          if (numClaims > 0) {
+            canAttemptRefund = false
+            data.alreadyClaimed = true
+            return { canAttemptRefund, claimableAmount }
+          }
+        } else if (claimableAmount <= 0) {
+          // There was an initial deposit but none of it is left.
+          canAttemptRefund = false
+          data.alreadyClaimed = true
+          return { canAttemptRefund, claimableAmount }
+        }
+        const prediction = await this.predict(dataSample)
+        if (isForTaking) {
+          // Prediction must be wrong.
+          canAttemptRefund = prediction !== data.classification
+          // Take the floor since that is what Solidity will do.      
+          const amountShouldGet = Math.floor(data.initialDeposit * this.state.numGood / this.state.totalGoodDataCount);
+          if (amountShouldGet !== 0) {
+            claimableAmount = amountShouldGet
+          }
+        } else {
+          canAttemptRefund = prediction === data.classification
+        }
+        return { canAttemptRefund, claimableAmount, prediction }
       }).catch(err => {
-        console.error(err);
-        canAttemptRefund = false;
-        cb({ canAttemptRefund, err });
+        console.error("Error determining if a refund can be done.")
+        console.error(err)
+        canAttemptRefund = false
+        return { canAttemptRefund, err }
       });
   }
 
@@ -692,7 +696,7 @@ class Model extends React.Component {
       const time = parseInt(d.returnValues.t);
       const initialDeposit = parseInt(d.returnValues.cost);
 
-      this.getOriginalData(d.transactionHash).then(originalData => {
+      this.getOriginalData(d.transactionHash).then(async originalData => {
         const info = {
           data, classification, initialDeposit, sender, time,
           originalData: this.getDisplayableOriginalData(originalData),
@@ -705,10 +709,10 @@ class Model extends React.Component {
         }
 
         info.hasEnoughTimePassed = this.hasEnoughTimePassed(info, this.state.refundWaitTimeS);
-        // Don't explicitly set hasEnoughTimePassed on the info in case the timing is off on the info
+        // TODO Don't explicitly set hasEnoughTimePassed on the info in case the timing is off on the info
         // in case the user wants to send the request anyway and hope that by the time the transaction is processed
         // that the request will be valid. In general these checks should just be done as warnings.
-        this.canAttemptRefund(info, false, refundInfo => {
+        this.canAttemptRefund(info, false).then(refundInfo => {
           const {
             canAttemptRefund = false,
             claimableAmount = null,
@@ -761,7 +765,7 @@ class Model extends React.Component {
         }
 
         info.hasEnoughTimePassed = this.hasEnoughTimePassed(info, this.state.refundWaitTimeS);
-        this.canAttemptRefund(info, isForTaking, refundInfo => {
+        this.canAttemptRefund(info, isForTaking).then(refundInfo => {
           const {
             canAttemptRefund = false,
             claimableAmount = null,
@@ -1043,7 +1047,7 @@ class Model extends React.Component {
                     {this.renderInputBox()}
                     <InputLabel htmlFor="classification-selector">Classification</InputLabel>
                     <Select
-                      value={this.state.trainClassIndex}
+                      value={this.state.trainClassIndex < this.state.classifications.length ? this.state.trainClassIndex : ''}
                       onChange={this.handleInputChange}
                       inputProps={{
                         name: 'trainClassIndex',

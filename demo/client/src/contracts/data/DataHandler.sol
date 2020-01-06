@@ -57,6 +57,9 @@ contract DataHandler64 is Ownable, DataHandler {
         mapping(address => bool) claimedBy;
     }
 
+    /**
+     * Meta-data for data that has been added.
+     */
     mapping(bytes32 => StoredData) public addedData;
 
     function getClaimableAmount(int64[] memory data, uint64 classification, uint addedTime, address originalAuthor)
@@ -83,6 +86,19 @@ contract DataHandler64 is Ownable, DataHandler {
         require(existingData.sender == originalAuthor, "Data isn't from the right author.");
 
         return existingData.initialDeposit;
+    }
+
+    function getNumClaims(int64[] memory data, uint64 classification, uint addedTime, address originalAuthor)
+            public view returns (uint) {
+        bytes32 key = keccak256(abi.encodePacked(data, classification, addedTime, originalAuthor));
+        StoredData storage existingData = addedData[key];
+        // Validate found value.
+        // usually unnecessary: require(isDataEqual(existingData.d, data), "Data is not equal.");
+        require(existingData.c == classification, "Classification is not equal.");
+        require(existingData.t == addedTime, "Added time is not equal.");
+        require(existingData.sender == originalAuthor, "Data isn't from the right author.");
+
+        return existingData.numClaims;
     }
 
     /**
