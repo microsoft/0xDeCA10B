@@ -44,12 +44,15 @@ contract('Stakeable64', function (accounts) {
     await stakeable.handleAddData(cost, data, classification);
     await utils.setTimeoutPromise(refundTimeS * 1000);
     claimableAmount = cost;
+    let numValidBefore = await stakeable.numValidForAddress.call(ownerAddress).then(parseBN)
+    assert.equal(numValidBefore, 0)
     let refundResponse = await stakeable.handleRefund(ownerAddress, data, classification,
       addedTime, claimableAmount, claimedBySubmitter,
-      prediction, { from: ownerAddress });
+      prediction, 0, { from: ownerAddress });
     let e = refundResponse.logs.filter(e => e.event == 'Refund')[0];
     refundAmount = parseBN(e.args.amount);
     assert.equal(refundAmount, claimableAmount);
+    assert.equal(await stakeable.numValidForAddress.call(ownerAddress).then(parseBN), numValidBefore + 1)
 
     // Add data as someone else.
     cost = await stakeable.getNextAddDataCost().then(parseBN);
@@ -62,11 +65,14 @@ contract('Stakeable64', function (accounts) {
     claimableAmount = cost;
     refundAmount = await stakeable.handleRefund.call(otherAddress, data, classification,
       addedTime, claimableAmount, claimedBySubmitter,
-      prediction, { from: ownerAddress });
+      prediction, 0, { from: ownerAddress });
     assert.equal(refundAmount, claimableAmount);
+    numValidBefore = await stakeable.numValidForAddress.call(otherAddress).then(parseBN)
+    assert.equal(numValidBefore, 0)
     await stakeable.handleRefund(otherAddress, data, classification,
       addedTime, claimableAmount, claimedBySubmitter,
-      prediction, { from: ownerAddress });
+      prediction, 0, { from: ownerAddress });
+    assert.equal(await stakeable.numValidForAddress.call(otherAddress).then(parseBN), numValidBefore + 1)
   });
 
   it("...should get full deposit", async () => {
@@ -76,7 +82,7 @@ contract('Stakeable64', function (accounts) {
     const prediction = classification = 0;
 
     const totalGoodDataCount = await stakeable.totalGoodDataCount.call().then(parseBN);
-    const numGoodForOther = await stakeable.numGoodDataPerAddress.call(otherAddress).then(parseBN);
+    const numGoodForOther = await stakeable.numValidForAddress.call(otherAddress).then(parseBN);
 
     const addedTime = Math.floor(new Date().getTime() / 1000);
 
@@ -100,18 +106,18 @@ contract('Stakeable64', function (accounts) {
       data, classification,
       addedTime, ownerAddress,
       cost, cost, false,
-      prediction).then((r) => {
-        assert.fail("Reporting should have failed because \"Cannot take your own deposit. Ask for a refund instead.\".");
+      prediction, 0).then(_ => {
+        assert.fail("Reporting should have failed because \"Cannot take your own deposit.\".");
       }).catch(err => {
-        assert.equal(err.message, "Returned error: VM Exception while processing transaction: revert Cannot take your own deposit. Ask for a refund instead. -- Reason given: Cannot take your own deposit. Ask for a refund instead..");
+        assert.equal(err.message, "Returned error: VM Exception while processing transaction: revert Cannot take your own deposit. -- Reason given: Cannot take your own deposit..");
       });
 
     rewardAmount = await stakeable.handleReport.call(otherAddress,
       data, classification,
       addedTime, ownerAddress,
       cost, cost, false,
-      // Predict the wrong classification.
-      classification + 1).then(parseBN);
+      // Prediction was the wrong classification.
+      classification + 1, 1).then(parseBN);
     assert.equal(rewardAmount, Math.floor(cost * numGoodForOther / totalGoodDataCount), "The reward amount should be split amongst those with \"verified\" data contributions.");
 
     // Again check that we are still in the refund period and not the any take period.
@@ -126,7 +132,7 @@ contract('Stakeable64', function (accounts) {
       data, classification,
       addedTime, ownerAddress,
       cost, cost, false,
-      prediction);
+      prediction, 1);
     let e = reportResponse.logs.filter(e => e.event == 'Report')[0];
     rewardAmount = parseBN(e.args.amount);
     assert.equal(rewardAmount, cost, "The reward amount should be the entire initial deposit.");
@@ -141,10 +147,9 @@ contract('Stakeable64', function (accounts) {
       data, classification,
       addedTime, ownerAddress,
       cost, cost, false,
-      prediction);
+      prediction, 2);
     e = reportResponse.logs.filter(e => e.event == 'Report')[0];
     rewardAmount = parseBN(e.args.amount);
     assert.equal(rewardAmount, cost, "The reward amount should be the entire initial deposit.");
-
   });
 });

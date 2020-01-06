@@ -1,8 +1,8 @@
 pragma solidity ^0.5.8;
 
-import "../libs/Math.sol";
-import "../libs/SafeMath.sol";
-import "../libs/SignedSafeMath.sol";
+import "../../../lib/Math.sol";
+import "../../../lib/SafeMath.sol";
+import "../../../lib/SignedSafeMath.sol";
 
 import {IncentiveMechanism, IncentiveMechanism64} from "./IncentiveMechanism.sol";
 import {Ownable} from "../ownership/Ownable.sol";
@@ -13,43 +13,33 @@ import {Ownable} from "../ownership/Ownable.sol";
 contract Stakeable is Ownable, IncentiveMechanism {
     using SafeMath for uint256;
 
+    /**
+     * A refund has been issued.
+     */
     event Refund(
+        /**
+         * The recipient of the refund which is the one who originally submitted the data contribution.
+         */
         address recipient,
+        /**
+         * The amount refunded.
+         */
         uint amount
     );
 
+    /**
+     * An award for reporting data has been issued.
+     */
     event Report(
+        /**
+         * The one who submitted the report.
+         */
         address recipient,
+        /**
+         * The amount awarded.
+         */
         uint amount
     );
-
-    // The following members are in chronologically increasing order of when they should occur.
-    /**
-     * Amount of time to wait to get a refund back.
-     * Once this amount of time has passed, the entire deposit can be reclaimed.
-     * Also once this amount of time has passed, the deposit (in full or in part) can be taken by others.
-     */
-    uint32 public refundWaitTimeS;
-
-    /**
-     * Amount of time owner has to wait to take someone's entire remaining refund.
-     * The purpose of this is to give the owner some incentive to deploy a model.
-     * This must be greater than the required amount of time to wait for attempting a refund.
-     * Contracts may want to enforce that this is much greater than the amount of time to wait for attempting a refund
-     * to give even more time to get the deposit back and not let the owner take too much.
-     */
-    uint32 public ownerClaimWaitTimeS;
-
-    /**
-     * Amount of time after which anyone can take someone's entire remaining refund.
-     * Similar to `ownerClaimWaitTimeS` but it allows any address to claim funds for specific data.
-     * The purpose of this is to help ensure that value does not get "stuck" in a contract.
-     * This must be greater than the required amount of time to wait for attempting a refund.
-     * Contracts may want to enforce that this is much greater than the amount of time to wait for attempting a refund
-     * to give even more time to get the deposit back and not let others take too much.
-     */
-    uint32 public anyAddressClaimWaitTimeS;
-    // End claim time members.
 
     /**
      * Multiplicative factor for the cost calculation.
@@ -61,29 +51,16 @@ contract Stakeable is Ownable, IncentiveMechanism {
      */
     uint public lastUpdateTimeS;
 
-    /**
-     * The number of samples that have been determined to be good for each address.
-     */
-    mapping(address => uint128) public numGoodDataPerAddress;
-
-    /**
-     * The total number of samples that have been determined to be good.
-     */
-    uint128 public totalGoodDataCount = 0;
-
     constructor(
         // Parameters in chronological order.
         uint32 _refundWaitTimeS,
         uint32 _ownerClaimWaitTimeS,
         uint32 _anyAddressClaimWaitTimeS,
         uint80 _costWeight
-    ) Ownable() public {
+    ) Ownable() IncentiveMechanism(_refundWaitTimeS, _ownerClaimWaitTimeS, _anyAddressClaimWaitTimeS) public {
         require(_refundWaitTimeS <= _ownerClaimWaitTimeS, "Owner claim wait time must be at least the refund wait time.");
         require(_ownerClaimWaitTimeS <= _anyAddressClaimWaitTimeS, "Owner claim wait time must be less than the any address claim wait time.");
 
-        refundWaitTimeS = _refundWaitTimeS;
-        ownerClaimWaitTimeS = _ownerClaimWaitTimeS;
-        anyAddressClaimWaitTimeS = _anyAddressClaimWaitTimeS;
         costWeight = _costWeight;
 
         lastUpdateTimeS = now; // solium-disable-line security/no-block-members
@@ -106,6 +83,9 @@ contract Stakeable is Ownable, IncentiveMechanism {
      * @return The amount of wei required to add data at `currentTimeS`.
      */
     function getNextAddDataCost(uint currentTimeS) public view returns (uint) {
+        if (costWeight == 0) {
+            return 0;
+        }
         // Value sent is in wei (1E18 wei = 1 ether).
         require(lastUpdateTimeS <= currentTimeS, "The last update time is after the current time.");
         // No SafeMath check needed because already done above.
@@ -134,10 +114,18 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
         // solium-disable-previous-line no-empty-blocks
     }
 
+    function getNextAddDataCost(int64[] memory /* data */, uint64 /* classification */)
+        public view
+        returns (uint) {
+        // Do not consider the data.
+        return getNextAddDataCost();
+    }
+
     function handleAddData(uint msgValue, int64[] memory data, uint64 classification) public onlyOwner returns (uint cost) {
         cost = getNextAddDataCost(data, classification);
         require(msgValue >= cost, "Didn't pay enough for the deposit.");
         lastUpdateTimeS = now; // solium-disable-line security/no-block-members
+        totalSubmitted = totalSubmitted.add(1);
     }
 
     function handleRefund(
@@ -145,7 +133,8 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
         int64[] memory /* data */, uint64 classification,
         uint addedTime,
         uint claimableAmount, bool claimedBySubmitter,
-        uint64 prediction)
+        uint64 prediction,
+        uint /* numClaims */)
         public onlyOwner
         returns (uint refundAmount) {
         refundAmount = claimableAmount;
@@ -156,8 +145,8 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
         require(now - addedTime >= refundWaitTimeS, "Not enough time has passed."); // solium-disable-line security/no-block-members
         require(prediction == classification, "The model doesn't agree with your contribution.");
 
-        numGoodDataPerAddress[submitter] += 1;
-        totalGoodDataCount += 1;
+        addressStats[submitter].numValid += 1;
+        totalGoodDataCount = totalGoodDataCount.add(1);
         emit Refund(submitter, refundAmount);
     }
 
@@ -166,7 +155,8 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
         int64[] memory /* data */, uint64 classification,
         uint addedTime, address originalAuthor,
         uint initialDeposit, uint claimableAmount, bool claimedByReporter,
-        uint64 prediction)
+        uint64 prediction,
+        uint /* numClaims */)
         public onlyOwner
         returns (uint rewardAmount) {
         // Make sure deposit can be taken.
@@ -181,13 +171,13 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
         } else {
             // Don't allow someone to claim back their own deposit if their data was wrong.
             // They can still claim it from another address but they will have had to have sent good data from that address.
-            require(reporter != originalAuthor, "Cannot take your own deposit. Ask for a refund instead.");
+            require(reporter != originalAuthor, "Cannot take your own deposit.");
 
             require(!claimedByReporter, "Deposit already claimed by reporter.");
             require(timeSinceAddedS >= refundWaitTimeS, "Not enough time has passed.");
             require(prediction != classification, "The model should not agree with the contribution.");
 
-            uint numGoodForReporter = numGoodDataPerAddress[reporter];
+            uint numGoodForReporter = addressStats[reporter].numValid;
             require(numGoodForReporter > 0, "The sender has not sent any good data.");
             // Weight the reward by the proportion of good data sent (maybe square the resulting value).
             // One nice reason to do this is to discourage someone from adding bad data through one address

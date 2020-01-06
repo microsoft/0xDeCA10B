@@ -5,10 +5,10 @@
   "private": true,
   "scripts": {
     "blockchain": "mkdir --parents blockchain_db && ganache-cli --db blockchain_db --networkId 5782 --gasLimit 9000000 --gasPrice 1 --host 0.0.0.0 --port ${PORT:-7545} --mnemonic \"net pistol fun vibrant sausage vintage general silk weekend street brave rubber\"",
-    "clean": "rm -rf blockchain_db db.sqlite client/src/contracts/*.json",
+    "clean": "rm -rf blockchain_db db.sqlite client/src/contracts/compiled/*.json",
     "client": "cd client && yarn start",
     "prod-client": "cd client && yarn start-prod",
-    "lint": "solium --dir client/contracts/ --fix-dry-run",
+    "lint": "solium --dir client/src/contracts/ --fix-dry-run",
     "server": "nodemon server.js --ignore client/",
     "start-prod-back-end": "node server.js",
     "test": "cd client && yarn test"

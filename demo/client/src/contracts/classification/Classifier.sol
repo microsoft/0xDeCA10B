@@ -1,8 +1,8 @@
 pragma solidity ^0.5.8;
 pragma experimental ABIEncoderV2;
 
-import "../libs/SafeMath.sol";
-import "../libs/SignedSafeMath.sol";
+import "../../../lib/SafeMath.sol";
+import "../../../lib/SignedSafeMath.sol";
 
 import {Ownable} from "../ownership/Ownable.sol";
 

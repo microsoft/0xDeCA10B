@@ -18,11 +18,12 @@ import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
 import React from 'react';
 import Dropzone from 'react-dropzone';
-import CollaborativeTrainer64 from '../contracts/CollaborativeTrainer64.json';
-import DataHandler64 from '../contracts/DataHandler64.json';
-import DensePerceptron from '../contracts/DensePerceptron.json';
-import SparsePerceptron from '../contracts/SparsePerceptron.json';
-import Stakeable64 from '../contracts/Stakeable64.json';
+import CollaborativeTrainer64 from '../contracts/compiled/CollaborativeTrainer64.json';
+import DataHandler64 from '../contracts/compiled/DataHandler64.json';
+import DensePerceptron from '../contracts/compiled/DensePerceptron.json';
+import Points64 from '../contracts/compiled/Points64.json';
+import SparsePerceptron from '../contracts/compiled/SparsePerceptron.json';
+import Stakeable64 from '../contracts/compiled/Stakeable64.json';
 import { convertToHex, convertToHexData } from '../float-utils';
 import { getWeb3 } from '../getWeb3';
 import { ModelInformation } from '../storage/data-store';
@@ -74,6 +75,13 @@ class AddModel extends React.Component {
 
   constructor(props) {
     super(props);
+    this.classes = props.classes;
+
+    this.modelTypes = {
+      'dense perceptron': DensePerceptron,
+      'sparse perceptron': SparsePerceptron,
+    };
+    this.web3 = null;
 
     // Default to local storage for storing original data.
     const storageType = localStorage.getItem('storageType') || 'local';
@@ -86,10 +94,10 @@ class AddModel extends React.Component {
       modelType: 'Classifier64',
       modelFileName: undefined,
       encoder: 'none',
-      incentiveMechanism: 'Stakeable64',
-      refundTimeWaitTimeS: 60,
-      ownerClaimWaitTimeS: 120,
-      anyAddressClaimWaitTimeS: 300,
+      incentiveMechanism: 'Points64',
+      refundTimeWaitTimeS: 0,
+      ownerClaimWaitTimeS: 0,
+      anyAddressClaimWaitTimeS: 0,
       costWeight: 1E15,
       deploymentInfo: {
         dataHandler: {
@@ -113,12 +121,6 @@ class AddModel extends React.Component {
       permittedStorageTypes: [],
     };
 
-    this.modelTypes = {
-      'dense perceptron': DensePerceptron,
-      'sparse perceptron': SparsePerceptron,
-    };
-    this.classes = props.classes;
-    this.web3 = null;
     this.save = this.save.bind(this);
     this.handleInputChange = this.handleInputChange.bind(this);
     this.processUploadedModel = this.processUploadedModel.bind(this);
@@ -156,13 +158,23 @@ class AddModel extends React.Component {
     const target = event.target;
     const value = target.type === "checkbox" ? target.checked : target.value;
     const name = target.name;
-    this.setState({
-      [name]: value
-    }, _ => {
-      if (name === 'storageType') {
-        localStorage.setItem(name, value);
+
+    let valid = true
+    if (['costWeight', 'refundTimeWaitTimeS', 'ownerClaimWaitTimeS', 'anyAddressClaimWaitTimeS'].indexOf(name) >= 0) {
+      if (value < 0) {
+        this.notify(`The value for ${name} must be at least 0`, { variant: 'error' })
+        valid = false
       }
-    });
+    }
+    if (valid) {
+      this.setState({
+        [name]: value
+      }, _ => {
+        if (name === 'storageType') {
+          localStorage.setItem(name, value);
+        }
+      });
+    }
   }
 
   processUploadedModel(acceptedFiles) {
@@ -177,12 +189,20 @@ class AddModel extends React.Component {
     reader.onload = () => {
       const binaryStr = reader.result
       const model = JSON.parse(binaryStr);
-      this.setState({ model, modelFileName: file.path });
+      if (!(model.type in this.modelTypes)) {
+        this.notify(`The "type" of the model must be one of ${JSON.stringify(Object.keys(this.modelTypes))}`, { variant: 'error' })
+      } else {
+        this.setState({ model, modelFileName: file.path });
+      }
     };
     reader.readAsBinaryString(file);
   }
 
   render() {
+    const disableSave = this.state.deploymentInfo.main.address !== undefined
+      || !(this.state.refundTimeWaitTimeS <= this.state.ownerClaimWaitTimeS)
+      || !(this.state.ownerClaimWaitTimeS <= this.state.anyAddressClaimWaitTimeS)
+      || this.state.costWeight < 0;
     return (
       <Container>
         <Paper className={this.classes.root} elevation={1}>
@@ -249,11 +269,14 @@ class AddModel extends React.Component {
                   name: 'incentiveMechanism',
                 }}
               >
-                {/* TODO <MenuItem value={"Points"}>Points</MenuItem> */}
-                <MenuItem value={"Stakeable64"}>Stakeable64</MenuItem>
+                <MenuItem value={"Points64"}>Points</MenuItem>
+                <MenuItem value={"Stakeable64"}>Stakeable</MenuItem>
               </Select>
               {this.state.incentiveMechanism === "Stakeable64" &&
                 this.renderStakeableOptions()
+              }
+              {this.state.incentiveMechanism === "Points64" &&
+                this.renderPointsOptions()
               }
               <div className={this.classes.selector}>
                 {renderStorageSelector("where to store the supplied meta-data about this model like its address",
@@ -262,9 +285,7 @@ class AddModel extends React.Component {
             </div>
           </form>
           <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}
-            disabled={this.state.deploymentInfo.main.address !== undefined
-              || !(this.state.refundTimeWaitTimeS <= this.state.ownerClaimWaitTimeS)
-              || !(this.state.ownerClaimWaitTimeS <= this.state.anyAddressClaimWaitTimeS)}
+            disabled={disableSave}
           >
             Save
           </Button>
@@ -337,11 +358,52 @@ class AddModel extends React.Component {
           margin="normal"
           onChange={this.handleInputChange} />
       </Grid>
-      <Grid item xs={12} sm={6}>
+      <Grid item xs={12} sm={12}>
+        <Typography component="h4">
+          Deposit Weight
+        </Typography>
+        <Typography component="p">
+          A multiplicative factor to the required deposit.
+          Setting this to 0 will mean that no deposit is required but will allow you to stil use the IM to track "good" and "bad" contributions.
+        </Typography>
         <TextField name="costWeight" label="Cost weight (in wei)"
           inputProps={{ 'aria-label': "Cost weight in wei" }}
           className={this.classes.numberTextField}
           value={this.state.costWeight}
+          type="number"
+          margin="normal"
+          onChange={this.handleInputChange} />
+      </Grid>
+    </Grid>;
+  }
+
+  renderPointsOptions() {
+    return <Grid container spacing={2}>
+      <Grid item xs={12} sm={6}>
+        <TextField name="refundTimeWaitTimeS" label="Refund wait time (seconds)"
+          inputProps={{ 'aria-label': "Refund wait time in seconds" }}
+          className={this.classes.numberTextField}
+          value={this.state.refundTimeWaitTimeS}
+          type="number"
+          margin="normal"
+          onChange={this.handleInputChange} />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        {/* TODO Show error if it is too low. */}
+        <TextField name="ownerClaimWaitTimeS" label="Owner claim wait time (seconds)"
+          inputProps={{ 'aria-label': "Owner claim wait time in seconds" }}
+          className={this.classes.numberTextField}
+          value={this.state.ownerClaimWaitTimeS}
+          type="number"
+          margin="normal"
+          onChange={this.handleInputChange} />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        {/* TODO Show error if it is too low. */}
+        <TextField name="anyAddressClaimWaitTimeS" label="Any address claim wait time (seconds)"
+          inputProps={{ 'aria-label': "Any address claim wait time in seconds" }}
+          className={this.classes.numberTextField}
+          value={this.state.anyAddressClaimWaitTimeS}
           type="number"
           margin="normal"
           onChange={this.handleInputChange} />
@@ -385,8 +447,12 @@ class AddModel extends React.Component {
         // Save to a database.
         const storage = this.storages[this.state.storageType];
         storage.saveModelInformation(modelInfo).then(() => {
-          this.notify("Saved", { variant: 'success' });
-          // TODO Redirect.
+          // Redirect
+          const redirectWaitS = 5
+          this.notify(`Saved. Will redirect in ${redirectWaitS} seconds.`, { variant: 'success' })
+          setTimeout(_ => {
+            this.props.history.push(`/model?address=${mainContract.options.address}&metaDataLocation=${this.state.storageType}`)
+          }, redirectWaitS * 1000)
         }).catch(err => {
           console.error(err);
           console.error(err.response.data.message);
@@ -515,40 +581,48 @@ class AddModel extends React.Component {
   }
 
   async deployIncentiveMechanism(account) {
-    let result;
-    const { refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS, costWeight, incentiveMechanism } = this.state;
-    const pleaseAcceptKey = this.notify("Please accept to deploy the incentive mechanism contract");
+    let contractInfo;
+    let args = undefined
+    const { incentiveMechanism,
+      refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS,
+      costWeight } = this.state;
     switch (incentiveMechanism) {
-      case 'Points':
-        // TODO
+      case 'Points64':
+        contractInfo = Points64
+        args = [refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS]
         break;
       case 'Stakeable64':
-        const stakeableContract = new this.web3.eth.Contract(Stakeable64.abi, {
-          from: account,
-        });
-        result = stakeableContract.deploy({
-          data: Stakeable64.bytecode,
-          arguments: [refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS, costWeight],
-        }).send({
-        }).on('transactionHash', transactionHash => {
-          this.dismissNotification(pleaseAcceptKey);
-          this.notify(`Submitted the incentive mechanism with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
-          this.saveTransactionHash('incentiveMechanism', transactionHash);
-        }).on('receipt', receipt => {
-          this.notify(`The incentive mechanism contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
-          this.saveAddress('incentiveMechanism', receipt.contractAddress);
-        }).on('error', err => {
-          this.dismissNotification(pleaseAcceptKey);
-          console.error(err);
-          this.notify("Error deploying the incentive mechanism", { variant: 'error' });
-          throw err;
-        });
+        contractInfo = Stakeable64
+        args = [refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS, costWeight]
         break;
       default:
         // Should not happen.
-        this.dismissNotification(pleaseAcceptKey);
+        this.notify(`Unrecognized incentive mechanism: "${incentiveMechanism}"`, { variant: 'error' });
         throw new Error(`Unrecognized incentive mechanism: "${incentiveMechanism}"`);
     }
+
+    const imContract = new this.web3.eth.Contract(contractInfo.abi, {
+      from: account,
+    })
+
+    const pleaseAcceptKey = this.notify("Please accept to deploy the incentive mechanism contract");
+    const result = imContract.deploy({
+      data: contractInfo.bytecode,
+      arguments: args,
+    }).send({
+    }).on('transactionHash', transactionHash => {
+      this.dismissNotification(pleaseAcceptKey);
+      this.notify(`Submitted the incentive mechanism with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+      this.saveTransactionHash('incentiveMechanism', transactionHash);
+    }).on('receipt', receipt => {
+      this.notify(`The incentive mechanism contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
+      this.saveAddress('incentiveMechanism', receipt.contractAddress);
+    }).on('error', err => {
+      this.dismissNotification(pleaseAcceptKey);
+      console.error(err);
+      this.notify("Error deploying the incentive mechanism", { variant: 'error' });
+      throw err;
+    });
 
     return result;
   }
