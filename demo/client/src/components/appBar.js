@@ -33,6 +33,9 @@ const styles = theme => ({
     marginLeft: -12,
     marginRight: 20,
   },
+  navButton: {
+    textDecoration: 'none',
+  },
   logoContainer: {
     marginTop: 10,
   },
@@ -106,18 +109,18 @@ class CustomAppBar extends React.Component {
             There's probably a better way to set up the aligning but I didn't want to bother because it was tricky and we might add a title back. */}
             <Typography variant="h6" color="inherit" className={classes.flex}></Typography>
             <Hidden xsDown>
-              <Link title="Add a new model" to='/add'>
-                <Button className={classes.button}>
-                  <AddIcon />&nbsp;Add a model
+              <Link className={classes.navButton} title="Add a new model" to='/add'>
+                <Button>
+                  <AddIcon />&nbsp;Add model
               </Button>
               </Link>
-              <Link title="About this site" to='/about'>
-                <Button className={classes.button}>
+              <Link className={classes.navButton} title="About this site" to='/about'>
+                <Button>
                   <InfoIcon />&nbsp;ABOUT
               </Button>
               </Link>
-              <Link title="Go to the home page" to='/'>
-                <Button className={classes.button}>
+              <Link className={classes.navButton} title="Go to the home page" to='/'>
+                <Button>
                   <HomeIcon /> Home
               </Button>
               </Link>
