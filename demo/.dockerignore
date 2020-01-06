@@ -21,6 +21,8 @@ client/node_modules/
 
 # Generated contract configs
 client/src/contracts/compiled/*.json
+# Previous location before refactor:
+client/src/contracts/*.json
 
 # Training
 **/embedding_cache.json

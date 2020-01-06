@@ -1,5 +1,0 @@
-node_modules
-client/node_modules
-
-client/lib/SafeMath.sol
-client/lib/SignedSafeMath.sol

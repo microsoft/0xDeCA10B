@@ -132,7 +132,7 @@ contract('Stakeable64', function (accounts) {
       data, classification,
       addedTime, ownerAddress,
       cost, cost, false,
-      prediction, 2);
+      prediction, 1);
     let e = reportResponse.logs.filter(e => e.event == 'Report')[0];
     rewardAmount = parseBN(e.args.amount);
     assert.equal(rewardAmount, cost, "The reward amount should be the entire initial deposit.");
@@ -147,10 +147,9 @@ contract('Stakeable64', function (accounts) {
       data, classification,
       addedTime, ownerAddress,
       cost, cost, false,
-      prediction, 3);
+      prediction, 2);
     e = reportResponse.logs.filter(e => e.event == 'Report')[0];
     rewardAmount = parseBN(e.args.amount);
     assert.equal(rewardAmount, cost, "The reward amount should be the entire initial deposit.");
-
   });
 });

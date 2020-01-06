@@ -94,7 +94,7 @@ class AddModel extends React.Component {
       modelType: 'Classifier64',
       modelFileName: undefined,
       encoder: 'none',
-      incentiveMechanism: 'Points',
+      incentiveMechanism: 'Points64',
       refundTimeWaitTimeS: 0,
       ownerClaimWaitTimeS: 0,
       anyAddressClaimWaitTimeS: 0,
@@ -162,7 +162,7 @@ class AddModel extends React.Component {
     let valid = true
     if (['costWeight', 'refundTimeWaitTimeS', 'ownerClaimWaitTimeS', 'anyAddressClaimWaitTimeS'].indexOf(name) >= 0) {
       if (value < 0) {
-        this.notify(`The value for ${name} but be at least 0`, { variant: 'error' })
+        this.notify(`The value for ${name} must be at least 0`, { variant: 'error' })
         valid = false
       }
     }
@@ -269,13 +269,13 @@ class AddModel extends React.Component {
                   name: 'incentiveMechanism',
                 }}
               >
-                <MenuItem value={"Points"}>Points</MenuItem>
+                <MenuItem value={"Points64"}>Points</MenuItem>
                 <MenuItem value={"Stakeable64"}>Stakeable</MenuItem>
               </Select>
               {this.state.incentiveMechanism === "Stakeable64" &&
                 this.renderStakeableOptions()
               }
-              {this.state.incentiveMechanism === "Points" &&
+              {this.state.incentiveMechanism === "Points64" &&
                 this.renderPointsOptions()
               }
               <div className={this.classes.selector}>
@@ -587,7 +587,7 @@ class AddModel extends React.Component {
       refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS,
       costWeight } = this.state;
     switch (incentiveMechanism) {
-      case 'Points':
+      case 'Points64':
         contractInfo = Points64
         args = [refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS]
         break;
