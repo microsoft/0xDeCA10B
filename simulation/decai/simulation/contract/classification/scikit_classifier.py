@@ -79,11 +79,15 @@ class SciKitClassifier(Classifier):
 
 @dataclass
 class SciKitClassifierModule(Module):
-    _model: Any
+    """
+    Module to provide SciKit Learn Classifier like models.
+    """
+
+    _model_initializer: Any
 
     # Purposely not a singleton so that it is easy to get a model that has not been initialized.
     @provider
     def provide_classifier(self, builder: ClassAssistedBuilder[SciKitClassifier]) -> Classifier:
         return builder.build(
-            _model_initializer=lambda: self._model,
+            _model_initializer=self._model_initializer,
         )

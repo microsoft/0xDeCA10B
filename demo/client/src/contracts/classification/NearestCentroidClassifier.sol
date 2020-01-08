@@ -6,6 +6,8 @@ import "../../../lib/Math.sol";
 import {Classifier64} from "./Classifier.sol";
 
 /**
+ * A nearest centroid classifier that uses Euclidean distance to predict the closest centroid.
+ *
  * https://en.wikipedia.org/wiki/Nearest_centroid_classifier
  */
 contract NearestCentroidClassifier is Classifier64 {

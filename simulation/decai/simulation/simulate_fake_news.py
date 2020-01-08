@@ -4,6 +4,7 @@ from typing import Optional
 
 from injector import Injector
 
+from decai.simulation.contract.classification.ncc import NearestCentroidClassifierModule
 from decai.simulation.contract.classification.perceptron import PerceptronModule
 from decai.simulation.contract.collab_trainer import DefaultCollaborativeTrainerModule
 from decai.simulation.contract.incentive.stakeable import StakeableImModule
@@ -23,6 +24,17 @@ else:
 
 
 def main():
+    # Model type:
+    model_type = 'ncc'
+    models = dict(
+        perceptron=dict(module=PerceptronModule,
+                        baseline_accuracy=0.9173,
+                        ),
+        ncc=dict(module=NearestCentroidClassifierModule,
+                 baseline_accuracy=0.8324,
+                 )
+    )
+
     # Set up the agents that will act in the simulation.
     agents = [
         # Good
@@ -59,14 +71,14 @@ def main():
         DefaultCollaborativeTrainerModule,
         NewsDataModule(),
         LoggingModule,
-        PerceptronModule,
+        models[model_type]['module'],
         StakeableImModule,
     ])
     s = inj.get(Simulator)
 
     # Start the simulation.
     s.simulate(agents,
-               baseline_accuracy=0.9173,
+               baseline_accuracy=models[model_type].get('baseline_accuracy'),
                init_train_data_portion=init_train_data_portion,
                train_size=train_size,
                test_size=test_size,

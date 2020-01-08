@@ -8,7 +8,7 @@ from decai.simulation.contract.classification.scikit_classifier import SciKitCla
 class PerceptronModule(SciKitClassifierModule):
     def __init__(self):
         super().__init__(
-            _model=SGDClassifier(
+            _model_initializer=lambda: SGDClassifier(
                 loss='perceptron',
                 n_jobs=max(1, os.cpu_count() - 2),
                 random_state=0xDeCA10B,
