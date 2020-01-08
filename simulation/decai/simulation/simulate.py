@@ -217,8 +217,11 @@ class Simulator(object):
             if self._logger.isEnabledFor(logging.DEBUG):
                 s = self._decai.model.evaluate(x_init_data, y_init_data)
                 self._logger.debug("Initial training data evaluation: %s", s)
-                s = self._decai.model.evaluate(x_remaining, y_remaining)
-                self._logger.debug("Remaining training data evaluation: %s", s)
+                if len(x_remaining) > 0:
+                    s = self._decai.model.evaluate(x_remaining, y_remaining)
+                    self._logger.debug("Remaining training data evaluation: %s", s)
+                else:
+                    self._logger.debug("There is no more remaining data to evaluate.")
 
             self._logger.info("Evaluating initial model.")
             accuracy = self._decai.model.log_evaluation_details(x_test, y_test)

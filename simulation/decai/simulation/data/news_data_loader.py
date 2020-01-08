@@ -203,9 +203,12 @@ class NewsDataLoader(DataLoader):
 
         x_train = map(lambda news: news.text, itertools.islice(news_articles, train_size))
         x_test = map(lambda news: news.text, itertools.islice(news_articles, test_start, len(news_articles)))
-        if self._replace_entities:
+        if self._replace_entities_enabled:
+            self._logger.debug("Will replace entities.")
             x_train = self._nlp.pipe(x_train, batch_size=128)
             x_test = self._nlp.pipe(x_test, batch_size=128)
+        else:
+            self._logger.debug("Replacing entities is disabled.")
 
         x_train = map(self._pre_process_text, x_train)
         x_test = map(self._pre_process_text, x_test)
