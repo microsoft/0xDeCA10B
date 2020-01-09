@@ -1,6 +1,5 @@
 import os
 import sys
-from typing import Optional
 
 from injector import Injector
 
@@ -8,6 +7,7 @@ from decai.simulation.contract.classification.ncc import NearestCentroidClassifi
 from decai.simulation.contract.classification.perceptron import PerceptronModule
 from decai.simulation.contract.collab_trainer import DefaultCollaborativeTrainerModule
 from decai.simulation.contract.incentive.stakeable import StakeableImModule
+from decai.simulation.data.fitness_data_loader import FitnessDataModule
 from decai.simulation.data.news_data_loader import NewsDataModule
 from decai.simulation.logging_module import LoggingModule
 from decai.simulation.simulate import Agent, Simulator
@@ -15,25 +15,44 @@ from decai.simulation.simulate import Agent, Simulator
 # For `bokeh serve`.
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
-train_size: Optional[int] = None
-test_size: Optional[int] = None
-if train_size is None:
-    init_train_data_portion = 0.08
-else:
-    init_train_data_portion = 100 / train_size
-
 
 def main():
-    # Model type:
-    model_type = 'ncc'
+    # This file is set up to use different models and datasets.
+    model_type = 'perceptron'
+    dataset = 'fitness'
+
     models = dict(
         perceptron=dict(module=PerceptronModule,
-                        baseline_accuracy=0.9173,
-                        ),
+                        baseline_accuracy=dict(
+                            # train_size, test_size = None, None
+                            news=0.9173,
+                            # train_size, test_size = 3500, 1500
+                            fitness=0.9833,
+                        )),
         ncc=dict(module=NearestCentroidClassifierModule,
-                 baseline_accuracy=0.8324,
-                 )
+                 baseline_accuracy=dict(
+                     # train_size, test_size = None, None
+                     news=0.8324,
+                     # train_size, test_size = 3500, 1500
+                     fitness=0.9667,
+                 )),
     )
+
+    datasets = dict(
+        fitness=dict(module=FitnessDataModule,
+                     train_size=3500, test_size=1500,
+                     ),
+        news=dict(module=NewsDataModule,
+                  train_size=None, test_size=None,
+                  ),
+    )
+
+    train_size = datasets[dataset]['train_size']
+    test_size = datasets[dataset]['test_size']
+    if train_size is None:
+        init_train_data_portion = 0.08
+    else:
+        init_train_data_portion = 100 / train_size
 
     # Set up the agents that will act in the simulation.
     agents = [
@@ -69,7 +88,7 @@ def main():
     # Set up the data, model, and incentive mechanism.
     inj = Injector([
         DefaultCollaborativeTrainerModule,
-        NewsDataModule(),
+        datasets[dataset]['module'],
         LoggingModule,
         models[model_type]['module'],
         StakeableImModule,
@@ -78,7 +97,7 @@ def main():
 
     # Start the simulation.
     s.simulate(agents,
-               baseline_accuracy=models[model_type].get('baseline_accuracy'),
+               baseline_accuracy=models[model_type]['baseline_accuracy'].get(dataset),
                init_train_data_portion=init_train_data_portion,
                train_size=train_size,
                test_size=test_size,

@@ -17,6 +17,7 @@ from decai.simulation.simulate import Agent, Simulator
 # For `bokeh serve`.
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
+# FIXME Using MultinomialNB might not work well with the Titanic dataset because it requires discrete features.
 
 class Runner(object):
     @inject
