@@ -25,7 +25,9 @@ const EMB_SIZE = 1280;
 const EMB_REDUCTION_FACTOR = REDUCE_EMBEDDINGS ? 4 : 1;
 
 // Classifier type can be: ncc/perceptron
-const CLASSIFIER_TYPE = 'perceptron';
+const args = process.argv.slice(2)
+const CLASSIFIER_TYPE = args.length > 0 ? args[0] : 'perceptron';
+console.log(`Training a ${CLASSIFIER_TYPE} classifier.`)
 
 // Perceptron Classifier Config
 
@@ -267,6 +269,7 @@ function getNearestCentroidModel() {
                 const modelPath = path.join(__dirname, 'classifier-centroids.json');
                 console.log(`Saving centroids to "${modelPath}".`);
                 model.type = 'nearest centroid classifier'
+                // FIXME Adding type makes it look like an intent but it is needed for loading when deploying to a smart contract.
                 fs.writeFileSync(modelPath, JSON.stringify(model));
                 resolve(model);
             }).catch(reject);
@@ -436,7 +439,7 @@ async function main() {
     fs.writeFileSync(embeddingCachePath, JSON.stringify(embeddingCache));
     console.debug(`Wrote embedding cache to \"${embeddingCachePath}\" with ${Object.keys(embeddingCache).length} cached embeddings.`);
 
-    if (PERCEPTRON_NUM_FEATS !== EMB_SIZE) {
+    if (CLASSIFIER_TYPE === 'perceptron' && PERCEPTRON_NUM_FEATS !== EMB_SIZE) {
         console.log(`Reducing weights to ${PERCEPTRON_NUM_FEATS} dimensions.`)
         model.featureIndices = tf.tidy(_ => {
             return tf.abs(model.weights).topk(PERCEPTRON_NUM_FEATS).indices;
