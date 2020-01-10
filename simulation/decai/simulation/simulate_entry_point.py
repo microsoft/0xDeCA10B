@@ -10,6 +10,7 @@ from decai.simulation.contract.classification.scikit_classifier import SciKitCla
 from decai.simulation.contract.collab_trainer import DefaultCollaborativeTrainerModule
 from decai.simulation.contract.incentive.stakeable import StakeableImModule
 from decai.simulation.data.fitness_data_loader import FitnessDataModule
+from decai.simulation.data.imdb_data_loader import ImdbDataModule
 from decai.simulation.data.news_data_loader import NewsDataModule
 from decai.simulation.logging_module import LoggingModule
 from decai.simulation.simulate import Agent, Simulator
@@ -20,30 +21,36 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 def main():
     # This file is set up to use different models and datasets.
-    model_type = 'perceptron'
+    model_type = 'ncc'
     dataset = 'fitness'
 
     models = dict(
         perceptron=dict(module=PerceptronModule,
                         baseline_accuracy=dict(
                             # train_size, test_size = None, None
-                            news=0.9173,
+                            imdb=0.73,
                             # train_size, test_size = 3500, 1500
-                            fitness=0.9833,
+                            fitness=0.9507,
+                            # train_size, test_size = None, None
+                            news=0.9173,
                         )),
         nb=dict(module=SciKitClassifierModule(MultinomialNB),
                 baseline_accuracy=dict(
                     # train_size, test_size = None, None
-                    news=0.8615,
+                    imdb=0.8323,
                     # train_size, test_size = 3500, 1500
-                    fitness=0.8980,
+                    fitness=0.97,
+                    # train_size, test_size = None, None
+                    news=0.8615,
                 )),
         ncc=dict(module=NearestCentroidClassifierModule,
                  baseline_accuracy=dict(
                      # train_size, test_size = None, None
-                     news=0.8324,
+                     imdb=0.7445,
                      # train_size, test_size = 3500, 1500
-                     fitness=0.9667,
+                     fitness=0.9513,
+                     # train_size, test_size = None, None
+                     news=0.8324,
                  )),
     )
 
@@ -54,6 +61,9 @@ def main():
         news=dict(module=NewsDataModule,
                   train_size=None, test_size=None,
                   ),
+        imdb=dict(module=ImdbDataModule(num_words=1000),
+                  train_size=None, test_size=None,
+                  )
     )
 
     train_size = datasets[dataset]['train_size']

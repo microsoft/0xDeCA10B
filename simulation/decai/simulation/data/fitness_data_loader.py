@@ -82,13 +82,14 @@ class FitnessDataLoader(DataLoader):
                 data.append({
                     # Values to keep as they are:
                     'rawValues':
-                        [np.mean(heart_rates) / np.min(heart_rates),
-                         np.median(heart_rates) / np.min(heart_rates),
-                         np.max(speeds),
-                         np.min(speeds),
-                         np.mean(speeds),
-                         np.median(speeds),
-                         ],
+                        [
+                            np.mean(heart_rates) / np.min(heart_rates),
+                            np.median(heart_rates) / np.min(heart_rates),
+                            np.max(speeds),
+                            np.min(speeds),
+                            np.mean(speeds),
+                            np.median(speeds),
+                        ],
                     # Values that need to be converted:
                     'gender': gender,
                 })
@@ -104,11 +105,16 @@ class FitnessDataLoader(DataLoader):
         if test_size is None:
             test_size = len(data) - train_size
 
-        # TODO Make sure features can be discretized for Naive Bayes.
+        # Thresholds for making sure features can be discretized for Naive Bayes.
+        thresholds = np.empty(len(data[0]['rawValues']), dtype=np.int32)
+        for i in range(len(data[0]['rawValues'])):
+            thresholds[i] = np.median([d['rawValues'][i] for d in data])
+
         def _featurize(datum):
+            rawValues = np.array(thresholds < datum['rawValues'], dtype=np.int8)
             gender_one_hot = np.zeros(len(gender_to_index), dtype=np.int)
             gender_one_hot[datum['gender']] = 1
-            return np.concatenate([datum['rawValues'], gender_one_hot])
+            return np.concatenate([rawValues, gender_one_hot])
 
         if self._logger.isEnabledFor(logging.DEBUG):
             self._logger.debug("Labels: %s", Counter(labels))
