@@ -262,14 +262,13 @@ function getNearestCentroidModel() {
     return new Promise((resolve, reject) => {
         Promise.all(Object.keys(INTENTS).map(getCentroid))
             .then(async centroidInfos => {
-                const model = {};
+                const model = { intents: {} };
                 Object.values(INTENTS).forEach((intent, i) => {
-                    model[intent] = centroidInfos[i];
+                    model.intents[intent] = centroidInfos[i];
                 });
                 const modelPath = path.join(__dirname, 'classifier-centroids.json');
                 console.log(`Saving centroids to "${modelPath}".`);
                 model.type = 'nearest centroid classifier'
-                // FIXME Adding type makes it look like an intent but it is needed for loading when deploying to a smart contract.
                 fs.writeFileSync(modelPath, JSON.stringify(model));
                 resolve(model);
             }).catch(reject);
@@ -281,7 +280,7 @@ async function predictNearestCentroidModel(model, sample) {
     let result;
     const emb = await getEmbedding(sample);
     tf.tidy(() => {
-        Object.entries(model).forEach(([intent, centroidInfo]) => {
+        Object.entries(model.intents).forEach(([intent, centroidInfo]) => {
             const centroid = tf.tensor1d(centroidInfo.centroid);
             const distance = centroid.sub(emb).pow(2).sum();
             if (distance.less(minDistance).dataSync()[0]) {
