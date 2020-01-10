@@ -2,9 +2,11 @@ import os
 import sys
 
 from injector import Injector
+from sklearn.naive_bayes import MultinomialNB
 
 from decai.simulation.contract.classification.ncc import NearestCentroidClassifierModule
 from decai.simulation.contract.classification.perceptron import PerceptronModule
+from decai.simulation.contract.classification.scikit_classifier import SciKitClassifierModule
 from decai.simulation.contract.collab_trainer import DefaultCollaborativeTrainerModule
 from decai.simulation.contract.incentive.stakeable import StakeableImModule
 from decai.simulation.data.fitness_data_loader import FitnessDataModule
@@ -29,6 +31,13 @@ def main():
                             # train_size, test_size = 3500, 1500
                             fitness=0.9833,
                         )),
+        nb=dict(module=SciKitClassifierModule(MultinomialNB),
+                baseline_accuracy=dict(
+                    # train_size, test_size = None, None
+                    news=0.8615,
+                    # train_size, test_size = 3500, 1500
+                    fitness=0.8980,
+                )),
         ncc=dict(module=NearestCentroidClassifierModule,
                  baseline_accuracy=dict(
                      # train_size, test_size = None, None
