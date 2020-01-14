@@ -32,7 +32,9 @@ contract('NaiveBayesClassifier', function (accounts) {
 
   before("deploy classifier", async () => {
     const queries = [
+      // ALARM
       "alarm for 11 am tomorrow",
+      // WEATHER
       "will i need a jacket for tomorrow"];
     const featureMappedQueries = queries.map(mapFeatures);
     const featureCounts = featureMappedQueries.map(fv => {

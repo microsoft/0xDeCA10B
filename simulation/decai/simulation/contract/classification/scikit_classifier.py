@@ -90,9 +90,20 @@ class SciKitClassifier(Classifier):
                 'bias': self._model.intercept_
             }
         elif isinstance(self._model, MultinomialNB):
-            # TODO
+            feature_counts = []
+            for class_features in self._model.feature_count_:
+                class_feature_counts = []
+                for index, count in enumerate(class_features):
+                    if count != 0:
+                        # Counts should already be integers.
+                        class_feature_counts.append((index, int(count)))
+                feature_counts.append(class_feature_counts)
             model = {
                 'classifications': classifications,
+                'classCounts': self._model.class_count_.tolist(),
+                'featureCounts': feature_counts,
+                'totalNumFeatures': self._model.n_features_,
+                'smoothingFactor': self._model.alpha,
                 'type': model_type or 'naive bayes',
             }
         elif isinstance(self._model, NearestCentroidClassifier):
