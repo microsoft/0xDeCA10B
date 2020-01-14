@@ -8,10 +8,6 @@ from decai.simulation.contract.classification.ncc_module import NearestCentroidC
 from decai.simulation.logging_module import LoggingModule
 
 
-def _ground_truth(data):
-    return data[0] * data[2]
-
-
 class TestNearestCentroidClassifier(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -39,7 +35,7 @@ class TestNearestCentroidClassifier(unittest.TestCase):
         sample = np.array([0.1, 0.1, ])
         self.assertEqual(1, model.predict(sample))
 
-        # Update a point beyond `sample` so that `sample` get a new label.
+        # Update a point beyond `sample` so that `sample` gets a new label.
         model.update(np.array([0.3, 0.3, ]), 0)
         self.assertEqual(0, model.predict(sample))
 
@@ -64,8 +60,8 @@ class TestNearestCentroidClassifier(unittest.TestCase):
         sample = np.array([0, +0.1, ])
         self.assertEqual(1, model.predict(sample))
 
-        # Update a point beyond `sample` so that `sample` get a new label.
-        model.update(np.array([0, -0.3, ]), 0)
+        # Update a point beyond `sample` so that `sample` gets a new label.
+        model.update(np.array([0, 0, ]), 0)
         self.assertEqual(0, model.predict(sample))
 
         self.assertEqual(1, model.evaluate(data, labels))

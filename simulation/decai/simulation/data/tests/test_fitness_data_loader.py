@@ -20,6 +20,7 @@ class TestFitnessDataLoader(unittest.TestCase):
         assert isinstance(cls.loader, FitnessDataLoader)
         cls.loader = cast(FitnessDataLoader, cls.loader)
 
+    @unittest.skip("The dataset does not exist on CI test machine.")
     def test_load(self):
         train_size = 70
         test_size = 30
