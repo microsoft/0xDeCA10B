@@ -1,5 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
+from typing import List
 
 from decai.simulation.contract.objects import SmartContract
 
@@ -65,5 +66,16 @@ class Classifier(ABC, SmartContract):
     def reset_model(self):
         """
         Re-initialize the model to the same state it was in after `init_model` was called.
+        """
+        pass
+
+    @abstractmethod
+    def export(self, path:str, classifications: List[str] = None, model_type: str = None):
+        """
+        Export the model in a format for the demo Node.js code to load.
+
+        :param path: The path to save the exported model to.
+        :param classifications: The classifications output by the model.
+        :param model_type: The type of the model.
         """
         pass

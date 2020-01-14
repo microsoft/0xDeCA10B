@@ -1,19 +1,23 @@
+import json
 import logging
 import os
 import time
 from dataclasses import dataclass
 from logging import Logger
-from typing import Any
+from typing import Any, List
 
 import joblib
 import numpy as np
 from injector import inject, Module, provider, ClassAssistedBuilder
+from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.naive_bayes import MultinomialNB
 
 from decai.simulation.contract.classification.classifier import Classifier
-
-
 # Purposely not a singleton so that it is easy to get a model that has not been initialized.
+from decai.simulation.contract.classification.ncc import NearestCentroidClassifier
+
+
 @inject
 @dataclass
 class SciKitClassifier(Classifier):
@@ -75,6 +79,35 @@ class SciKitClassifier(Classifier):
         assert self._model is not None, "The model has not been initialized yet."
         self._logger.debug("Loading model from \"%s\".", self._original_model_path)
         self._model = joblib.load(self._original_model_path)
+
+    def export(self, path: str, classifications: List[str] = None, model_type: str = None):
+        assert self._model is not None, "The model has not been initialized yet."
+        if isinstance(self._model, SGDClassifier) and self._model.loss == 'perceptron':
+            model = {
+                'classifications': classifications,
+                'type': model_type or 'sparse perceptron',
+                'weights': self._model.coef_,
+                'bias': self._model.intercept_
+            }
+        elif isinstance(self._model, MultinomialNB):
+            # TODO
+            model = {
+                'classifications': classifications,
+                'type': model_type or 'naive bayes',
+            }
+        elif isinstance(self._model, NearestCentroidClassifier):
+            intents = dict()
+            for i, classification in enumerate(classifications):
+                intents[classification] = dict(centroid=self.centroids_[i],
+                                               dataCount=self._model._num_samples_per_centroid[i])
+            model = {
+                'intents': intents,
+                'type': 'nearest centroid classifier',
+            }
+        else:
+            raise Exception("Unrecognized model type.")
+        with open(path, 'w') as f:
+            json.dump(model, f)
 
 
 @dataclass

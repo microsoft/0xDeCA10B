@@ -4,7 +4,7 @@ import numpy as np
 from injector import Injector
 
 from decai.simulation.contract.classification.classifier import Classifier
-from decai.simulation.contract.classification.ncc import NearestCentroidClassifierModule
+from decai.simulation.contract.classification.ncc_module import NearestCentroidClassifierModule
 from decai.simulation.logging_module import LoggingModule
 
 

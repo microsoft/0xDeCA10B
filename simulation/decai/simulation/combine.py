@@ -32,6 +32,8 @@ class SimulationCombiner(object):
 
         # TODO Make plot wider (or maybe it's ok for the paper).
 
+        # TODO Put legend above.
+
         good_colors = cycle([
             colors.named.green,
             colors.named.lawngreen,
@@ -119,14 +121,14 @@ if __name__ == '__main__':
     s = inj.get(SimulationCombiner)
     path = Path(__file__, '../../..').resolve()
     s.combine([
-        dict(name="1561144838",
-             path=path / 'saved_runs/1561144838.json',
+        dict(name="NB",
+             path=path / 'saved_runs/1578937397-fitness-nb.json',
              ),
-        dict(name="1578522458",
-             path=path / 'saved_runs/1578522458.json',
+        dict(name="Perceptron",
+             path=path / 'saved_runs/1578934493-fitness-perceptron.json',
              ),
-        dict(name="1578601321",
-             path=path / 'saved_runs/1578601321.json',
+        dict(name="NCC",
+             path=path / 'saved_runs/1578938741-fitness-ncc.json',
              ),
     ],
-        path / 'saved_runs/1561144838-1578522458-1578601321.png')
+        path / 'saved_runs/fitness.png')

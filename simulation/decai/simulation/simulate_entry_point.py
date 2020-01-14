@@ -4,7 +4,7 @@ import sys
 from injector import Injector
 from sklearn.naive_bayes import MultinomialNB
 
-from decai.simulation.contract.classification.ncc import NearestCentroidClassifierModule
+from decai.simulation.contract.classification.ncc_module import NearestCentroidClassifierModule
 from decai.simulation.contract.classification.perceptron import PerceptronModule
 from decai.simulation.contract.classification.scikit_classifier import SciKitClassifierModule
 from decai.simulation.contract.collab_trainer import DefaultCollaborativeTrainerModule
@@ -21,8 +21,20 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 def main():
     # This file is set up to use different models and datasets.
-    model_type = 'ncc'
     dataset = 'fitness'
+    model_type = 'ncc'
+
+    datasets = dict(
+        fitness=dict(module=FitnessDataModule,
+                     train_size=3500, test_size=1500,
+                     ),
+        news=dict(module=NewsDataModule,
+                  train_size=None, test_size=None,
+                  ),
+        imdb=dict(module=ImdbDataModule(num_words=1000),
+                  train_size=None, test_size=None,
+                  )
+    )
 
     models = dict(
         perceptron=dict(module=PerceptronModule,
@@ -52,18 +64,6 @@ def main():
                      # train_size, test_size = None, None
                      news=0.8324,
                  )),
-    )
-
-    datasets = dict(
-        fitness=dict(module=FitnessDataModule,
-                     train_size=3500, test_size=1500,
-                     ),
-        news=dict(module=NewsDataModule,
-                  train_size=None, test_size=None,
-                  ),
-        imdb=dict(module=ImdbDataModule(num_words=1000),
-                  train_size=None, test_size=None,
-                  )
     )
 
     train_size = datasets[dataset]['train_size']
@@ -120,6 +120,7 @@ def main():
                init_train_data_portion=init_train_data_portion,
                train_size=train_size,
                test_size=test_size,
+               filename_indicator=f"{dataset}-{model_type}"
                )
 
 

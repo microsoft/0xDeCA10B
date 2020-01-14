@@ -90,6 +90,7 @@ class Simulator(object):
                  pm_test_sets: list = None,
                  accuracy_plot_wait_s=2E5,
                  train_size: int = None, test_size: int = None,
+                 filename_indicator: str = None
                  ):
         """
         Run a simulation.
@@ -102,6 +103,7 @@ class Simulator(object):
         :param accuracy_plot_wait_s: The amount of time to wait in seconds between plotting the accuracy.
         :param train_size: The amount of training data to use.
         :param test_size: The amount of test data to use.
+        :param filename_indicator: Path of the filename to create for the run.
         """
 
         assert 0 <= init_train_data_portion <= 1
@@ -114,8 +116,8 @@ class Simulator(object):
                          balances=[],
                          )
         time_for_filenames = int(time.time())
-        save_path = f'saved_runs/{time_for_filenames}.json'
-        plot_save_path = f'saved_runs/{time_for_filenames}_plot.png'
+        save_path = f'saved_runs/{time_for_filenames}-{filename_indicator}.json'
+        plot_save_path = f'saved_runs/{time_for_filenames}-{filename_indicator}.png'
         self._logger.info("Saving run info to \"%s\".", save_path)
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
