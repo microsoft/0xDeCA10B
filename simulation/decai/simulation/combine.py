@@ -9,6 +9,7 @@ from typing import List, Dict
 
 from bokeh import colors
 from bokeh.io import export_png
+from bokeh.models import Legend
 from bokeh.plotting import figure, output_file, show
 from injector import Injector, inject
 
@@ -27,12 +28,10 @@ class SimulationCombiner(object):
 
         :param paths: The paths to the runs to combine.
         """
-        output_file('plots.html')
+        output_file('combined_plots.html')
         plot = figure(title="Balances & Accuracy on Hidden Test Set", )
 
         # TODO Make plot wider (or maybe it's ok for the paper).
-
-        # TODO Put legend above.
 
         good_colors = cycle([
             colors.named.green,
@@ -66,6 +65,8 @@ class SimulationCombiner(object):
             'dashdot',
         ])
 
+        legend = []
+
         for run in runs:
             name = run['name']
             path = run['path']
@@ -76,21 +77,22 @@ class SimulationCombiner(object):
                 baseline_accuracy = data['baselineAccuracy']
                 if baseline_accuracy is not None:
                     self._logger.debug("Baseline accuracy: %s", baseline_accuracy)
-                    plot.ray(x=[0], y=[baseline_accuracy * 100], length=0, angle=0, line_width=2,
-                             line_dash=line_dash,
-                             color=next(baseline_accuracy_colors),
-                             legend=f"{name} accuracy when trained with all data: {baseline_accuracy * 100:0.1f}%")
+                    r = plot.ray(x=[0], y=[baseline_accuracy * 100], length=0, angle=0, line_width=2,
+                                 line_dash=line_dash,
+                                 color=next(baseline_accuracy_colors))
+                    legend.append((f"{name} accuracy when trained with all data: {baseline_accuracy * 100:0.1f}%", [r]))
                 agents: Dict[str, Agent] = dict()
                 for agent in data['agents']:
                     agent = Agent(**agent)
                     agents[agent.address] = agent
-                plot.line(x=[d['t'] for d in data['accuracies']],
-                          y=[d['accuracy'] * 100 for d in data['accuracies']],
-                          line_dash=line_dash,
-                          line_width=2,
-                          color=next(accuracy_colors),
-                          legend=f"{name} Accuracy"
-                          )
+                l = plot.line(x=[d['t'] for d in data['accuracies']],
+                              y=[d['accuracy'] * 100 for d in data['accuracies']],
+                              line_dash=line_dash,
+
+                              line_width=2,
+                              color=next(accuracy_colors),
+                              )
+                legend.append((f"{name} Accuracy", [l]))
                 agent_balance_data = defaultdict(list)
                 for balance_data in data['balances']:
                     agent = balance_data['a']
@@ -102,14 +104,18 @@ class SimulationCombiner(object):
                         color = next(good_colors)
                     else:
                         color = next(bad_colors)
-                    plot.line(x=list(map(itemgetter(0), balance_data)),
-                              y=list(map(itemgetter(1), balance_data)),
-                              line_dash=line_dash,
-                              line_width=2,
-                              color=color,
-                              legend=f"{name} {agent.address} Balance"
-                              )
+                    l = plot.line(x=list(map(itemgetter(0), balance_data)),
+                                  y=list(map(itemgetter(1), balance_data)),
+                                  line_dash=line_dash,
+                                  line_width=2,
+                                  color=color,
+                                  )
+                    legend.append((f"{name} {agent.address} Balance", [l]))
         self._logger.info("Done going through runs.")
+
+        legend = Legend(items=legend, location='center_left')
+        plot.add_layout(legend, 'above')
+
         export_png(plot, img_save_path)
         show(plot)
 
