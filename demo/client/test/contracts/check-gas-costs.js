@@ -1,3 +1,5 @@
+const fs = require('fs')
+
 const CollaborativeTrainer64 = artifacts.require("./CollaborativeTrainer64")
 const DataHandler64 = artifacts.require("./data/DataHandler64")
 const Stakeable64 = artifacts.require("./incentive/Stakeable64")
@@ -96,6 +98,10 @@ contract('CheckGasUsage', function (accounts) {
     ]
     const gasUsages = []
     for (const model of models) {
+      if (!fs.existsSync(model.path)) {
+        console.debug(`Skipping model path that does not exist: ${model.path}`)
+        continue
+      }
       const gasUsage = {
         model: model.path,
       }
@@ -103,13 +109,28 @@ contract('CheckGasUsage', function (accounts) {
       const mainInterfaceInfo = await initialize(model.path)
       const { classifier, mainInterface } = mainInterfaceInfo
       gasUsage['deploy'] = mainInterfaceInfo.gasUsed
-      const { classification } = model
       const data = model.normalize ? (await normalize(classifier, model.data)) : model.data
-      const r = await mainInterface.addData(data, classification, { from: accounts[0], value: 1E18 })
+
+      // Add with predicted class so that it can be refunded.
+      const predictedClassification = parseBN(await classifier.predict(data))
+
+      let r = await mainInterface.addData(data, predictedClassification, { from: accounts[0], value: 1E17 })
+      let e = r.logs.filter(e => e.event == 'AddData')[0]
+      let addedTime = e.args.t;
       gasUsage['addData'] = r.receipt.gasUsed
 
-      // TODO Refund
-      // TODO Report
+      // Refund
+      r = await mainInterface.refund(data, predictedClassification, addedTime)
+      gasUsage['refund'] = r.receipt.gasUsed
+
+      // Report
+
+      // Someone else adds bad data.
+      r = await mainInterface.addData(data, 1 - predictedClassification, { from: accounts[1], value: 1E17 })
+      e = r.logs.filter(e => e.event == 'AddData')[0]
+      addedTime = e.args.t;
+      r = await mainInterface.report(data, 1 - predictedClassification, addedTime, accounts[1])
+      gasUsage['report'] = r.receipt.gasUsed
 
       console.log(`gasUsage: ${JSON.stringify(gasUsage, null, 4)}`)
     }
