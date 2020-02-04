@@ -113,7 +113,7 @@ class SciKitClassifier(Classifier):
                                                dataCount=self._model._num_samples_per_centroid[i])
             model = {
                 'intents': intents,
-                'type': 'nearest centroid classifier',
+                'type': model_type or 'nearest centroid classifier',
             }
         else:
             raise Exception("Unrecognized model type.")
