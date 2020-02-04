@@ -9,7 +9,7 @@ from typing import List, Dict
 
 from bokeh import colors
 from bokeh.io import export_png
-from bokeh.models import Legend
+from bokeh.models import FuncTickFormatter, Legend, PrintfTickFormatter, AdaptiveTicker
 from bokeh.plotting import figure, output_file, show
 from injector import Injector, inject
 
@@ -30,6 +30,25 @@ class SimulationCombiner(object):
         """
         output_file('combined_plots.html')
         plot = figure(title="Balances & Accuracy on Hidden Test Set", )
+        plot.width = 800
+        plot.height = 800
+
+        plot.xaxis.axis_label = "Time (days)"
+        plot.yaxis.axis_label = "Percent"
+        plot.title.text_font_size = '20pt'
+        plot.xaxis.major_label_text_font_size = '16pt'
+        plot.xaxis.axis_label_text_font_size = '16pt'
+        plot.yaxis.major_label_text_font_size = '16pt'
+        plot.yaxis.axis_label_text_font_size = '16pt'
+
+        plot.xaxis[0].ticker = AdaptiveTicker(base=5 * 24 * 60 * 60)
+        plot.xgrid[0].ticker = AdaptiveTicker(base=24 * 60 * 60)
+
+        # JavaScript code.
+        plot.xaxis[0].formatter = FuncTickFormatter(code="""
+                return (tick / 86400).toFixed(0);
+                """)
+        plot.yaxis[0].formatter = PrintfTickFormatter(format="%0.1f%%")
 
         # TODO Make plot wider (or maybe it's ok for the paper).
 
@@ -115,6 +134,7 @@ class SimulationCombiner(object):
 
         legend = Legend(items=legend, location='center_left')
         plot.add_layout(legend, 'above')
+        plot.legend.label_text_font_size = '12pt'
 
         export_png(plot, img_save_path)
         show(plot)
