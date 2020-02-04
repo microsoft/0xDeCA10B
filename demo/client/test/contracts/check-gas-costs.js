@@ -87,6 +87,12 @@ contract('CheckGasUsage', function (accounts) {
   it("...should log gasUsed", async () => {
     const models = [
       {
+        path: `${__dirname}/../../../../simulation/saved_runs/1580856910-fitness-nb-model.json`,
+        data: [1, 1,
+          1, 1, 1, 1,
+          1, 0, 0],
+      },
+      {
         path: `${__dirname}/../../../../simulation/saved_runs/1580845144-fitness-ncc-model.json`,
         data: [1, 1,
           1, 1, 1, 1,

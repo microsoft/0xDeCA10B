@@ -43,16 +43,16 @@ async function loadSparsePerceptron(model, web3, toFloat) {
     let gasUsed = 0
     const weightChunkSize = 450
     const { classifications } = model
-    const weights = convertData(model.weights, web3, toFloat);
-    const intercept = convertNum(model.bias, web3, toFloat);
-    const learningRate = convertNum(1, web3, toFloat);
-    console.log(`  Deploying Sparse Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights.`);
+    const weights = convertData(model.weights, web3, toFloat)
+    const intercept = convertNum(model.bias, web3, toFloat)
+    const learningRate = convertNum(1, web3, toFloat)
+    console.log(`  Deploying Sparse Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights.`)
     const classifierContract = await SparsePerceptron.new(classifications, weights.slice(0, weightChunkSize), intercept, learningRate)
     gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
 
     // Add remaining weights.
     for (let i = weightChunkSize; i < weights.length; i += weightChunkSize) {
-        console.log(`  Deploying classifier weights [${i}, ${Math.min(i + weightChunkSize, weights.length)}).`);
+        console.log(`  Deploying classifier weights [${i}, ${Math.min(i + weightChunkSize, weights.length)}).`)
         const r = await classifierContract.initializeWeights(i, weights.slice(i, i + weightChunkSize))
         gasUsed += r.receipt.gasUsed
     }
@@ -90,7 +90,6 @@ async function loadNearestCentroidClassifier(model, web3, toFloat) {
         [classifications[0]], [centroids[0]], [dataCounts[0]],
         { gas: 8.9E6 }
     )
-    // TODO Extend centroids if needed.
 
     gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
     console.log(`  Deployed classifier to ${classifierContract.address}. gasUsed: ${gasUsed}`)
@@ -114,7 +113,37 @@ async function loadNearestCentroidClassifier(model, web3, toFloat) {
 }
 
 async function loadNaiveBayes(model, web3, toFloat) {
+    let gasUsed = 0
+    const { classifications, classCounts, featureCounts, totalNumFeatures } = model
+    const smoothingFactor = convertNum(model.smoothingFactor, web3, toFloat)
+    console.log(`  Deploying Naive Bayes classifier.`)
 
+    const classifierContract = await NaiveBayesClassifier.new([classifications[0]], [classCounts[0]], [featureCounts[0]], totalNumFeatures, smoothingFactor)
+    gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
+
+    const addClassPromises = []
+    for (let i = 1; i < classifications.length; ++i) {
+        addClassPromises.push(classifierContract.addClass(
+            classCounts[i], featureCounts[i], classifications[i]
+        ))
+    }
+    return Promise.all(addClassPromises).then(responses => {
+        for (const r of responses) {
+            gasUsed += r.receipt.gasUsed
+        }
+        console.log(`  Deployed all Naive Bayes classifier classes. gasUsed: ${gasUsed}.`)
+        return {
+            classifierContract,
+            gasUsed,
+        }
+    })
+
+    console.log(`  Deployed Naive Bayes classifier to ${classifierContract.address}. gasUsed: ${gasUsed}`)
+
+    return {
+        classifierContract,
+        gasUsed,
+    }
 }
 
 /**

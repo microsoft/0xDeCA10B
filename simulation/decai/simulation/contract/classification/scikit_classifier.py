@@ -104,7 +104,7 @@ class SciKitClassifier(Classifier):
                 feature_counts.append(class_feature_counts)
             model = {
                 'classifications': classifications,
-                'classCounts': self._model.class_count_.tolist(),
+                'classCounts': self._model.class_count_.astype(dtype=np.int64).tolist(),
                 'featureCounts': feature_counts,
                 'totalNumFeatures': self._model.feature_count_.shape[1],
                 'smoothingFactor': self._model.alpha,
