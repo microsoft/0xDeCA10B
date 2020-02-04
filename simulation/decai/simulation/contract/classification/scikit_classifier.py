@@ -88,8 +88,8 @@ class SciKitClassifier(Classifier):
             model = {
                 'classifications': classifications,
                 'type': model_type or 'sparse perceptron',
-                'weights': self._model.coef_,
-                'bias': self._model.intercept_
+                'weights': self._model.coef_[0].tolist(),
+                'bias': self._model.intercept_[0]
             }
         elif isinstance(self._model, MultinomialNB):
             if classifications is None:

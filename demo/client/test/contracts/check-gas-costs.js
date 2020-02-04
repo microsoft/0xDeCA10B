@@ -92,8 +92,13 @@ contract('CheckGasUsage', function (accounts) {
           1, 1, 1, 1,
           1, 0, 0],
         normalize: true,
-        // BIKING
-        classification: 0,
+      },
+      {
+        path: `${__dirname}/../../../../simulation/saved_runs/1580854505-fitness-dense-perceptron-model.json`,
+        data: [1, 1,
+          1, 1, 1, 1,
+          1, 0, 0],
+        normalize: true,
       },
     ]
     const gasUsages = []
@@ -102,6 +107,7 @@ contract('CheckGasUsage', function (accounts) {
         console.debug(`Skipping model path that does not exist: ${model.path}`)
         continue
       }
+      console.log(`Checking gas usage for ${model.path}`)
       const gasUsage = {
         model: model.path,
       }

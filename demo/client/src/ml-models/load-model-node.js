@@ -5,28 +5,67 @@ const NaiveBayesClassifier = artifacts.require("./classification/NaiveBayesClass
 const NearestCentroidClassifier = artifacts.require("./classification/NearestCentroidClassifier")
 const SparsePerceptron = artifacts.require("./classification/SparsePerceptron")
 
-const { convertData } = require('../../src/float-utils-node');
+const { convertData, convertNum } = require('../../src/float-utils-node');
 
 
 const _toFloat = 1E9
 
-const modelTypes = {
-    'dense perceptron': DensePerceptron,
-    'naive bayes': NaiveBayesClassifier,
-    'nearest centroid classifier': NearestCentroidClassifier,
-    'sparse perceptron': SparsePerceptron,
+
+
+
+async function loadDensePerceptron(model, web3, toFloat) {
+    let gasUsed = 0
+    const weightChunkSize = 450
+    const { classifications } = model
+    const weights = convertData(model.weights, web3, toFloat);
+    const intercept = convertNum(model.bias, web3, toFloat);
+    const learningRate = convertNum(1, web3, toFloat);
+    console.log(`  Deploying Dense Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights.`);
+    const classifierContract = await DensePerceptron.new(classifications, weights.slice(0, weightChunkSize), intercept, learningRate)
+    gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
+
+    // Add remaining weights.
+    for (let i = weightChunkSize; i < weights.length; i += weightChunkSize) {
+        console.log(`  Deploying classifier weights [${i}, ${Math.min(i + weightChunkSize, weights.length)}).`);
+        const r = await classifierContract.initializeWeights(weights.slice(i, i + weightChunkSize))
+        gasUsed += r.receipt.gasUsed
+    }
+
+    console.log(`  Deployed Dense Perceptron classifier to ${classifierContract.address}. gasUsed: ${gasUsed}`)
+
+    return {
+        classifierContract,
+        gasUsed,
+    }
 }
 
+async function loadSparsePerceptron(model, web3, toFloat) {
+    let gasUsed = 0
+    const weightChunkSize = 450
+    const { classifications } = model
+    const weights = convertData(model.weights, web3, toFloat);
+    const intercept = convertNum(model.bias, web3, toFloat);
+    const learningRate = convertNum(1, web3, toFloat);
+    console.log(`  Deploying Sparse Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights.`);
+    const classifierContract = await SparsePerceptron.new(classifications, weights.slice(0, weightChunkSize), intercept, learningRate)
+    gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
 
-async function loadDensePerceptron(model) {
+    // Add remaining weights.
+    for (let i = weightChunkSize; i < weights.length; i += weightChunkSize) {
+        console.log(`  Deploying classifier weights [${i}, ${Math.min(i + weightChunkSize, weights.length)}).`);
+        const r = await classifierContract.initializeWeights(i, weights.slice(i, i + weightChunkSize))
+        gasUsed += r.receipt.gasUsed
+    }
 
+    console.log(`  Deployed Sparse Perceptron classifier to ${classifierContract.address}. gasUsed: ${gasUsed}`)
+
+    return {
+        classifierContract,
+        gasUsed,
+    }
 }
 
-async function loadSparsePerceptron(model) {
-
-}
-
-async function loadNearestCentroidClassifier(model, web3, toFloat = _toFloat) {
+async function loadNearestCentroidClassifier(model, web3, toFloat) {
     let gasUsed = 0
     const classifications = []
     const centroids = []
@@ -74,7 +113,7 @@ async function loadNearestCentroidClassifier(model, web3, toFloat = _toFloat) {
     })
 }
 
-async function loadNaiveBayes(model) {
+async function loadNaiveBayes(model, web3, toFloat) {
 
 }
 
