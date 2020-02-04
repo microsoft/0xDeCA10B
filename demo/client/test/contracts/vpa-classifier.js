@@ -52,7 +52,7 @@ contract('VpaClassifier', function (accounts) {
     const dataCounts = [];
     let model = fs.readFileSync('./src/ml-models/vpa/vpa-classifier-centroids.json', 'utf8');
     model = JSON.parse(model);
-    for (let [classification, centroidInfo] of Object.entries(model)) {
+    for (let [classification, centroidInfo] of Object.entries(model.intents)) {
       classifications.push(classification);
       // To test gas usage faster, use less dimensions:
       // centroidInfo.centroid = centroidInfo.centroid.slice(0, 64);

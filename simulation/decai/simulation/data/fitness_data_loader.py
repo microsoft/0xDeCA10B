@@ -133,9 +133,10 @@ class FitnessDataLoader(DataLoader):
             test_size = len(data) - train_size
 
         # Thresholds for making sure features can be discretized for Naive Bayes.
+        # Just use training data to make thresholds.
         thresholds = np.empty(len(data[0]['rawValues']), dtype=np.int32)
         for i in range(len(data[0]['rawValues'])):
-            thresholds[i] = np.median([d['rawValues'][i] for d in data])
+            thresholds[i] = np.median([d['rawValues'][i] for d in data[:train_size]])
 
         def _featurize(datum):
             rawValues = np.array(thresholds < datum['rawValues'], dtype=np.int8)
