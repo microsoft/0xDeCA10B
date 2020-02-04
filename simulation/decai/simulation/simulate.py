@@ -117,6 +117,7 @@ class Simulator(object):
                          )
         time_for_filenames = int(time.time())
         save_path = f'saved_runs/{time_for_filenames}-{filename_indicator}.json'
+        model_save_path = f'saved_runs/{time_for_filenames}-{filename_indicator}-model.json'
         plot_save_path = f'saved_runs/{time_for_filenames}-{filename_indicator}.png'
         self._logger.info("Saving run info to \"%s\".", save_path)
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
@@ -208,6 +209,7 @@ class Simulator(object):
         def task():
             (x_train, y_train), (x_test, y_test) = \
                 self._data_loader.load_data(train_size=train_size, test_size=test_size)
+            classifications = self._data_loader.classifications()
             init_idx = int(len(x_train) * init_train_data_portion)
             self._logger.info("Initializing model with %d out of %d samples.",
                               init_idx, len(x_train))
@@ -273,6 +275,7 @@ class Simulator(object):
 
                         with open(save_path, 'w') as f:
                             json.dump(save_data, f, separators=(',', ':'))
+                        self._decai.model.export(model_save_path, classifications)
 
                         if os.path.exists(plot_save_path):
                             os.remove(plot_save_path)
@@ -448,6 +451,7 @@ class Simulator(object):
 
             with open(save_path, 'w') as f:
                 json.dump(save_data, f, separators=(',', ':'))
+            self._decai.model.export(model_save_path, classifications)
 
             if os.path.exists(plot_save_path):
                 os.remove(plot_save_path)

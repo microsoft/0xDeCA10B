@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from enum import Enum
 from logging import Logger
 from operator import itemgetter
-from typing import Optional, Collection, Tuple
+from typing import Collection, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -149,11 +149,13 @@ class NewsDataLoader(DataLoader):
     _entity_types_to_replace = {'PERSON', 'GPE', 'ORG', 'DATE', 'TIME', 'PERCENT',
                                 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL'}
 
+    def classifications(self) -> List[str]:
+        return ["RELIABLE", "UNRELIABLE"]
+
     def __post_init__(self):
         spacy_model = 'en_core_web_lg'
         download(spacy_model)
         self._nlp = spacy.load(spacy_model, disable={'tagger', 'parser', 'textcat'})
-
 
     def _load_kaggle_data(self, data_folder_path: str) -> Collection[News]:
         """

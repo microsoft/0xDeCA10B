@@ -83,6 +83,8 @@ class SciKitClassifier(Classifier):
     def export(self, path: str, classifications: List[str] = None, model_type: str = None):
         assert self._model is not None, "The model has not been initialized yet."
         if isinstance(self._model, SGDClassifier) and self._model.loss == 'perceptron':
+            if classifications is None:
+                classifications = ["0", "1"]
             model = {
                 'classifications': classifications,
                 'type': model_type or 'sparse perceptron',
@@ -90,6 +92,8 @@ class SciKitClassifier(Classifier):
                 'bias': self._model.intercept_
             }
         elif isinstance(self._model, MultinomialNB):
+            if classifications is None:
+                classifications = list(map(str, range(self._model.feature_count_.shape[1])))
             feature_counts = []
             for class_features in self._model.feature_count_:
                 class_feature_counts = []
@@ -102,12 +106,14 @@ class SciKitClassifier(Classifier):
                 'classifications': classifications,
                 'classCounts': self._model.class_count_.tolist(),
                 'featureCounts': feature_counts,
-                'totalNumFeatures': self._model.n_features_,
+                'totalNumFeatures': self._model.feature_count_.shape[1],
                 'smoothingFactor': self._model.alpha,
                 'type': model_type or 'naive bayes',
             }
         elif isinstance(self._model, NearestCentroidClassifier):
             intents = dict()
+            if classifications is None:
+                list(map(str, range(len(self.centroids_))))
             for i, classification in enumerate(classifications):
                 intents[classification] = dict(centroid=self.centroids_[i],
                                                dataCount=self._model._num_samples_per_centroid[i])

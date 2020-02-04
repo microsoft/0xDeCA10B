@@ -5,7 +5,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from logging import Logger
 from pathlib import Path
-from typing import Set, Tuple
+from typing import List, Set, Tuple
 
 import numpy as np
 from injector import ClassAssistedBuilder, inject, Module, provider, singleton
@@ -36,13 +36,19 @@ class FitnessDataLoader(DataLoader):
     _train_split: float = field(default=0.7, init=False)
     _classes: Set[str] = field(default_factory=lambda: {'bike', 'run'}, init=False)
 
+    def classifications(self) -> List[str]:
+        return ["BIKING", "RUNNING"]
+
     def load_data(self, train_size: int = None, test_size: int = None) -> (Tuple, Tuple):
         self._logger.info("Loading Endomondo fitness data.")
         data = []
         labels = []
         data_folder_path = Path(__file__, '../../../../training_data/fitness')
         user_id_to_set = {}
-        sport_to_label = {}
+        sport_to_label = {
+            'bike': 0,
+            'run': 1
+        }
         gender_to_index = {}
         if train_size is not None and test_size is not None:
             max_num_samples = train_size + test_size
@@ -67,7 +73,7 @@ class FitnessDataLoader(DataLoader):
                     continue
                 if 'speed' not in record:
                     continue
-                label = sport_to_label.setdefault(sport, len(sport_to_label))
+                label = sport_to_label[sport]
                 labels.append(label)
                 heart_rates = record['heart_rate']
                 gender = gender_to_index.setdefault(record['gender'], len(gender_to_index))
