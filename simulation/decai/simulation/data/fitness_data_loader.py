@@ -1,6 +1,8 @@
 import ast
 import logging
+import os
 import re
+import time
 from collections import Counter
 from dataclasses import dataclass, field
 from logging import Logger
@@ -41,6 +43,25 @@ class FitnessDataLoader(DataLoader):
 
     def load_data(self, train_size: int = None, test_size: int = None) -> (Tuple, Tuple):
         self._logger.info("Loading Endomondo fitness data.")
+
+        # Look for cached data.
+        file_identifier = f'fitness-data-{train_size}-{test_size}.npy'
+        base_path = Path(os.path.dirname(__file__)) / 'cached_data'
+        os.makedirs(base_path, exist_ok=True)
+        cache_paths = {
+            'x_train': base_path / f'x_train-{file_identifier}',
+            'y_train': base_path / f'y_train-{file_identifier}',
+            'x_test': base_path / f'x_test-{file_identifier}',
+            'y_test': base_path / f'y_test-{file_identifier}'
+        }
+
+        # Use if modified in the last day.
+        if all([p.exists() for p in cache_paths.values()]) and \
+                all([time.time() - p.stat().st_mtime < 60 * 60 * 24 for p in cache_paths.values()]):
+            self._logger.info("Loaded cached Endomondo fitness data from %s.", cache_paths)
+            return (np.load(cache_paths['x_train']), np.load(cache_paths['y_train'])), \
+                   (np.load(cache_paths['x_test']), np.load(cache_paths['y_test']))
+
         data = []
         labels = []
         data_folder_path = Path(__file__, '../../../../training_data/fitness')
@@ -130,6 +151,10 @@ class FitnessDataLoader(DataLoader):
         x_test = np.array([_featurize(d) for d in data[-test_size:]])
         y_test = np.array(labels[-test_size:])
 
+        np.save(cache_paths['x_train'], x_train, allow_pickle=False)
+        np.save(cache_paths['y_train'], y_train, allow_pickle=False)
+        np.save(cache_paths['x_test'], x_test, allow_pickle=False)
+        np.save(cache_paths['y_test'], y_test, allow_pickle=False)
         self._logger.info("Done loading Endomondo fitness data.")
         return (x_train, y_train), (x_test, y_test)
 

@@ -115,7 +115,7 @@ class SciKitClassifier(Classifier):
             if classifications is None:
                 list(map(str, range(len(self.centroids_))))
             for i, classification in enumerate(classifications):
-                intents[classification] = dict(centroid=self.centroids_[i],
+                intents[classification] = dict(centroid=self._model.centroids_[i].tolist(),
                                                dataCount=self._model._num_samples_per_centroid[i])
             model = {
                 'intents': intents,
