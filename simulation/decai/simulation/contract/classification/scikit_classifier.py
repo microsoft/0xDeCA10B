@@ -124,7 +124,7 @@ class SciKitClassifier(Classifier):
         else:
             raise Exception("Unrecognized model type.")
         with open(path, 'w') as f:
-            json.dump(model, f)
+            json.dump(model, f, separators=(',', ':'))
 
 
 @dataclass

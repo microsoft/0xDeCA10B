@@ -202,7 +202,8 @@ class NewsDataLoader(DataLoader):
         self._logger.info("Getting features for %d articles.", len(news_articles))
         # Only use binary features.
         ngram_range = (2, 2)
-        t = TfidfVectorizer(max_features=3000, ngram_range=ngram_range)
+        # Don't use IDF because we need integer features.
+        t = TfidfVectorizer(max_features=3000, ngram_range=ngram_range, norm=None, use_idf=False)
         test_start = len(news_articles) - test_size
 
         x_train = map(lambda news: news.text, itertools.islice(news_articles, train_size))
