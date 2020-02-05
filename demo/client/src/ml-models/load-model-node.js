@@ -150,7 +150,7 @@ async function loadSparseNearestCentroidClassifier(model, web3, toFloat) {
         const extensionPromises = []
         for (let classification = 0; i < classifications.length; ++classification) {
             for (let j = chunkSize; j < centroids[classification].length; j += chunkSize) {
-                extensionPromises.push(await classifierContract.extendCentroid(centroids[classification].slice(j, j + chunkSize), classification))
+                extensionPromises.push(classifierContract.extendCentroid(centroids[classification].slice(j, j + chunkSize), classification))
             }
         }
         return Promise.all(extensionPromises).then(responses => {
@@ -188,9 +188,9 @@ async function loadNaiveBayes(model, web3, toFloat) {
         }
         // Add remaining feature counts.
         const initializeCountsPromises = []
-        for (let classification = 0; i < classifications.length; ++classification) {
+        for (let classification = 0; classification < classifications.length; ++classification) {
             for (let j = featureChunkSize; j < featureCounts[classification].length; j += featureChunkSize) {
-                initializeCountsPromises.push(await classifierContract.initializeCounts(featureCounts[classification].slice(j, j + featureChunkSize), classification))
+                initializeCountsPromises.push(classifierContract.initializeCounts(featureCounts[classification].slice(j, j + featureChunkSize), classification))
             }
         }
         return Promise.all(initializeCountsPromises).then(responses => {

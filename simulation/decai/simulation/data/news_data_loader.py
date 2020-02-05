@@ -2,11 +2,13 @@ import itertools
 import json
 import os
 import random
+import time
 from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
 from logging import Logger
 from operator import itemgetter
+from pathlib import Path
 from typing import Collection, List, Optional, Tuple
 
 import numpy as np
@@ -241,6 +243,23 @@ class NewsDataLoader(DataLoader):
         self._logger.info("Loading news data.")
         data_folder_path = os.path.join(__file__, '../../../../training_data/news')
 
+        # Look for cached data.
+        file_identifier = f'news-data-{train_size}-{test_size}-replace_ents_{self._replace_entities_enabled}.npy'
+        base_path = Path(data_folder_path) / 'cached_data'
+        os.makedirs(base_path, exist_ok=True)
+        cache_paths = {
+            'x_train': base_path / f'x_train-{file_identifier}',
+            'y_train': base_path / f'y_train-{file_identifier}',
+            'x_test': base_path / f'x_test-{file_identifier}',
+            'y_test': base_path / f'y_test-{file_identifier}'
+        }
+        # Use if modified in the last day.
+        if all([p.exists() for p in cache_paths.values()]) and \
+                all([time.time() - p.stat().st_mtime < 60 * 60 * 24 for p in cache_paths.values()]):
+            self._logger.info("Loaded cached News data from %s.", cache_paths)
+            return (np.load(cache_paths['x_train']), np.load(cache_paths['y_train'])), \
+                   (np.load(cache_paths['x_test']), np.load(cache_paths['y_test']))
+
         data = self._load_kaggle_data(data_folder_path)
 
         #  Separate train and test data.
@@ -258,6 +277,10 @@ class NewsDataLoader(DataLoader):
                             f"\n  test size: {test_size}")
 
         (x_train, y_train), (x_test, y_test) = self._pre_process(data, train_size, test_size)
+        np.save(cache_paths['x_train'], x_train, allow_pickle=False)
+        np.save(cache_paths['y_train'], y_train, allow_pickle=False)
+        np.save(cache_paths['x_test'], x_test, allow_pickle=False)
+        np.save(cache_paths['y_test'], y_test, allow_pickle=False)
         self._logger.info("Done loading news data.")
         return (x_train, y_train), (x_test, y_test)
 
