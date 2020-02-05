@@ -137,7 +137,12 @@ async function loadSparseNearestCentroidClassifier(model, web3, toFloat) {
     // Add classes separately to avoid hitting gasLimit.
     const addClassPromises = []
     for (let i = 1; i < classifications.length; ++i) {
-        addClassPromises.push(classifierContract.addClass(centroids[i].slice(0, chunkSize), classifications[i], dataCounts[i]))
+        addClassPromises.push(classifierContract.addClass(
+            centroids[i].slice(0, chunkSize), classifications[i], dataCounts[i]
+        ).then(r => {
+            console.log(`    Added class ${i}`)
+            return r
+        }))
     }
     return Promise.all(addClassPromises).then(responses => {
         console.log("  All classes added.")
@@ -146,11 +151,17 @@ async function loadSparseNearestCentroidClassifier(model, web3, toFloat) {
         }
 
         // Add remaining dimensions.
-        console.log("Adding remaining dimensions.")
+        console.log("  Adding remaining dimensions.")
         const extensionPromises = []
-        for (let classification = 0; i < classifications.length; ++classification) {
+        for (let classification = 0; classification < classifications.length; ++classification) {
             for (let j = chunkSize; j < centroids[classification].length; j += chunkSize) {
-                extensionPromises.push(classifierContract.extendCentroid(centroids[classification].slice(j, j + chunkSize), classification))
+                extensionPromises.push(classifierContract.extendCentroid(
+                    centroids[classification].slice(j, j + chunkSize), classification,
+                    { gas: 8.9E6 }
+                ).then(r => {
+                    console.log(`    Added dimensions [${j}, ${Math.min(j + chunkSize, centroids[classification].length)}) for class ${classification}`)
+                    return r
+                }))
             }
         }
         return Promise.all(extensionPromises).then(responses => {
@@ -180,7 +191,10 @@ async function loadNaiveBayes(model, web3, toFloat) {
     for (let i = 1; i < classifications.length; ++i) {
         addClassPromises.push(classifierContract.addClass(
             classCounts[i], featureCounts[i].slice(0, featureChunkSize), classifications[i]
-        ))
+        ).then(r => {
+            console.log(`    Added class ${i}`)
+            return r
+        }))
     }
     return Promise.all(addClassPromises).then(responses => {
         for (const r of responses) {
@@ -190,7 +204,12 @@ async function loadNaiveBayes(model, web3, toFloat) {
         const initializeCountsPromises = []
         for (let classification = 0; classification < classifications.length; ++classification) {
             for (let j = featureChunkSize; j < featureCounts[classification].length; j += featureChunkSize) {
-                initializeCountsPromises.push(classifierContract.initializeCounts(featureCounts[classification].slice(j, j + featureChunkSize), classification))
+                initializeCountsPromises.push(classifierContract.initializeCounts(
+                    featureCounts[classification].slice(j, j + featureChunkSize), classification
+                ).then(r => {
+                    console.log(`    Added features [${j}, ${Math.min(j + featureChunkSize, featureCounts[classification].length)}) for class ${classification}`)
+                    return r
+                }))
             }
         }
         return Promise.all(initializeCountsPromises).then(responses => {
