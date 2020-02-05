@@ -3,6 +3,7 @@ const fs = require('fs')
 const DensePerceptron = artifacts.require("classification/DensePerceptron")
 const NaiveBayesClassifier = artifacts.require("./classification/NaiveBayesClassifier")
 const NearestCentroidClassifier = artifacts.require("./classification/NearestCentroidClassifier")
+const SparseNearestCentroidClassifier = artifacts.require("./classification/SparseNearestCentroidClassifier")
 const SparsePerceptron = artifacts.require("./classification/SparsePerceptron")
 
 const { convertData, convertNum } = require('../../src/float-utils-node');
@@ -91,9 +92,7 @@ async function loadNearestCentroidClassifier(model, web3, toFloat) {
     // Add classes separately to avoid hitting gasLimit.
     const addClassPromises = []
     for (let i = 1; i < classifications.length; ++i) {
-        addClassPromises.push(classifierContract.addClass(
-            centroids[i], classifications[i], dataCounts[i]
-        ))
+        addClassPromises.push(classifierContract.addClass(centroids[i], classifications[i], dataCounts[i]))
     }
     return Promise.all(addClassPromises).then(responses => {
         console.log("  All classes added.")
@@ -104,6 +103,66 @@ async function loadNearestCentroidClassifier(model, web3, toFloat) {
             classifierContract,
             gasUsed,
         }
+    })
+}
+
+async function loadSparseNearestCentroidClassifier(model, web3, toFloat) {
+    let gasUsed = 0
+    const chunkSize = 500
+    const classifications = []
+    const centroids = []
+    const dataCounts = []
+    console.log("  Deploying Sparse Nearest Centroid Classifier model.")
+    let numDimensions = null
+    for (let [classification, centroidInfo] of Object.entries(model.intents)) {
+        classifications.push(classification)
+        centroids.push(convertData(centroidInfo.centroid, web3, toFloat))
+        dataCounts.push(centroidInfo.dataCount)
+        if (numDimensions === null) {
+            numDimensions = centroidInfo.centroid.length
+        } else {
+            if (centroidInfo.centroid.length !== numDimensions) {
+                throw new Error(`Found a centroid with ${centroidInfo.centroid.length} dimensions. Expected: ${numDimensions}.`)
+            }
+        }
+    }
+
+    const classifierContract = await SparseNearestCentroidClassifier.new(
+        [classifications[0]], [centroids[0].slice(0, chunkSize)], [dataCounts[0]],
+        { gas: 8.9E6 }
+    )
+
+    gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
+    console.log(`  Deployed classifier to ${classifierContract.address}. gasUsed: ${gasUsed}`)
+    // Add classes separately to avoid hitting gasLimit.
+    const addClassPromises = []
+    for (let i = 1; i < classifications.length; ++i) {
+        addClassPromises.push(classifierContract.addClass(centroids[i].slice(0, chunkSize), classifications[i], dataCounts[i]))
+    }
+    return Promise.all(addClassPromises).then(responses => {
+        console.log("  All classes added.")
+        for (const r of responses) {
+            gasUsed += r.receipt.gasUsed
+        }
+
+        // Add remaining dimensions.
+        console.log("Adding remaining dimensions.")
+        const extensionPromises = []
+        for (let classification = 0; i < classifications.length; ++classification) {
+            for (let j = chunkSize; j < centroids[classification].length; j += chunkSize) {
+                extensionPromises.push(await classifierContract.extendCentroid(centroids[classification].slice(j, j + chunkSize), classification))
+            }
+        }
+        return Promise.all(extensionPromises).then(responses => {
+            for (const r of responses) {
+                gasUsed += r.receipt.gasUsed
+            }
+            console.log(`  Set all centroids. gasUsed: ${gasUsed}.`)
+            return {
+                classifierContract,
+                gasUsed,
+            }
+        })
     })
 }
 
@@ -128,27 +187,23 @@ async function loadNaiveBayes(model, web3, toFloat) {
             gasUsed += r.receipt.gasUsed
         }
         // Add remaining feature counts.
+        const initializeCountsPromises = []
         for (let classification = 0; i < classifications.length; ++classification) {
-            for (let j = 0; j < featureCounts[classification].length; j += featureChunkSize) {
-                console.log(`    Setting Naive Bayes counts [${j}, ${Math.min(j + featureChunkSize, featureCounts[classification].length)}) for class ${classification}.`)
-                const r = await classifierContract.initializeCounts(featureCounts[classification].slice(j, j + featureChunkSize), classification)
-                gasUsed += r.receipt.gasUsed
+            for (let j = featureChunkSize; j < featureCounts[classification].length; j += featureChunkSize) {
+                initializeCountsPromises.push(await classifierContract.initializeCounts(featureCounts[classification].slice(j, j + featureChunkSize), classification))
             }
         }
-
-        console.log(`  Deployed all Naive Bayes classifier classes. gasUsed: ${gasUsed}.`)
-        return {
-            classifierContract,
-            gasUsed,
-        }
+        return Promise.all(initializeCountsPromises).then(responses => {
+            for (const r of responses) {
+                gasUsed += r.receipt.gasUsed
+            }
+            console.log(`  Deployed all Naive Bayes classifier classes. gasUsed: ${gasUsed}.`)
+            return {
+                classifierContract,
+                gasUsed,
+            }
+        })
     })
-
-    console.log(`  Deployed Naive Bayes classifier to ${classifierContract.address}. gasUsed: ${gasUsed}`)
-
-    return {
-        classifierContract,
-        gasUsed,
-    }
 }
 
 /**
@@ -162,8 +217,11 @@ exports.loadModel = async function (path, web3, toFloat = _toFloat) {
             return loadDensePerceptron(model, web3, toFloat)
         case 'naive bayes':
             return loadNaiveBayes(model, web3, toFloat)
+        case 'dense nearest centroid classifier':
         case 'nearest centroid classifier':
             return loadNearestCentroidClassifier(model, web3, toFloat)
+        case 'sparse nearest centroid classifier':
+            return loadSparseNearestCentroidClassifier(model, web3, toFloat)
         case 'sparse perceptron':
             return loadSparsePerceptron(model, web3, toFloat)
         default:

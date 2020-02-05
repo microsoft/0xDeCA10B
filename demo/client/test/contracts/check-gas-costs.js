@@ -88,22 +88,16 @@ contract('CheckGasUsage', function (accounts) {
     const models = [
       {
         path: `${__dirname}/../../../../simulation/saved_runs/1580856910-fitness-nb-model.json`,
-        data: [1, 1,
-          1, 1, 1, 1,
-          1, 0, 0],
+        data: [1, 1, 1, 1, 1, 1, 1, 0, 0],
       },
       {
         path: `${__dirname}/../../../../simulation/saved_runs/1580845144-fitness-ncc-model.json`,
-        data: [1, 1,
-          1, 1, 1, 1,
-          1, 0, 0],
+        data: [1, 1, 1, 1, 1, 1, 1, 0, 0],
         normalize: true,
       },
       {
         path: `${__dirname}/../../../../simulation/saved_runs/1580854505-fitness-dense-perceptron-model.json`,
-        data: [1, 1,
-          1, 1, 1, 1,
-          1, 0, 0],
+        data: [1, 1, 1, 1, 1, 1, 1, 0, 0],
         normalize: true,
       },
     ]
