@@ -38,7 +38,7 @@ async function loadDensePerceptron(model, web3, toFloat) {
 
 async function loadSparsePerceptron(model, web3, toFloat) {
     let gasUsed = 0
-    const weightChunkSize = 450
+    const weightChunkSize = 300
     const { classifications } = model
     const weights = convertData(model.weights, web3, toFloat)
     const intercept = convertNum(model.bias, web3, toFloat)
@@ -83,8 +83,7 @@ async function loadNearestCentroidClassifier(model, web3, toFloat) {
     }
 
     const classifierContract = await NearestCentroidClassifier.new(
-        [classifications[0]], [centroids[0]], [dataCounts[0]],
-        { gas: 8.9E6 }
+        [classifications[0]], [centroids[0]], [dataCounts[0]]
     )
 
     gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
@@ -128,8 +127,7 @@ async function loadSparseNearestCentroidClassifier(model, web3, toFloat) {
     }
 
     const classifierContract = await SparseNearestCentroidClassifier.new(
-        [classifications[0]], [centroids[0].slice(0, chunkSize)], [dataCounts[0]],
-        { gas: 8.9E6 }
+        [classifications[0]], [centroids[0].slice(0, chunkSize)], [dataCounts[0]]
     )
 
     gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
@@ -138,8 +136,7 @@ async function loadSparseNearestCentroidClassifier(model, web3, toFloat) {
     const addClassPromises = []
     for (let i = 1; i < classifications.length; ++i) {
         addClassPromises.push(classifierContract.addClass(
-            centroids[i].slice(0, chunkSize), classifications[i], dataCounts[i],
-            { gas: 8.9E6 }
+            centroids[i].slice(0, chunkSize), classifications[i], dataCounts[i]
         ).then(r => {
             console.log(`    Added class ${i}`)
             return r
@@ -156,8 +153,7 @@ async function loadSparseNearestCentroidClassifier(model, web3, toFloat) {
         for (let classification = 0; classification < classifications.length; ++classification) {
             for (let j = chunkSize; j < centroids[classification].length; j += chunkSize) {
                 const r = await classifierContract.extendCentroid(
-                    centroids[classification].slice(j, j + chunkSize), classification,
-                    { gas: 8.9E6 })
+                    centroids[classification].slice(j, j + chunkSize), classification)
                 console.log(`    Added dimensions [${j}, ${Math.min(j + chunkSize, centroids[classification].length)}) for class ${classification}`)
                 gasUsed += r.receipt.gasUsed
             }
@@ -183,8 +179,7 @@ async function loadNaiveBayes(model, web3, toFloat) {
     const addClassPromises = []
     for (let i = 1; i < classifications.length; ++i) {
         addClassPromises.push(classifierContract.addClass(
-            classCounts[i], featureCounts[i].slice(0, initialFeatureChunkSize), classifications[i],
-            { gas: 8.9E6 }
+            classCounts[i], featureCounts[i].slice(0, initialFeatureChunkSize), classifications[i]
         ).then(r => {
             console.log(`    Added class ${i}`)
             return r
@@ -199,8 +194,7 @@ async function loadNaiveBayes(model, web3, toFloat) {
         for (let classification = 0; classification < classifications.length; ++classification) {
             for (let j = initialFeatureChunkSize; j < featureCounts[classification].length; j += featureChunkSize) {
                 const r = await classifierContract.initializeCounts(
-                    featureCounts[classification].slice(j, j + featureChunkSize), classification,
-                    { gas: 8.9E6 }
+                    featureCounts[classification].slice(j, j + featureChunkSize), classification
                 )
                 console.log(`    Added features [${j}, ${Math.min(j + featureChunkSize, featureCounts[classification].length)}) for class ${classification}`)
                 gasUsed += r.receipt.gasUsed

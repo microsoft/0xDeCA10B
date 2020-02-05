@@ -203,7 +203,7 @@ class NewsDataLoader(DataLoader):
         # Only use binary features.
         ngram_range = (2, 2)
         # Don't use IDF because we need integer features.
-        t = TfidfVectorizer(max_features=3000, ngram_range=ngram_range, norm=None, use_idf=False)
+        t = TfidfVectorizer(max_features=1000, ngram_range=ngram_range, norm=None, use_idf=False)
         test_start = len(news_articles) - test_size
 
         x_train = map(lambda news: news.text, itertools.islice(news_articles, train_size))
@@ -246,7 +246,7 @@ class NewsDataLoader(DataLoader):
 
         # Look for cached data.
         file_identifier = f'news-data-{train_size}-{test_size}-replace_ents_{self._replace_entities_enabled}.npy'
-        base_path = Path(data_folder_path) / 'cached_data'
+        base_path = Path(os.path.dirname(__file__)) / 'cached_data'
         os.makedirs(base_path, exist_ok=True)
         cache_paths = {
             'x_train': base_path / f'x_train-{file_identifier}',

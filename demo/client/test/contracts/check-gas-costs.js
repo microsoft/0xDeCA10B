@@ -80,21 +80,17 @@ contract('CheckGasUsage', function (accounts) {
 
   it("...should log gasUsed", async (done) => {
     const models = [
-      // "deploy": 146512342,
-      // "addData": 281332,
-      // "refund": 168730,
-      // "report": 133197
       // {
-      //   path: `${__dirname}/../../../../simulation/saved_runs/1580931573-news-nb-model.json`,
-      //   data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 1212, 2213, 2614, 2815],
+      //   path: `${__dirname}/../../../../simulation/saved_runs/-news-nb-model.json`,
+      //   data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 512, 613, 714, 815],
+      // },
+      // {
+      //   path: `${__dirname}/../../../../simulation/saved_runs/-news-ncc-model.json`,
+      //   data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 512, 613, 714, 815],
       // },
       {
-        path: `${__dirname}/../../../../simulation/saved_runs/1580931015-news-ncc-model.json`,
-        data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 1212, 2213, 2614, 2815],
-      },
-      {
-        path: `${__dirname}/../../../../simulation/saved_runs/1580931174-news-perceptron-model.json`,
-        data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 1212, 2213, 2614, 2815],
+        path: `${__dirname}/../../../../simulation/saved_runs/-news-perceptron-model.json`,
+        data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 512, 613, 714, 815],
       },
       {
         path: `${__dirname}/../../../../simulation/saved_runs/1580856910-fitness-nb-model.json`,
@@ -129,24 +125,27 @@ contract('CheckGasUsage', function (accounts) {
 
       // Add with predicted class so that it can be refunded.
       const predictedClassification = parseBN(await classifier.predict(data))
+      console.log(`  predictedClassification: ${predictedClassification}`)
 
       let r = await mainInterface.addData(data, predictedClassification, { from: accounts[0], value: 1E17 })
       let e = r.logs.filter(e => e.event == 'AddData')[0]
       let addedTime = e.args.t;
       gasUsage['addData'] = r.receipt.gasUsed
+      console.log(`Adding data gas used: ${r.receipt.gasUsed}`)
 
       // Refund
       r = await mainInterface.refund(data, predictedClassification, addedTime)
       gasUsage['refund'] = r.receipt.gasUsed
+      console.log(`Refund gas used: ${r.receipt.gasUsed}`)
 
       // Report
-
       // Someone else adds bad data.
       r = await mainInterface.addData(data, 1 - predictedClassification, { from: accounts[1], value: 1E17 })
       e = r.logs.filter(e => e.event == 'AddData')[0]
       addedTime = e.args.t;
       r = await mainInterface.report(data, 1 - predictedClassification, addedTime, accounts[1])
       gasUsage['report'] = r.receipt.gasUsed
+      console.log(`Report gas used: ${r.receipt.gasUsed}`)
 
       console.log(`gasUsage: ${JSON.stringify(gasUsage, null, 4)}`)
       fs.writeFileSync('gasUsages.json~', JSON.stringify(gasUsages, null, 4))

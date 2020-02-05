@@ -21,12 +21,16 @@ module.exports = {
     development: {
       host: "127.0.0.1",
       port: 7545,
-      network_id: "*" // Match any network id
+      // Match any network ID.
+      network_id: "*",
+      gas: 9E6 - 5000,
     },
     skipMigrations: {
       host: "127.0.0.1",
       port: 7545,
-      network_id: "*"
+      // Match any network ID.
+      network_id: "*",
+      gas: 9E6 - 5000,
     }
   },
   mocha: {

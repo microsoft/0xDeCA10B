@@ -90,6 +90,10 @@ contract SparseNearestCentroidClassifier is Classifier64 {
                     diff /= toFloat;
                     distance = distance.add(uint256(diff));
                     ++dataIndex;
+
+                    if (distance >= minDistance) {
+                        break;
+                    }
                 } else {
                     // Feature is not present.
                     uint256 diff = centroids[currentClass][j];
@@ -97,10 +101,6 @@ contract SparseNearestCentroidClassifier is Classifier64 {
                     // Convert back to our float representation.
                     diff /= toFloat;
                     distance = distance.add(diff);
-                }
-
-                if (distance >= minDistance) {
-                    break;
                 }
             }
             if (distance < minDistance) {
