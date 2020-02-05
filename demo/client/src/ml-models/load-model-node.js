@@ -138,90 +138,79 @@ async function loadSparseNearestCentroidClassifier(model, web3, toFloat) {
     const addClassPromises = []
     for (let i = 1; i < classifications.length; ++i) {
         addClassPromises.push(classifierContract.addClass(
-            centroids[i].slice(0, chunkSize), classifications[i], dataCounts[i]
+            centroids[i].slice(0, chunkSize), classifications[i], dataCounts[i],
+            { gas: 8.9E6 }
         ).then(r => {
             console.log(`    Added class ${i}`)
             return r
         }))
     }
-    return Promise.all(addClassPromises).then(responses => {
-        console.log("  All classes added.")
+    return Promise.all(addClassPromises).then(async responses => {
+        console.debug("  All classes added.")
         for (const r of responses) {
             gasUsed += r.receipt.gasUsed
         }
 
-        // Add remaining dimensions.
-        console.log("  Adding remaining dimensions.")
-        const extensionPromises = []
+        // Tried with promises but got weird unhelpful errors from Truffle (some were like network timeout errors).
+        console.debug("  Adding remaining dimensions.")
         for (let classification = 0; classification < classifications.length; ++classification) {
             for (let j = chunkSize; j < centroids[classification].length; j += chunkSize) {
-                extensionPromises.push(classifierContract.extendCentroid(
+                const r = await classifierContract.extendCentroid(
                     centroids[classification].slice(j, j + chunkSize), classification,
-                    { gas: 8.9E6 }
-                ).then(r => {
-                    console.log(`    Added dimensions [${j}, ${Math.min(j + chunkSize, centroids[classification].length)}) for class ${classification}`)
-                    return r
-                }))
-            }
-        }
-        return Promise.all(extensionPromises).then(responses => {
-            for (const r of responses) {
+                    { gas: 8.9E6 })
+                console.log(`    Added dimensions [${j}, ${Math.min(j + chunkSize, centroids[classification].length)}) for class ${classification}`)
                 gasUsed += r.receipt.gasUsed
             }
-            console.log(`  Set all centroids. gasUsed: ${gasUsed}.`)
-            return {
-                classifierContract,
-                gasUsed,
-            }
-        })
+        }
+        console.log(`  Set all centroids. gasUsed: ${gasUsed}.`)
+        return {
+            classifierContract,
+            gasUsed,
+        }
     })
 }
 
 async function loadNaiveBayes(model, web3, toFloat) {
     let gasUsed = 0
-    const featureChunkSize = 500
+    const initialFeatureChunkSize = 150
+    const featureChunkSize = 350
     const { classifications, classCounts, featureCounts, totalNumFeatures } = model
     const smoothingFactor = convertNum(model.smoothingFactor, web3, toFloat)
     console.log(`  Deploying Naive Bayes classifier.`)
-
-    const classifierContract = await NaiveBayesClassifier.new([classifications[0]], [classCounts[0]], [featureCounts[0].slice(0, featureChunkSize)], totalNumFeatures, smoothingFactor)
+    const classifierContract = await NaiveBayesClassifier.new([classifications[0]], [classCounts[0]], [featureCounts[0].slice(0, initialFeatureChunkSize)], totalNumFeatures, smoothingFactor)
     gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
 
     const addClassPromises = []
     for (let i = 1; i < classifications.length; ++i) {
         addClassPromises.push(classifierContract.addClass(
-            classCounts[i], featureCounts[i].slice(0, featureChunkSize), classifications[i]
+            classCounts[i], featureCounts[i].slice(0, initialFeatureChunkSize), classifications[i],
+            { gas: 8.9E6 }
         ).then(r => {
             console.log(`    Added class ${i}`)
             return r
         }))
     }
-    return Promise.all(addClassPromises).then(responses => {
+    return Promise.all(addClassPromises).then(async responses => {
         for (const r of responses) {
             gasUsed += r.receipt.gasUsed
         }
         // Add remaining feature counts.
-        const initializeCountsPromises = []
+        // Tried with promises but got weird unhelpful errors from Truffle (some were like network timeout errors).
         for (let classification = 0; classification < classifications.length; ++classification) {
-            for (let j = featureChunkSize; j < featureCounts[classification].length; j += featureChunkSize) {
-                initializeCountsPromises.push(classifierContract.initializeCounts(
-                    featureCounts[classification].slice(j, j + featureChunkSize), classification
-                ).then(r => {
-                    console.log(`    Added features [${j}, ${Math.min(j + featureChunkSize, featureCounts[classification].length)}) for class ${classification}`)
-                    return r
-                }))
-            }
-        }
-        return Promise.all(initializeCountsPromises).then(responses => {
-            for (const r of responses) {
+            for (let j = initialFeatureChunkSize; j < featureCounts[classification].length; j += featureChunkSize) {
+                const r = await classifierContract.initializeCounts(
+                    featureCounts[classification].slice(j, j + featureChunkSize), classification,
+                    { gas: 8.9E6 }
+                )
+                console.log(`    Added features [${j}, ${Math.min(j + featureChunkSize, featureCounts[classification].length)}) for class ${classification}`)
                 gasUsed += r.receipt.gasUsed
             }
-            console.log(`  Deployed all Naive Bayes classifier classes. gasUsed: ${gasUsed}.`)
-            return {
-                classifierContract,
-                gasUsed,
-            }
-        })
+        }
+        console.log(`  Deployed all Naive Bayes classifier classes. gasUsed: ${gasUsed}.`)
+        return {
+            classifierContract,
+            gasUsed,
+        }
     })
 }
 

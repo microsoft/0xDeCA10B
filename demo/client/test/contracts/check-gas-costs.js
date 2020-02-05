@@ -28,12 +28,6 @@ contract('CheckGasUsage', function (accounts) {
     }
   }
 
-  function parseFloatBN(bn) {
-    assert(web3.utils.isBN(bn), `${bn} is not a BN`);
-    // Can't divide first since a BN can only be an integer.
-    return bn.toNumber() / toFloat;
-  }
-
   async function initialize(modelPath) {
     let gasUsed = 0
     // Low default times for testing.
@@ -84,8 +78,24 @@ contract('CheckGasUsage', function (accounts) {
     })
   }
 
-  it("...should log gasUsed", async () => {
+  it("...should log gasUsed", async (done) => {
     const models = [
+      // "deploy": 146512342,
+      // "addData": 281332,
+      // "refund": 168730,
+      // "report": 133197
+      // {
+      //   path: `${__dirname}/../../../../simulation/saved_runs/1580931573-news-nb-model.json`,
+      //   data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 1212, 2213, 2614, 2815],
+      // },
+      {
+        path: `${__dirname}/../../../../simulation/saved_runs/1580931015-news-ncc-model.json`,
+        data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 1212, 2213, 2614, 2815],
+      },
+      {
+        path: `${__dirname}/../../../../simulation/saved_runs/1580931174-news-perceptron-model.json`,
+        data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 1212, 2213, 2614, 2815],
+      },
       {
         path: `${__dirname}/../../../../simulation/saved_runs/1580856910-fitness-nb-model.json`,
         data: [1, 1, 1, 1, 1, 1, 1, 0, 0],
@@ -139,7 +149,9 @@ contract('CheckGasUsage', function (accounts) {
       gasUsage['report'] = r.receipt.gasUsed
 
       console.log(`gasUsage: ${JSON.stringify(gasUsage, null, 4)}`)
+      fs.writeFileSync('gasUsages.json~', JSON.stringify(gasUsages, null, 4))
     }
     console.log(`gasUsages: ${JSON.stringify(gasUsages, null, 4)}`)
+    done()
   })
 })
