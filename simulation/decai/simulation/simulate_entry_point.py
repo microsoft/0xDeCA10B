@@ -53,7 +53,7 @@ def main():
                     # train_size, test_size = 3500, 1500
                     fitness=0.97,
                     # train_size, test_size = None, None
-                    news=0.8615,
+                    news=0.8528,
                 )),
         ncc=dict(module=NearestCentroidClassifierModule,
                  baseline_accuracy=dict(
@@ -62,7 +62,7 @@ def main():
                      # train_size, test_size = 3500, 1500
                      fitness=0.9513,
                      # train_size, test_size = None, None
-                     news=0.8324,
+                     news=0.6751,
                  )),
     )
 
