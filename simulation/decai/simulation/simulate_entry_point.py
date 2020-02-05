@@ -37,15 +37,6 @@ def main():
     )
 
     models = dict(
-        perceptron=dict(module=PerceptronModule,
-                        baseline_accuracy=dict(
-                            # train_size, test_size = None, None
-                            imdb=0.73,
-                            # train_size, test_size = 3500, 1500
-                            fitness=0.9507,
-                            # train_size, test_size = None, None
-                            news=0.9173,
-                        )),
         nb=dict(module=SciKitClassifierModule(MultinomialNB),
                 baseline_accuracy=dict(
                     # train_size, test_size = None, None
@@ -64,6 +55,15 @@ def main():
                      # train_size, test_size = None, None
                      news=0.6751,
                  )),
+        perceptron=dict(module=PerceptronModule,
+                        baseline_accuracy=dict(
+                            # train_size, test_size = None, None
+                            imdb=0.73,
+                            # train_size, test_size = 3500, 1500
+                            fitness=0.9507,
+                            # train_size, test_size = None, None
+                            news=0.9173,
+                        )),
     )
 
     train_size = datasets[dataset]['train_size']

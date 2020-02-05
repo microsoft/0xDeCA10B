@@ -116,7 +116,7 @@ class Simulator(object):
                          balances=[],
                          )
         time_for_filenames = int(time.time())
-        save_path = f'saved_runs/{time_for_filenames}-{filename_indicator}.json'
+        save_path = f'saved_runs/{time_for_filenames}-{filename_indicator}-simulation_data.json'
         model_save_path = f'saved_runs/{time_for_filenames}-{filename_indicator}-model.json'
         plot_save_path = f'saved_runs/{time_for_filenames}-{filename_indicator}.png'
         self._logger.info("Saving run info to \"%s\".", save_path)
