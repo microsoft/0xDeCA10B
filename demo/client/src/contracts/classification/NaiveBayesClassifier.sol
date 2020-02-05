@@ -90,6 +90,7 @@ contract NaiveBayesClassifier is Classifier64 {
      * @param classification The class to add counts to.
      */
     function initializeCounts(uint32[][] memory _featureCounts, uint64 classification) public onlyOwner {
+        require(classification < classInfos.length, "This classification has not been added yet.");
         ClassInfo storage classInfo = classInfos[classification];
         uint totalFeatureCount = classInfo.totalFeatureCount;
         for (uint j = 0 ; j < _featureCounts.length; ++j) {
