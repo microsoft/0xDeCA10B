@@ -10,7 +10,7 @@ from typing import List, Dict
 from bokeh import colors
 from bokeh.io import export_png
 from bokeh.models import FuncTickFormatter, Legend, PrintfTickFormatter, AdaptiveTicker
-from bokeh.plotting import figure, output_file, show
+from bokeh.plotting import figure, output_file
 from injector import Injector, inject
 
 from decai.simulation.logging_module import LoggingModule
@@ -117,7 +117,7 @@ class SimulationCombiner(object):
                     agent = balance_data['a']
                     agent_balance_data[agent].append(
                         (balance_data['t'], balance_data['b'] * 100 / agents[agent].start_balance))
-                for agent_id, balance_data in agent_balance_data.items():
+                for agent_id, balance_data in sorted(agent_balance_data.items(), key=itemgetter(0)):
                     agent = agents[agent_id]
                     if agent.good:
                         color = next(good_colors)
@@ -129,7 +129,7 @@ class SimulationCombiner(object):
                                   line_width=2,
                                   color=color,
                                   )
-                    legend.append((f"{name} {agent.address} Balance", [l]))
+                    legend.append((f"{name} {agent.address} Agent Balance", [l]))
         self._logger.info("Done going through runs.")
 
         legend = Legend(items=legend, location='center_left')
@@ -138,7 +138,6 @@ class SimulationCombiner(object):
 
         self._logger.info("Saving image to: %s", img_save_path)
         export_png(plot, img_save_path)
-        show(plot)
 
 
 if __name__ == '__main__':
@@ -147,7 +146,6 @@ if __name__ == '__main__':
     ])
     s = inj.get(SimulationCombiner)
     path = Path(__file__, '../../..').resolve()
-    dataset = 'imdb'
     paths = dict(
         fitness=dict(
             nb=path / 'saved_runs/1578937397-fitness-nb.json',
@@ -165,15 +163,16 @@ if __name__ == '__main__':
             perceptron=path / 'saved_runs/1580940494-news-perceptron-simulation_data.json',
         ),
     )
-    s.combine([
-        dict(name="NB",
-             path=paths[dataset]['nb']
-             ),
-        dict(name="NCC",
-             path=paths[dataset]['ncc']
-             ),
-        dict(name="Perceptron",
-             path=paths[dataset]['perceptron']
-             ),
-    ],
-        path / f'saved_runs/combined-{dataset}.png')
+    for dataset in paths.keys():
+        s.combine([
+            dict(name="NB",
+                 path=paths[dataset]['nb']
+                 ),
+            dict(name="NCC",
+                 path=paths[dataset]['ncc']
+                 ),
+            dict(name="Perceptron",
+                 path=paths[dataset]['perceptron']
+                 ),
+        ],
+            path / f'saved_runs/combined-{dataset}.png')
