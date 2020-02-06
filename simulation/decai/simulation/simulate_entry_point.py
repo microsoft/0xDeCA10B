@@ -21,46 +21,46 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 def main():
     # This file is set up to use different models and datasets.
-    dataset = 'fitness'
+    dataset = 'imdb'
     model_type = 'ncc'
 
     datasets = dict(
         fitness=dict(module=FitnessDataModule,
                      train_size=3500, test_size=1500,
                      ),
+        imdb=dict(module=ImdbDataModule(num_words=1000),
+                  train_size=None, test_size=None,
+                  ),
         news=dict(module=NewsDataModule,
                   train_size=None, test_size=None,
                   ),
-        imdb=dict(module=ImdbDataModule(num_words=1000),
-                  train_size=None, test_size=None,
-                  )
     )
 
     models = dict(
         nb=dict(module=SciKitClassifierModule(MultinomialNB),
                 baseline_accuracy=dict(
-                    # train_size, test_size = None, None
-                    imdb=0.8323,
                     # train_size, test_size = 3500, 1500
                     fitness=0.97,
+                    # train_size, test_size = None, None
+                    imdb=0.8323,
                     # train_size, test_size = None, None
                     news=0.8181,
                 )),
         ncc=dict(module=NearestCentroidClassifierModule,
                  baseline_accuracy=dict(
-                     # train_size, test_size = None, None
-                     imdb=0.7445,
                      # train_size, test_size = 3500, 1500
                      fitness=0.9513,
+                     # train_size, test_size = None, None
+                     imdb=0.7445,
                      # train_size, test_size = None, None
                      news=0.6727,
                  )),
         perceptron=dict(module=PerceptronModule,
                         baseline_accuracy=dict(
-                            # train_size, test_size = None, None
-                            imdb=0.73,
                             # train_size, test_size = 3500, 1500
                             fitness=0.9507,
+                            # train_size, test_size = None, None
+                            imdb=0.73,
                             # train_size, test_size = None, None
                             news=0.9003,
                         )),

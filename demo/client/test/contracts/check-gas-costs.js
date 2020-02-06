@@ -78,33 +78,45 @@ contract('CheckGasUsage', function (accounts) {
     })
   }
 
-  it("...should log gasUsed", async (done) => {
+  it("...should log gasUsed", async () => {
     const models = [
       // {
-      //   path: `${__dirname}/../../../../simulation/saved_runs/-news-nb-model.json`,
+      //   path: `${__dirname}/../../../../simulation/saved_runs/1580856910-fitness-nb-model.json`,
+      //   data: [1, 1, 1, 1, 1, 1, 1, 0, 0],
+      // },
+      // {
+      //   path: `${__dirname}/../../../../simulation/saved_runs/1580845144-fitness-ncc-model.json`,
+      //   data: [1, 1, 1, 1, 1, 1, 1, 0, 0],
+      //   normalize: true,
+      // },
+      // {
+      //   path: `${__dirname}/../../../../simulation/saved_runs/1580854505-fitness-dense-perceptron-model.json`,
+      //   data: [1, 1, 1, 1, 1, 1, 1, 0, 0],
+      //   normalize: true,
+      // },
+      // {
+      //   path: `${__dirname}/../../../../simulation/saved_runs/1580940061-news-nb-model.json`,
       //   data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 512, 613, 714, 815],
       // },
       // {
-      //   path: `${__dirname}/../../../../simulation/saved_runs/-news-ncc-model.json`,
+      //   path: `${__dirname}/../../../../simulation/saved_runs/1580940189-news-ncc-model.json`,
+      //   data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 512, 613, 714, 815],
+      // },
+      // {
+      //   path: `${__dirname}/../../../../simulation/saved_runs/1580940494-news-perceptron-model.json`,
+      //   data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 512, 613, 714, 815],
+      // },
+      // {
+      //   path: `${__dirname}/../../../../simulation/saved_runs/1580943847-imdb-nb-model.json`,
+      //   data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 512, 613, 714, 815],
+      // },
+      // {
+      //   path: `${__dirname}/../../../../simulation/saved_runs/1580945025-imdb-ncc-model.json`,
       //   data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 512, 613, 714, 815],
       // },
       {
-        path: `${__dirname}/../../../../simulation/saved_runs/-news-perceptron-model.json`,
+        path: `${__dirname}/../../../../simulation/saved_runs/1580945565-imdb-perceptron-model.json`,
         data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 512, 613, 714, 815],
-      },
-      {
-        path: `${__dirname}/../../../../simulation/saved_runs/1580856910-fitness-nb-model.json`,
-        data: [1, 1, 1, 1, 1, 1, 1, 0, 0],
-      },
-      {
-        path: `${__dirname}/../../../../simulation/saved_runs/1580845144-fitness-ncc-model.json`,
-        data: [1, 1, 1, 1, 1, 1, 1, 0, 0],
-        normalize: true,
-      },
-      {
-        path: `${__dirname}/../../../../simulation/saved_runs/1580854505-fitness-dense-perceptron-model.json`,
-        data: [1, 1, 1, 1, 1, 1, 1, 0, 0],
-        normalize: true,
       },
     ]
     const gasUsages = []
@@ -151,6 +163,5 @@ contract('CheckGasUsage', function (accounts) {
       fs.writeFileSync('gasUsages.json~', JSON.stringify(gasUsages, null, 4))
     }
     console.log(`gasUsages: ${JSON.stringify(gasUsages, null, 4)}`)
-    done()
   })
 })

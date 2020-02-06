@@ -67,7 +67,7 @@ async function loadNearestCentroidClassifier(model, web3, toFloat) {
     const classifications = []
     const centroids = []
     const dataCounts = []
-    console.log("  Deploying Nearest Centroid Classifier model.")
+    console.log("  Deploying Dense Nearest Centroid Classifier model.")
     let numDimensions = null
     for (let [classification, centroidInfo] of Object.entries(model.intents)) {
         classifications.push(classification)
@@ -107,6 +107,7 @@ async function loadNearestCentroidClassifier(model, web3, toFloat) {
 
 async function loadSparseNearestCentroidClassifier(model, web3, toFloat) {
     let gasUsed = 0
+    const initialChunkSize = 500
     const chunkSize = 500
     const classifications = []
     const centroids = []
@@ -127,7 +128,7 @@ async function loadSparseNearestCentroidClassifier(model, web3, toFloat) {
     }
 
     const classifierContract = await SparseNearestCentroidClassifier.new(
-        [classifications[0]], [centroids[0].slice(0, chunkSize)], [dataCounts[0]]
+        [classifications[0]], [centroids[0].slice(0, initialChunkSize)], [dataCounts[0]]
     )
 
     gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
@@ -136,7 +137,7 @@ async function loadSparseNearestCentroidClassifier(model, web3, toFloat) {
     const addClassPromises = []
     for (let i = 1; i < classifications.length; ++i) {
         addClassPromises.push(classifierContract.addClass(
-            centroids[i].slice(0, chunkSize), classifications[i], dataCounts[i]
+            centroids[i].slice(0, initialChunkSize), classifications[i], dataCounts[i]
         ).then(r => {
             console.log(`    Added class ${i}`)
             return r
@@ -151,7 +152,7 @@ async function loadSparseNearestCentroidClassifier(model, web3, toFloat) {
         // Tried with promises but got weird unhelpful errors from Truffle (some were like network timeout errors).
         console.debug("  Adding remaining dimensions.")
         for (let classification = 0; classification < classifications.length; ++classification) {
-            for (let j = chunkSize; j < centroids[classification].length; j += chunkSize) {
+            for (let j = initialChunkSize; j < centroids[classification].length; j += chunkSize) {
                 const r = await classifierContract.extendCentroid(
                     centroids[classification].slice(j, j + chunkSize), classification)
                 console.log(`    Added dimensions [${j}, ${Math.min(j + chunkSize, centroids[classification].length)}) for class ${classification}`)

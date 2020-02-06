@@ -136,6 +136,7 @@ class SimulationCombiner(object):
         plot.add_layout(legend, 'above')
         plot.legend.label_text_font_size = '12pt'
 
+        self._logger.info("Saving image to: %s", img_save_path)
         export_png(plot, img_save_path)
         show(plot)
 
@@ -146,15 +147,33 @@ if __name__ == '__main__':
     ])
     s = inj.get(SimulationCombiner)
     path = Path(__file__, '../../..').resolve()
+    dataset = 'imdb'
+    paths = dict(
+        fitness=dict(
+            nb=path / 'saved_runs/1578937397-fitness-nb.json',
+            ncc=path / 'saved_runs/1578938741-fitness-ncc.json',
+            perceptron=path / 'saved_runs/1578934493-fitness-perceptron.json',
+        ),
+        imdb=dict(
+            nb=path / 'saved_runs/1580943847-imdb-nb-simulation_data.json',
+            ncc=path / 'saved_runs/1580945025-imdb-ncc-simulation_data.json',
+            perceptron=path / 'saved_runs/1580945565-imdb-perceptron-simulation_data.json',
+        ),
+        news=dict(
+            nb=path / 'saved_runs/1580941815-news-nb-simulation_data.json',
+            ncc=path / 'saved_runs/1580941258-news-ncc-simulation_data.json',
+            perceptron=path / 'saved_runs/1580940494-news-perceptron-simulation_data.json',
+        ),
+    )
     s.combine([
         dict(name="NB",
-             path=path / 'saved_runs/1578937397-fitness-nb.json',
-             ),
-        dict(name="Perceptron",
-             path=path / 'saved_runs/1578934493-fitness-perceptron.json',
+             path=paths[dataset]['nb']
              ),
         dict(name="NCC",
-             path=path / 'saved_runs/1578938741-fitness-ncc.json',
+             path=paths[dataset]['ncc']
+             ),
+        dict(name="Perceptron",
+             path=paths[dataset]['perceptron']
              ),
     ],
-        path / 'saved_runs/fitness.png')
+        path / f'saved_runs/combined-{dataset}.png')
