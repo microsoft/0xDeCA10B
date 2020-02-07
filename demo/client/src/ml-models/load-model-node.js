@@ -105,7 +105,7 @@ async function loadNearestCentroidClassifier(model, web3, toFloat) {
     })
 }
 
-async function loadSparseNearestCentroidClassifier(model, web3, toFloat) {
+exports.loadSparseNearestCentroidClassifier = async function (model, web3, toFloat) {
     let gasUsed = 0
     const initialChunkSize = 500
     const chunkSize = 500
@@ -224,7 +224,7 @@ exports.loadModel = async function (path, web3, toFloat = _toFloat) {
         case 'nearest centroid classifier':
             return loadNearestCentroidClassifier(model, web3, toFloat)
         case 'sparse nearest centroid classifier':
-            return loadSparseNearestCentroidClassifier(model, web3, toFloat)
+            return exports.loadSparseNearestCentroidClassifier(model, web3, toFloat)
         case 'sparse perceptron':
             return loadSparsePerceptron(model, web3, toFloat)
         default:
