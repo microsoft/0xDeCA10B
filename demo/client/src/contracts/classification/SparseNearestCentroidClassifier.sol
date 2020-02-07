@@ -74,11 +74,14 @@ contract SparseNearestCentroidClassifier is Classifier64 {
     function predict(int64[] memory data) public view returns (uint64 bestClass) {
         // Sparse representation: each number in data is a feature index.
         // Assume values in data are sorted in increasing order.
+
         uint minDistance = UINT256_MAX;
         bestClass = 0;
         for (uint64 currentClass = 0; currentClass < centroids.length; ++currentClass) {
             uint distance = 0;
             uint dataIndex = 0;
+            // This can be optimized by storing magnitudes, updating them on updates,
+            // and for predicting: only use necessary dimensions to find difference from magnitude of the centroid.
             for (uint64 j = 0; j < centroids[currentClass].length; ++j) {
                 if (dataIndex < data.length && data[dataIndex] == int64(j)) {
                     // Feature is present.
