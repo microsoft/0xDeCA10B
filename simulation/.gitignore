@@ -1,7 +1,8 @@
+combined_plots.html
+
+decai/simulation/data/cached_data/
 saved_runs/
-
 saved_models/
-
 training_data/
 
 *.egg-info/
@@ -47,3 +48,4 @@ logs/
 *.sav
 *.asv
 \#*\#
+/decai/simulation/data/cached_data/

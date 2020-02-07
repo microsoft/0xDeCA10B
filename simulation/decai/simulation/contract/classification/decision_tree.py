@@ -6,12 +6,12 @@ from decai.simulation.contract.classification.scikit_classifier import SciKitCla
 class DecisionTreeModule(SciKitClassifierModule):
     def __init__(self, regression=False):
         if regression:
-            model = self._model = RegressionHAT(
+            model_initializer = lambda: RegressionHAT(
                 # leaf_prediction='mc'
             )
         else:
-            model = HAT(
+            model_initializer = lambda: HAT(
                 # leaf_prediction='mc',
                 # nominal_attributes=[ 4],
             )
-        super().__init__(_model=model)
+        super().__init__(_model_initializer=model_initializer)

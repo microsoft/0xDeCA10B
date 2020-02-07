@@ -17,6 +17,7 @@ from decai.simulation.simulate import Agent, Simulator
 # For `bokeh serve`.
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
+# FIXME Using MultinomialNB might not work well with the Titanic dataset because it requires discrete features.
 
 class Runner(object):
     @inject
@@ -61,7 +62,7 @@ class Runner(object):
 if __name__.startswith('bk_script_'):
     # Set up the data, model, and incentive mechanism.
     inj = Injector([
-        SciKitClassifierModule(MultinomialNB()),
+        SciKitClassifierModule(MultinomialNB),
         DefaultCollaborativeTrainerModule,
         LoggingModule,
         StakeableImModule,
@@ -72,7 +73,7 @@ if __name__.startswith('bk_script_'):
 if __name__ == '__main__':
     # Play the game.
     inj = Injector([
-        SciKitClassifierModule(MultinomialNB()),
+        SciKitClassifierModule(MultinomialNB),
         DefaultCollaborativeTrainerModule,
         LoggingModule,
         StakeableImModule,

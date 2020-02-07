@@ -2,12 +2,14 @@ import itertools
 import json
 import os
 import random
+import time
 from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
 from logging import Logger
 from operator import itemgetter
-from typing import Optional, Collection, Tuple
+from pathlib import Path
+from typing import Collection, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -149,11 +151,13 @@ class NewsDataLoader(DataLoader):
     _entity_types_to_replace = {'PERSON', 'GPE', 'ORG', 'DATE', 'TIME', 'PERCENT',
                                 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL'}
 
+    def classifications(self) -> List[str]:
+        return ["RELIABLE", "UNRELIABLE"]
+
     def __post_init__(self):
         spacy_model = 'en_core_web_lg'
         download(spacy_model)
         self._nlp = spacy.load(spacy_model, disable={'tagger', 'parser', 'textcat'})
-
 
     def _load_kaggle_data(self, data_folder_path: str) -> Collection[News]:
         """
@@ -198,14 +202,18 @@ class NewsDataLoader(DataLoader):
         self._logger.info("Getting features for %d articles.", len(news_articles))
         # Only use binary features.
         ngram_range = (2, 2)
-        t = TfidfVectorizer(max_features=3000, ngram_range=ngram_range)
+        # Don't use IDF because we need integer features.
+        t = TfidfVectorizer(max_features=1000, ngram_range=ngram_range, norm=None, use_idf=False)
         test_start = len(news_articles) - test_size
 
         x_train = map(lambda news: news.text, itertools.islice(news_articles, train_size))
         x_test = map(lambda news: news.text, itertools.islice(news_articles, test_start, len(news_articles)))
-        if self._replace_entities:
+        if self._replace_entities_enabled:
+            self._logger.debug("Will replace entities.")
             x_train = self._nlp.pipe(x_train, batch_size=128)
             x_test = self._nlp.pipe(x_test, batch_size=128)
+        else:
+            self._logger.debug("Replacing entities is disabled.")
 
         x_train = map(self._pre_process_text, x_train)
         x_test = map(self._pre_process_text, x_test)
@@ -236,6 +244,23 @@ class NewsDataLoader(DataLoader):
         self._logger.info("Loading news data.")
         data_folder_path = os.path.join(__file__, '../../../../training_data/news')
 
+        # Look for cached data.
+        file_identifier = f'news-data-{train_size}-{test_size}-replace_ents_{self._replace_entities_enabled}.npy'
+        base_path = Path(os.path.dirname(__file__)) / 'cached_data'
+        os.makedirs(base_path, exist_ok=True)
+        cache_paths = {
+            'x_train': base_path / f'x_train-{file_identifier}',
+            'y_train': base_path / f'y_train-{file_identifier}',
+            'x_test': base_path / f'x_test-{file_identifier}',
+            'y_test': base_path / f'y_test-{file_identifier}'
+        }
+        # Use if modified in the last day.
+        if all([p.exists() for p in cache_paths.values()]) and \
+                all([time.time() - p.stat().st_mtime < 60 * 60 * 24 for p in cache_paths.values()]):
+            self._logger.info("Loaded cached News data from %s.", cache_paths)
+            return (np.load(cache_paths['x_train']), np.load(cache_paths['y_train'])), \
+                   (np.load(cache_paths['x_test']), np.load(cache_paths['y_test']))
+
         data = self._load_kaggle_data(data_folder_path)
 
         #  Separate train and test data.
@@ -253,6 +278,10 @@ class NewsDataLoader(DataLoader):
                             f"\n  test size: {test_size}")
 
         (x_train, y_train), (x_test, y_test) = self._pre_process(data, train_size, test_size)
+        np.save(cache_paths['x_train'], x_train, allow_pickle=False)
+        np.save(cache_paths['y_train'], y_train, allow_pickle=False)
+        np.save(cache_paths['x_test'], x_test, allow_pickle=False)
+        np.save(cache_paths['y_test'], y_test, allow_pickle=False)
         self._logger.info("Done loading news data.")
         return (x_train, y_train), (x_test, y_test)
 

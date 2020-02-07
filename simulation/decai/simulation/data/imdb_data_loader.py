@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from logging import Logger
+from typing import List
 
 import numpy as np
 from injector import ClassAssistedBuilder, inject, Module, provider, singleton
@@ -19,6 +20,9 @@ class ImdbDataLoader(DataLoader):
 
     _logger: Logger
     num_words: int = field(default=1000)
+
+    def classifications(self) -> List[str]:
+        return ["NEGATIVE", "POSITIVE"]
 
     def load_data(self, train_size: int = None, test_size: int = None) -> (tuple, tuple):
         self._logger.info("Loading IMDB review data using %d words.", self.num_words)

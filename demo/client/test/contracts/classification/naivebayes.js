@@ -32,7 +32,9 @@ contract('NaiveBayesClassifier', function (accounts) {
 
   before("deploy classifier", async () => {
     const queries = [
+      // ALARM
       "alarm for 11 am tomorrow",
+      // WEATHER
       "will i need a jacket for tomorrow"];
     const featureMappedQueries = queries.map(mapFeatures);
     const featureCounts = featureMappedQueries.map(fv => {
@@ -105,7 +107,7 @@ contract('NaiveBayesClassifier', function (accounts) {
     const updateResponse = await classifier.update(data, classification);
     // To help with optimizing gas usage:
     // console.log(`  update gasUsed: ${updateResponse.receipt.gasUsed}`);
-    assert.isBelow(updateResponse.receipt.gasUsed, 106357 + 1, "Too much gas used.");
+    assert.isBelow(updateResponse.receipt.gasUsed, 106424 + 1, "Too much gas used.");
 
     for (let i in prevFeatureCounts) {
       const featureIndex = data[i];
@@ -150,4 +152,36 @@ contract('NaiveBayesClassifier', function (accounts) {
 
     assert.equal(await classifier.predict([0, 1, 6]).then(parseBN), classIndex);
   });
-});
+
+  it("... should add feature counts", async () => {
+    const featureCounts = [
+      [[0, 1]],
+      [[1, 1]],
+    ]
+    const classCounts = [1, 1]
+    const totalNumFeatures = 2
+    const classifier = await NaiveBayesClassifier.new(["0", "1"], classCounts, featureCounts, totalNumFeatures, smoothingFactor)
+    assert.equal(await classifier.getFeatureCount(0, 0).then(parseBN), 1)
+    assert.equal(await classifier.getFeatureCount(0, 1).then(parseBN), 0)
+    assert.equal(await classifier.getFeatureCount(1, 0).then(parseBN), 0)
+    assert.equal(await classifier.getFeatureCount(1, 1).then(parseBN), 1)
+
+    // Overrides
+    await classifier.initializeCounts([[0, 0]], 0)
+    assert.equal(await classifier.getFeatureCount(0, 0).then(parseBN), 0)
+
+    await classifier.initializeCounts([[0, 1], [2, 2]], 0)
+    assert.equal(await classifier.getFeatureCount(0, 0).then(parseBN), 1)
+    assert.equal(await classifier.getFeatureCount(0, 2).then(parseBN), 2)
+    assert.equal(await classifier.getClassTotalFeatureCount(0).then(parseBN), 1 + 0 + 1 + 2)
+
+    await classifier.initializeCounts([[2, 1], [3, 2]], 1)
+    assert.equal(await classifier.getFeatureCount(1, 0).then(parseBN), 0)
+    assert.equal(await classifier.getFeatureCount(1, 1).then(parseBN), 1)
+    assert.equal(await classifier.getFeatureCount(1, 2).then(parseBN), 1)
+    assert.equal(await classifier.getFeatureCount(1, 3).then(parseBN), 2)
+    assert.equal(await classifier.getClassTotalFeatureCount(1).then(parseBN), 1 + 1 + 2)
+
+    // A new class.
+  })
+})

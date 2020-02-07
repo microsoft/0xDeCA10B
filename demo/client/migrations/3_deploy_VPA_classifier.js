@@ -40,7 +40,7 @@ module.exports = function (deployer) {
   const dataCounts = [];
   let model = fs.readFileSync('./src/ml-models/vpa/vpa-classifier-centroids.json', 'utf8');
   model = JSON.parse(model);
-  for (let [classification, centroidInfo] of Object.entries(model)) {
+  for (let [classification, centroidInfo] of Object.entries(model.intents)) {
     classifications.push(classification);
     centroids.push(convertData(centroidInfo.centroid, web3, toFloat));
     dataCounts.push(centroidInfo.dataCount);

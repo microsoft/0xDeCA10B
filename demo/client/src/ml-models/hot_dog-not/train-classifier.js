@@ -25,7 +25,9 @@ const EMB_SIZE = 1280;
 const EMB_REDUCTION_FACTOR = REDUCE_EMBEDDINGS ? 4 : 1;
 
 // Classifier type can be: ncc/perceptron
-const CLASSIFIER_TYPE = 'perceptron';
+const args = process.argv.slice(2)
+const CLASSIFIER_TYPE = args.length > 0 ? args[0] : 'perceptron';
+console.log(`Training a ${CLASSIFIER_TYPE} classifier.`)
 
 // Perceptron Classifier Config
 
@@ -260,9 +262,9 @@ function getNearestCentroidModel() {
     return new Promise((resolve, reject) => {
         Promise.all(Object.keys(INTENTS).map(getCentroid))
             .then(async centroidInfos => {
-                const model = {};
+                const model = { intents: {} };
                 Object.values(INTENTS).forEach((intent, i) => {
-                    model[intent] = centroidInfos[i];
+                    model.intents[intent] = centroidInfos[i];
                 });
                 const modelPath = path.join(__dirname, 'classifier-centroids.json');
                 console.log(`Saving centroids to "${modelPath}".`);
@@ -278,7 +280,7 @@ async function predictNearestCentroidModel(model, sample) {
     let result;
     const emb = await getEmbedding(sample);
     tf.tidy(() => {
-        Object.entries(model).forEach(([intent, centroidInfo]) => {
+        Object.entries(model.intents).forEach(([intent, centroidInfo]) => {
             const centroid = tf.tensor1d(centroidInfo.centroid);
             const distance = centroid.sub(emb).pow(2).sum();
             if (distance.less(minDistance).dataSync()[0]) {
@@ -436,7 +438,7 @@ async function main() {
     fs.writeFileSync(embeddingCachePath, JSON.stringify(embeddingCache));
     console.debug(`Wrote embedding cache to \"${embeddingCachePath}\" with ${Object.keys(embeddingCache).length} cached embeddings.`);
 
-    if (PERCEPTRON_NUM_FEATS !== EMB_SIZE) {
+    if (CLASSIFIER_TYPE === 'perceptron' && PERCEPTRON_NUM_FEATS !== EMB_SIZE) {
         console.log(`Reducing weights to ${PERCEPTRON_NUM_FEATS} dimensions.`)
         model.featureIndices = tf.tidy(_ => {
             return tf.abs(model.weights).topk(PERCEPTRON_NUM_FEATS).indices;

@@ -82,14 +82,34 @@ contract NaiveBayesClassifier is Classifier64 {
         }
     }
 
+    /**
+     * Set feature counts for an existing classification.
+     * For efficiency, features are overriden them if they have already been set.
+     * Made to be called just after the contract is created and never again.
+     * @param _featureCounts The index to start placing `_weights` into the model's weights.
+     * @param classification The class to add counts to.
+     */
+    function initializeCounts(uint32[][] memory _featureCounts, uint64 classification) public onlyOwner {
+        require(classification < classInfos.length, "This classification has not been added yet.");
+        ClassInfo storage classInfo = classInfos[classification];
+        uint totalFeatureCount = classInfo.totalFeatureCount;
+        for (uint j = 0 ; j < _featureCounts.length; ++j) {
+            // Possibly override a feature.
+            classInfo.featureCounts[_featureCounts[j][0]] = _featureCounts[j][1];
+            totalFeatureCount = totalFeatureCount.add(_featureCounts[j][1]);
+        }
+        require(totalFeatureCount < 2 ** 65, "There are too many features.");
+        classInfo.totalFeatureCount = uint64(totalFeatureCount);
+    }
+
     // Main overriden methods for training and predicting:
 
-    function addClass(uint64 classCount, uint32[][] memory featureCounts, string memory classification) public onlyOwner {
+    function addClass(uint64 numSamples, uint32[][] memory featureCounts, string memory classification) public onlyOwner {
         require(classifications.length + 1 < 2 ** 65, "There are too many classes already.");
         classifications.push(classification);
         uint classIndex = classifications.length - 1;
         emit AddClass(classification, classIndex);
-        ClassInfo memory info = ClassInfo(classCount, 0);
+        ClassInfo memory info = ClassInfo(numSamples, 0);
         uint totalFeatureCount = 0;
         classInfos.push(info);
         ClassInfo storage storedInfo = classInfos[classIndex];

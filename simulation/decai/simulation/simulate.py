@@ -90,6 +90,7 @@ class Simulator(object):
                  pm_test_sets: list = None,
                  accuracy_plot_wait_s=2E5,
                  train_size: int = None, test_size: int = None,
+                 filename_indicator: str = None
                  ):
         """
         Run a simulation.
@@ -102,6 +103,7 @@ class Simulator(object):
         :param accuracy_plot_wait_s: The amount of time to wait in seconds between plotting the accuracy.
         :param train_size: The amount of training data to use.
         :param test_size: The amount of test data to use.
+        :param filename_indicator: Path of the filename to create for the run.
         """
 
         assert 0 <= init_train_data_portion <= 1
@@ -114,8 +116,9 @@ class Simulator(object):
                          balances=[],
                          )
         time_for_filenames = int(time.time())
-        save_path = f'saved_runs/{time_for_filenames}.json'
-        plot_save_path = f'saved_runs/{time_for_filenames}_plot.png'
+        save_path = f'saved_runs/{time_for_filenames}-{filename_indicator}-simulation_data.json'
+        model_save_path = f'saved_runs/{time_for_filenames}-{filename_indicator}-model.json'
+        plot_save_path = f'saved_runs/{time_for_filenames}-{filename_indicator}.png'
         self._logger.info("Saving run info to \"%s\".", save_path)
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
@@ -206,6 +209,7 @@ class Simulator(object):
         def task():
             (x_train, y_train), (x_test, y_test) = \
                 self._data_loader.load_data(train_size=train_size, test_size=test_size)
+            classifications = self._data_loader.classifications()
             init_idx = int(len(x_train) * init_train_data_portion)
             self._logger.info("Initializing model with %d out of %d samples.",
                               init_idx, len(x_train))
@@ -217,8 +221,11 @@ class Simulator(object):
             if self._logger.isEnabledFor(logging.DEBUG):
                 s = self._decai.model.evaluate(x_init_data, y_init_data)
                 self._logger.debug("Initial training data evaluation: %s", s)
-                s = self._decai.model.evaluate(x_remaining, y_remaining)
-                self._logger.debug("Remaining training data evaluation: %s", s)
+                if len(x_remaining) > 0:
+                    s = self._decai.model.evaluate(x_remaining, y_remaining)
+                    self._logger.debug("Remaining training data evaluation: %s", s)
+                else:
+                    self._logger.debug("There is no more remaining data to evaluate.")
 
             self._logger.info("Evaluating initial model.")
             accuracy = self._decai.model.log_evaluation_details(x_test, y_test)
@@ -268,6 +275,7 @@ class Simulator(object):
 
                         with open(save_path, 'w') as f:
                             json.dump(save_data, f, separators=(',', ':'))
+                        self._decai.model.export(model_save_path, classifications)
 
                         if os.path.exists(plot_save_path):
                             os.remove(plot_save_path)
@@ -443,6 +451,7 @@ class Simulator(object):
 
             with open(save_path, 'w') as f:
                 json.dump(save_data, f, separators=(',', ':'))
+            self._decai.model.export(model_save_path, classifications)
 
             if os.path.exists(plot_save_path):
                 os.remove(plot_save_path)
