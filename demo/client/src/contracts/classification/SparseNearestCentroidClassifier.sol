@@ -101,9 +101,6 @@ contract SparseNearestCentroidClassifier is Classifier64 {
         uint minDistance = UINT256_MAX;
         bestClass = 0;
         for (uint64 currentClass = 0; currentClass < centroids.length; ++currentClass) {
-            // This can be optimized by storing magnitudes, updating them on updates,
-            // and for predicting: only use necessary dimensions to find difference from magnitude of the centroid.
-
             // Default distance for empty data is `squaredMagnitudes[currentClass]`.
             // Well use that as a base and update it.
             // distance = squaredMagnitudes[currentClass]
@@ -114,12 +111,11 @@ contract SparseNearestCentroidClassifier is Classifier64 {
             // = distance + toFloat * (-2 * centroids[currentClass][j] + toFloat)
             int distanceUpdate = 0;
 
-            // FIXME Fails test.
-
             for (uint dataIndex = 0; dataIndex < data.length; ++dataIndex) {
                 // Should be safe since data is not very long.
-                distanceUpdate += int(toFloat) - 2 * centroids[currentClass][dataIndex];
+                distanceUpdate += int(toFloat) - 2 * centroids[currentClass][uint(data[dataIndex])];
             }
+
             uint distance = uint(int(squaredMagnitudes[currentClass]) + distanceUpdate * toFloat);
 
             if (distance < minDistance) {
