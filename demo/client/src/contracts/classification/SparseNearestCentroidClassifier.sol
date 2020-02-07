@@ -7,6 +7,7 @@ import {Classifier64} from "./Classifier.sol";
 
 /**
  * A nearest centroid classifier that uses Euclidean distance to predict the closest centroid based on sparse data sample.
+ * Data must be sorted indices of features with each feature occurring at most once.
  *
  * https://en.wikipedia.org/wiki/Nearest_centroid_classifier
  */
@@ -19,12 +20,22 @@ contract SparseNearestCentroidClassifier is Classifier64 {
         uint index
     );
 
+    int256 constant public INT256_MAX = int256(~(uint256(1) << 255));
     uint256 constant public UINT256_MAX = ~uint256(0);
 
     uint256 constant public dataCountLimit = 2 ** (256 - 64 - 1);
 
     uint64[][] public centroids;
+
+    /**
+     * The number of samples for each class.
+     */
     uint[] public dataCounts;
+
+    /**
+     * The squared 2-norm of each centroid. Multiplied by (toFloat * toFloat).
+     */
+    uint[] public squaredMagnitudes;
 
     constructor(
         string[] memory _classifications,
@@ -38,8 +49,16 @@ contract SparseNearestCentroidClassifier is Classifier64 {
         dataCounts = _dataCounts;
         uint dimensions = centroids[0].length;
         require(dimensions < 2 ** 63, "First centroid is too long.");
-        for (uint i = 1; i < centroids.length; ++i) {
-            require(centroids[i].length == dimensions, "Inconsistent number of dimensions.");
+        for (uint i = 0; i < centroids.length; ++i) {
+            require(_centroids[i].length == dimensions, "Inconsistent number of dimensions.");
+            squaredMagnitudes.push(getMagnitude(_centroids[i]));
+        }
+    }
+
+    function getMagnitude(uint64[] memory vector) internal pure returns (uint squaredMagnitude) {
+        squaredMagnitude = 0;
+        for (uint i = 0; i < vector.length; ++i) {
+            squaredMagnitude = squaredMagnitude.add(uint(vector[i]) * vector[i]);
         }
     }
 
@@ -52,9 +71,12 @@ contract SparseNearestCentroidClassifier is Classifier64 {
     function extendCentroid(uint64[] memory extension, uint64 classification) public onlyOwner {
         require(classification < centroids.length, "This classification has not been added yet.");
         require(centroids[classification].length + extension.length < 2 ** 63, "Centroid would be too long.");
+        uint squaredMagnitude = squaredMagnitudes[classification];
         for (uint i = 0; i < extension.length; ++i) {
             centroids[classification].push(extension[i]);
+            squaredMagnitude = squaredMagnitude.add(uint(extension[i]) * extension[i]);
         }
+        squaredMagnitudes[classification] = squaredMagnitude;
     }
 
     function addClass(uint64[] memory centroid, string memory classification, uint dataCount) public onlyOwner {
@@ -64,6 +86,7 @@ contract SparseNearestCentroidClassifier is Classifier64 {
         classifications.push(classification);
         centroids.push(centroid);
         dataCounts.push(dataCount);
+        squaredMagnitudes.push(getMagnitude(centroid));
         emit AddClass(classification, classifications.length - 1);
     }
 
@@ -78,34 +101,27 @@ contract SparseNearestCentroidClassifier is Classifier64 {
         uint minDistance = UINT256_MAX;
         bestClass = 0;
         for (uint64 currentClass = 0; currentClass < centroids.length; ++currentClass) {
-            uint distance = 0;
-            uint dataIndex = 0;
             // This can be optimized by storing magnitudes, updating them on updates,
             // and for predicting: only use necessary dimensions to find difference from magnitude of the centroid.
-            for (uint64 j = 0; j < centroids[currentClass].length; ++j) {
-                if (dataIndex < data.length && data[dataIndex] == int64(j)) {
-                    // Feature is present.
-                    // Safe calculation because both values are int64.
-                    int256 diff = toFloat;
-                    diff -= centroids[currentClass][j];
-                    diff *= diff;
-                    // Convert back to our float representation.
-                    diff /= toFloat;
-                    distance = distance.add(uint256(diff));
-                    ++dataIndex;
 
-                    if (distance >= minDistance) {
-                        break;
-                    }
-                } else {
-                    // Feature is not present.
-                    uint256 diff = centroids[currentClass][j];
-                    diff *= diff;
-                    // Convert back to our float representation.
-                    diff /= toFloat;
-                    distance = distance.add(diff);
-                }
+            // Default distance for empty data is `squaredMagnitudes[currentClass]`.
+            // Well use that as a base and update it.
+            // distance = squaredMagnitudes[currentClass]
+            // For each j:
+            // distance = distance - centroids[currentClass][j]^2 + (centroids[currentClass][j] - toFloat)^2
+            // = distance - centroids[currentClass][j]^2 + centroids[currentClass][j]^2 - 2 * centroids[currentClass][j] * toFloat + toFloat^2
+            // = distance - 2 * centroids[currentClass][j] * toFloat + toFloat^2
+            // = distance + toFloat * (-2 * centroids[currentClass][j] + toFloat)
+            int distanceUpdate = 0;
+
+            // FIXME Fails test.
+
+            for (uint dataIndex = 0; dataIndex < data.length; ++dataIndex) {
+                // Should be safe since data is not very long.
+                distanceUpdate += int(toFloat) - 2 * centroids[currentClass][dataIndex];
             }
+            uint distance = uint(int(squaredMagnitudes[currentClass]) + distanceUpdate * toFloat);
+
             if (distance < minDistance) {
                 minDistance = distance;
                 bestClass = currentClass;
@@ -127,16 +143,22 @@ contract SparseNearestCentroidClassifier is Classifier64 {
         }
 
         // Update centroid using moving average calculation.
+        uint squaredMagnitude = 0;
         uint dataIndex = 0;
         for (uint64 featureIndex = 0; featureIndex < centroids[classification].length; ++featureIndex) {
             if (dataIndex < data.length && data[dataIndex] == int64(featureIndex)) {
                 // Feature is present.
-                centroids[classification][featureIndex] = uint64((int(centroid[featureIndex]) * int(n) + toFloat) / int(newN));
+                uint64 v = uint64((int(centroid[featureIndex]) * int(n) + toFloat) / int(newN));
+                centroids[classification][featureIndex] = v;
                 ++dataIndex;
+                squaredMagnitude = squaredMagnitude.add(uint(v) * v);
             } else {
                 // Feature is not present.
-                centroids[classification][featureIndex] = uint64((int(centroid[featureIndex]) * int(n)) / int(newN));
+                uint64 v = uint64((int(centroid[featureIndex]) * int(n)) / int(newN));
+                centroids[classification][featureIndex] = v;
+                squaredMagnitude = squaredMagnitude.add(uint(v) * v);
             }
         }
+        squaredMagnitudes[classification] = squaredMagnitude;
     }
 }

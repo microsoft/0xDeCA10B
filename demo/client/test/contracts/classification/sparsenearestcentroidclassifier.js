@@ -41,26 +41,36 @@ contract('SparseNearestCentroidClassifier', function (accounts) {
 	it("...should get the classifications", function () {
 		const expectedClassifications = ["ALARM", "WEATHER"]
 		return classifier.getNumClassifications().then(parseBN).then(numClassifications => {
-			assert.equal(numClassifications, expectedClassifications.length, "Number of classifications is wrong.")
+			assert.equal(numClassifications, expectedClassifications.length, "Number of classifications is wrong")
 			let promises = expectedClassifications.map((_, i) => {
 				return classifier.classifications(i)
 			})
 			return Promise.all(promises).then(results => {
-				assert.deepEqual(results, expectedClassifications, "Wrong classifications.")
+				assert.deepEqual(results, expectedClassifications, "Wrong classifications")
 			})
 		})
+	})
+
+	it("...should get the squared magnitudes", async function () {
+		const squaredMagnitude0 = await classifier.squaredMagnitudes(0)
+		let expected = web3.utils.toBN(toFloat).mul(web3.utils.toBN(toFloat))
+		assert(squaredMagnitude0.eq(expected), `${squaredMagnitude0} != ${expected}`);
+
+		const squaredMagnitude1 = await classifier.squaredMagnitudes(1)
+		expected = web3.utils.toBN(toFloat).mul(web3.utils.toBN(toFloat))
+		assert(squaredMagnitude1.eq(expected), `${squaredMagnitude1} != ${expected}`);
 	})
 
 	it("...should predict the classification", async function () {
 		const data = [0]
 		const prediction = await classifier.predict(data)
-		assert.equal(prediction, 0, "Wrong classification.")
+		assert.equal(prediction, 0, "Wrong classification")
 	})
 
 	it("...should predict the classification", async function () {
 		const data = [1]
 		const prediction = await classifier.predict(data)
-		assert.equal(prediction, 1, "Wrong classification.")
+		assert.equal(prediction, 1, "Wrong classification")
 	})
 
 	it("...should train", async function () {
