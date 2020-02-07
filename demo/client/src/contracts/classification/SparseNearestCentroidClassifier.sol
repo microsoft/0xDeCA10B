@@ -51,14 +51,15 @@ contract SparseNearestCentroidClassifier is Classifier64 {
         require(dimensions < 2 ** 63, "First centroid is too long.");
         for (uint i = 0; i < centroids.length; ++i) {
             require(_centroids[i].length == dimensions, "Inconsistent number of dimensions.");
-            squaredMagnitudes.push(getMagnitude(_centroids[i]));
+            squaredMagnitudes.push(getSquaredMagnitude(_centroids[i]));
         }
     }
 
-    function getMagnitude(uint64[] memory vector) internal pure returns (uint squaredMagnitude) {
+    function getSquaredMagnitude(uint64[] memory vector) internal pure returns (uint squaredMagnitude) {
         squaredMagnitude = 0;
         for (uint i = 0; i < vector.length; ++i) {
-            squaredMagnitude = squaredMagnitude.add(uint(vector[i]) * vector[i]);
+            // Should be safe multiplication and addition because vector entries should be small.
+            squaredMagnitude += vector[i] * vector[i];
         }
     }
 
@@ -74,7 +75,8 @@ contract SparseNearestCentroidClassifier is Classifier64 {
         uint squaredMagnitude = squaredMagnitudes[classification];
         for (uint i = 0; i < extension.length; ++i) {
             centroids[classification].push(extension[i]);
-            squaredMagnitude = squaredMagnitude.add(uint(extension[i]) * extension[i]);
+            // Should be safe multiplication and addition because vector entries should be small.
+            squaredMagnitude += extension[i] * extension[i];
         }
         squaredMagnitudes[classification] = squaredMagnitude;
     }
@@ -86,7 +88,7 @@ contract SparseNearestCentroidClassifier is Classifier64 {
         classifications.push(classification);
         centroids.push(centroid);
         dataCounts.push(dataCount);
-        squaredMagnitudes.push(getMagnitude(centroid));
+        squaredMagnitudes.push(getSquaredMagnitude(centroid));
         emit AddClass(classification, classifications.length - 1);
     }
 
@@ -138,19 +140,22 @@ contract SparseNearestCentroidClassifier is Classifier64 {
             dataCounts[classification] = newN;
         }
 
+        // Could try to optimize further by not updating zero entries in the centroid that are not in the data.
+        // This wouldn't help much for our current examples (IMDB + Fake News) since most features occur in all classes.
+
         // Update centroid using moving average calculation.
         uint squaredMagnitude = 0;
         uint dataIndex = 0;
         for (uint64 featureIndex = 0; featureIndex < centroids[classification].length; ++featureIndex) {
             if (dataIndex < data.length && data[dataIndex] == int64(featureIndex)) {
                 // Feature is present.
-                uint64 v = uint64((int(centroid[featureIndex]) * int(n) + toFloat) / int(newN));
+                uint64 v = uint64((n * centroid[featureIndex] + toFloat) / newN);
                 centroids[classification][featureIndex] = v;
-                ++dataIndex;
                 squaredMagnitude = squaredMagnitude.add(uint(v) * v);
+                ++dataIndex;
             } else {
                 // Feature is not present.
-                uint64 v = uint64((int(centroid[featureIndex]) * int(n)) / int(newN));
+                uint64 v = uint64((n * centroid[featureIndex]) / newN);
                 centroids[classification][featureIndex] = v;
                 squaredMagnitude = squaredMagnitude.add(uint(v) * v);
             }
