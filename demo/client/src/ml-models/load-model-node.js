@@ -6,7 +6,7 @@ const NearestCentroidClassifier = artifacts.require("./classification/NearestCen
 const SparseNearestCentroidClassifier = artifacts.require("./classification/SparseNearestCentroidClassifier")
 const SparsePerceptron = artifacts.require("./classification/SparsePerceptron")
 
-const { convertData, convertNum } = require('../../src/float-utils-node');
+const { convertData, convertNum } = require('../../src/float-utils-node')
 
 const _toFloat = 1E9
 
@@ -14,17 +14,17 @@ async function loadDensePerceptron(model, web3, toFloat) {
     let gasUsed = 0
     const weightChunkSize = 450
     const { classifications } = model
-    const weights = convertData(model.weights, web3, toFloat);
-    const intercept = convertNum(model.bias, web3, toFloat);
-    const learningRate = convertNum(1, web3, toFloat);
-    console.log(`  Deploying Dense Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights.`);
+    const weights = convertData(model.weights, web3, toFloat)
+    const intercept = convertNum(model.bias, web3, toFloat)
+    const learningRate = convertNum(1, web3, toFloat)
+    console.log(`  Deploying Dense Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights.`)
     const classifierContract = await DensePerceptron.new(classifications, weights.slice(0, weightChunkSize), intercept, learningRate)
     gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
 
     // Add remaining weights.
     for (let i = weightChunkSize; i < weights.length; i += weightChunkSize) {
-        console.log(`    Adding classifier weights [${i}, ${Math.min(i + weightChunkSize, weights.length)}).`);
         const r = await classifierContract.initializeWeights(weights.slice(i, i + weightChunkSize))
+        console.debug(`    Added classifier weights [${i}, ${Math.min(i + weightChunkSize, weights.length)}). gasUsed: ${r.receipt.gasUsed}`)
         gasUsed += r.receipt.gasUsed
     }
 
@@ -37,20 +37,20 @@ async function loadDensePerceptron(model, web3, toFloat) {
 }
 
 async function loadSparsePerceptron(model, web3, toFloat) {
-    let gasUsed = 0
     const weightChunkSize = 300
     const { classifications } = model
     const weights = convertData(model.weights, web3, toFloat)
     const intercept = convertNum(model.bias, web3, toFloat)
     const learningRate = convertNum(1, web3, toFloat)
-    console.log(`  Deploying Sparse Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights.`)
+    console.log(`  Deploying Sparse Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights...`)
     const classifierContract = await SparsePerceptron.new(classifications, weights.slice(0, weightChunkSize), intercept, learningRate)
-    gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
+    let gasUsed = (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
+    console.log(`  Deployed Sparse Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights. gasUsed: ${gasUsed}`)
 
     // Add remaining weights.
     for (let i = weightChunkSize; i < weights.length; i += weightChunkSize) {
-        console.log(`    Adding classifier weights [${i}, ${Math.min(i + weightChunkSize, weights.length)}).`)
         const r = await classifierContract.initializeWeights(i, weights.slice(i, i + weightChunkSize))
+        console.debug(`    Added classifier weights [${i}, ${Math.min(i + weightChunkSize, weights.length)}) gasUsed: ${r.receipt.gasUsed}`)
         gasUsed += r.receipt.gasUsed
     }
 
@@ -94,7 +94,7 @@ async function loadNearestCentroidClassifier(model, web3, toFloat) {
         addClassPromises.push(classifierContract.addClass(centroids[i], classifications[i], dataCounts[i]))
     }
     return Promise.all(addClassPromises).then(responses => {
-        console.log("  All classes added.")
+        console.debug("  All classes added.")
         for (const r of responses) {
             gasUsed += r.receipt.gasUsed
         }
@@ -139,7 +139,7 @@ exports.loadSparseNearestCentroidClassifier = async function (model, web3, toFlo
         addClassPromises.push(classifierContract.addClass(
             centroids[i].slice(0, initialChunkSize), classifications[i], dataCounts[i]
         ).then(r => {
-            console.log(`    Added class ${i}`)
+            console.debug(`    Added class ${i}. gasUsed: ${r.receipt.gasUsed}`)
             return r
         }))
     }
@@ -155,7 +155,7 @@ exports.loadSparseNearestCentroidClassifier = async function (model, web3, toFlo
             for (let j = initialChunkSize; j < centroids[classification].length; j += chunkSize) {
                 const r = await classifierContract.extendCentroid(
                     centroids[classification].slice(j, j + chunkSize), classification)
-                console.log(`    Added dimensions [${j}, ${Math.min(j + chunkSize, centroids[classification].length)}) for class ${classification}`)
+                console.debug(`    Added dimensions [${j}, ${Math.min(j + chunkSize, centroids[classification].length)}) for class ${classification}. gasUsed: ${r.receipt.gasUsed}`)
                 gasUsed += r.receipt.gasUsed
             }
         }
@@ -182,7 +182,7 @@ async function loadNaiveBayes(model, web3, toFloat) {
         addClassPromises.push(classifierContract.addClass(
             classCounts[i], featureCounts[i].slice(0, initialFeatureChunkSize), classifications[i]
         ).then(r => {
-            console.log(`    Added class ${i}`)
+            console.debug(`    Added class ${i}. gasUsed: ${r.receipt.gasUsed}`)
             return r
         }))
     }
@@ -197,11 +197,11 @@ async function loadNaiveBayes(model, web3, toFloat) {
                 const r = await classifierContract.initializeCounts(
                     featureCounts[classification].slice(j, j + featureChunkSize), classification
                 )
-                console.log(`    Added features [${j}, ${Math.min(j + featureChunkSize, featureCounts[classification].length)}) for class ${classification}`)
+                console.debug(`    Added features [${j}, ${Math.min(j + featureChunkSize, featureCounts[classification].length)}) for class ${classification}. gasUsed: ${r.receipt.gasUsed}`)
                 gasUsed += r.receipt.gasUsed
             }
         }
-        console.log(`  Deployed all Naive Bayes classifier classes. gasUsed: ${gasUsed}.`)
+        console.debug(`  Deployed all Naive Bayes classifier classes. gasUsed: ${gasUsed}.`)
         return {
             classifierContract,
             gasUsed,
