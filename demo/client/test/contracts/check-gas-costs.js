@@ -152,6 +152,7 @@ contract('CheckGasUsage', function (accounts) {
 
       // Report
       // Someone else adds bad data.
+      console.debug("  Adding currently incorrect data using another account...")
       r = await mainInterface.addData(data, 1 - predictedClassification, { from: accounts[1], value: 1E17 })
       e = r.logs.filter(e => e.event == 'AddData')[0]
       addedTime = e.args.t;
