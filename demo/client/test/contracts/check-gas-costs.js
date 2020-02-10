@@ -108,16 +108,16 @@ contract('CheckGasUsage', function (accounts) {
       // },
       // {
       //   path: `${__dirname}/../../../../simulation/saved_runs/1580943847-imdb-nb-model.json`,
-      //   data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 512, 613, 714, 815],
+      //   data: [1, 2, 3, 14, 15, 26, 37, 48, 59, 110, 111, 112, 213, 314, 515, 616, 717, 818, 919, 920],
       // },
       // {
       //   path: `${__dirname}/../../../../simulation/saved_runs/1580945025-imdb-ncc-model.json`,
-      //   data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 512, 613, 714, 815],
+      //   data: [1, 2, 3, 14, 15, 26, 37, 48, 59, 110, 111, 112, 213, 314, 515, 616, 717, 818, 919, 920],
       // },
-      {
-        path: `${__dirname}/../../../../simulation/saved_runs/1580945565-imdb-perceptron-model.json`,
-        data: [1, 2, 3, 14, 25, 36, 57, 88, 299, 310, 411, 512, 613, 714, 815],
-      },
+      // {
+      //   path: `${__dirname}/../../../../simulation/saved_runs/1580945565-imdb-perceptron-model.json`,
+      //   data: [1, 2, 3, 14, 15, 26, 37, 48, 59, 110, 111, 112, 213, 314, 515, 616, 717, 818, 919, 920],
+      // },
     ]
     const gasUsages = []
     for (const model of models) {
@@ -149,10 +149,13 @@ contract('CheckGasUsage', function (accounts) {
       r = await mainInterface.refund(data, predictedClassification, addedTime)
       gasUsage['refund'] = r.receipt.gasUsed
       console.log(`Refund gas used: ${r.receipt.gasUsed}`)
-
+      
       // Report
       // Someone else adds bad data.
+      console.debug("  Adding currently incorrect data using another account...")
       r = await mainInterface.addData(data, 1 - predictedClassification, { from: accounts[1], value: 1E17 })
+      console.log(`Adding data (was incorrect) gas used: ${r.receipt.gasUsed}`)
+      gasUsage['addData (was incorrect)'] = r.receipt.gasUsed
       e = r.logs.filter(e => e.event == 'AddData')[0]
       addedTime = e.args.t;
       r = await mainInterface.report(data, 1 - predictedClassification, addedTime, accounts[1])
