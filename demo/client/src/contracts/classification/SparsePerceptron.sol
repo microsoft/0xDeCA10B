@@ -1,4 +1,4 @@
-pragma solidity ^0.5.8;
+pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
 import {Classifier64} from "./Classifier.sol";
@@ -53,11 +53,11 @@ contract SparsePerceptron is Classifier64 {
         }
     }
 
-    function norm(int64[] memory /* data */) public pure returns (uint) {
+    function norm(int64[] memory /* data */) public override pure returns (uint) {
         revert("Normalization is not required.");
     }
 
-    function predict(int64[] memory data) public view returns (uint64) {
+    function predict(int64[] memory data) public override view returns (uint64) {
         int m = intercept;
         for (uint i = 0; i < data.length; ++i) {
             // `update` assumes this check is done.
@@ -71,7 +71,7 @@ contract SparsePerceptron is Classifier64 {
         }
     }
 
-    function update(int64[] memory data, uint64 classification) public onlyOwner {
+    function update(int64[] memory data, uint64 classification) public override onlyOwner {
         // Data is binarized (data holds the indices of the features that are present).
         uint64 prediction = predict(data);
         if (prediction != classification) {
@@ -98,7 +98,7 @@ contract SparsePerceptron is Classifier64 {
      *
      * Force samples to have a size of 60 because about 78% of the IMDB test data has less than 60 tokens. If the sample has less than 60 unique tokens, then use a value > weights.length.
      *
-     * @return The number correct in the batch.
+     * @return numCorrect The number correct in the batch.
      */
     function evaluateBatch(uint24[60][] calldata dataBatch, uint64[] calldata _classifications) external view returns (uint numCorrect) {
         numCorrect = 0;

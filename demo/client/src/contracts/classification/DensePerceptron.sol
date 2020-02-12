@@ -1,4 +1,4 @@
-pragma solidity ^0.5.8;
+pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
 import "../../../lib/Math.sol";
@@ -52,7 +52,7 @@ contract DensePerceptron is Classifier64 {
         }
     }
 
-    function norm(int64[] memory data) public pure returns (uint result) {
+    function norm(int64[] memory data) public override pure returns (uint result) {
         result = 0;
         for (uint i = 0; i < data.length; ++i) {
             result = result.add(uint(int128(data[i]) * data[i]));
@@ -60,7 +60,7 @@ contract DensePerceptron is Classifier64 {
         result = Math.sqrt(result);
     }
 
-    function predict(int64[] memory data) public view returns (uint64) {
+    function predict(int64[] memory data) public override view returns (uint64) {
         int m = intercept;
         require(data.length == weights.length, "The data must have the same dimension as the weights.");
         for (uint i = 0; i < data.length; ++i) {
@@ -73,11 +73,13 @@ contract DensePerceptron is Classifier64 {
         }
     }
 
-    function update(int64[] memory data, uint64 classification) public onlyOwner {
+    function update(int64[] memory data, uint64 classification) public override onlyOwner {
         uint len = data.length;
         require(len == weights.length, "The data must have the same dimension as the weights.");
 
         // Compute prediction and updates at the same time to save gas.
+        // If the model does not need to be updated, then this function should not be called
+        // because it will not actually update the state.
         int prediction = intercept;
         int80[] memory newWeights = new int80[](data.length);
         uint _norm = 0;

@@ -1,4 +1,4 @@
-pragma solidity ^0.5.8;
+pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
 import "../../../lib/Math.sol";
@@ -121,11 +121,11 @@ contract NaiveBayesClassifier is Classifier64 {
         classInfos[classIndex].totalFeatureCount = uint64(totalFeatureCount);
     }
 
-    function norm(int64[] memory /* data */) public pure returns (uint) {
+    function norm(int64[] memory /* data */) public override pure returns (uint) {
         revert("Normalization is not required.");
     }
 
-    function predict(int64[] memory data) public view returns (uint64 bestClass) {
+    function predict(int64[] memory data) public override view returns (uint64 bestClass) {
         // Implementation: simple calculation (no log-probabilities optimization, see contract docs for the reasons)
         bestClass = 0;
         uint maxProb = 0;
@@ -146,7 +146,7 @@ contract NaiveBayesClassifier is Classifier64 {
         }
     }
 
-    function update(int64[] memory data, uint64 classification) public onlyOwner {
+    function update(int64[] memory data, uint64 classification) public override onlyOwner {
         // Data is binarized (data holds the indices of the features that are present).
         // We could also change this to hold the feature index and counts without changing the interface:
         // each int64 would be split into featureIndex|count and decomposed using bit shift operations.

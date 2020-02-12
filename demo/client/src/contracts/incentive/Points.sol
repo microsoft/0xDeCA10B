@@ -1,4 +1,4 @@
-pragma solidity ^0.5.8;
+pragma solidity ^0.6;
 
 import "../../../lib/Math.sol";
 import "../../../lib/SafeMath.sol";
@@ -40,11 +40,11 @@ contract Points is Ownable, IncentiveMechanism {
     ) Ownable() IncentiveMechanism(_refundWaitTimeS, _ownerClaimWaitTimeS, _anyAddressClaimWaitTimeS) public {
     }
 
-    function getNextAddDataCost() public view returns (uint) {
+    function getNextAddDataCost() public override view returns (uint) {
         return 0;
     }
 
-    function getNextAddDataCost(uint /* currentTimeS */) public view returns (uint) {
+    function getNextAddDataCost(uint /* currentTimeS */) public override view returns (uint) {
         return 0;
     }
 }
@@ -61,12 +61,13 @@ contract Points64 is IncentiveMechanism64, Points {
     }
 
     function getNextAddDataCost(int64[] memory /* data */, uint64 /* classification */)
-        public view
+        public override view
         returns (uint) {
         return 0;
     }
 
-    function handleAddData(uint /* msgValue */, int64[] memory /* data */, uint64 /* classification */) public onlyOwner returns (uint cost) {
+    function handleAddData(uint /* msgValue */, int64[] memory /* data */, uint64 /* classification */)
+        public override onlyOwner returns (uint cost) {
         cost = 0;
         totalSubmitted = totalSubmitted.add(1);
     }
@@ -78,7 +79,7 @@ contract Points64 is IncentiveMechanism64, Points {
         uint claimableAmount, bool claimedBySubmitter,
         uint64 prediction,
         uint numClaims)
-        public onlyOwner
+        public override onlyOwner
         returns (uint refundAmount) {
         // `claimableAmount` should be 0.
         refundAmount = claimableAmount;
@@ -100,7 +101,7 @@ contract Points64 is IncentiveMechanism64, Points {
         uint /* initialDeposit */, uint claimableAmount, bool claimedByReporter,
         uint64 prediction,
         uint numClaims)
-        public onlyOwner
+        public override onlyOwner
         returns (uint rewardAmount) {
         // `claimableAmount` should be 0.
         rewardAmount = claimableAmount;

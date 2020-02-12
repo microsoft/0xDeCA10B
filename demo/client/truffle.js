@@ -17,6 +17,11 @@ module.exports = {
   // Following the directory structure for solidity (juanblanco.solidity) VS Code extension.
   contracts_directory: path.join(__dirname, 'src/contracts'),
   contracts_build_directory: path.join(__dirname, 'src/contracts/compiled'),
+  compilers: {
+    solc: {
+      version: "^0.6.2",
+    },
+  },
   networks: {
     development: {
       host: "127.0.0.1",

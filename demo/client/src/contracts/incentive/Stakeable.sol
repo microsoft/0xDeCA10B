@@ -1,4 +1,4 @@
-pragma solidity ^0.5.8;
+pragma solidity ^0.6;
 
 import "../../../lib/Math.sol";
 import "../../../lib/SafeMath.sol";
@@ -73,7 +73,7 @@ contract Stakeable is Ownable, IncentiveMechanism {
      * when testing, the output of this function may not change over time unless blocks are created.
      * @dev see also `getNextAddDataCost(uint)`
      */
-    function getNextAddDataCost() public view returns (uint) {
+    function getNextAddDataCost() public override view returns (uint) {
         return getNextAddDataCost(now); // solium-disable-line security/no-block-members
     }
 
@@ -82,7 +82,7 @@ contract Stakeable is Ownable, IncentiveMechanism {
      *
      * @return The amount of wei required to add data at `currentTimeS`.
      */
-    function getNextAddDataCost(uint currentTimeS) public view returns (uint) {
+    function getNextAddDataCost(uint currentTimeS) public override view returns (uint) {
         if (costWeight == 0) {
             return 0;
         }
@@ -115,13 +115,13 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
     }
 
     function getNextAddDataCost(int64[] memory /* data */, uint64 /* classification */)
-        public view
+        public override view
         returns (uint) {
         // Do not consider the data.
         return getNextAddDataCost();
     }
 
-    function handleAddData(uint msgValue, int64[] memory data, uint64 classification) public onlyOwner returns (uint cost) {
+    function handleAddData(uint msgValue, int64[] memory data, uint64 classification) public override onlyOwner returns (uint cost) {
         cost = getNextAddDataCost(data, classification);
         require(msgValue >= cost, "Didn't pay enough for the deposit.");
         lastUpdateTimeS = now; // solium-disable-line security/no-block-members
@@ -135,7 +135,7 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
         uint claimableAmount, bool claimedBySubmitter,
         uint64 prediction,
         uint /* numClaims */)
-        public onlyOwner
+        public override onlyOwner
         returns (uint refundAmount) {
         refundAmount = claimableAmount;
 
@@ -157,7 +157,7 @@ contract Stakeable64 is IncentiveMechanism64, Stakeable {
         uint initialDeposit, uint claimableAmount, bool claimedByReporter,
         uint64 prediction,
         uint /* numClaims */)
-        public onlyOwner
+        public override onlyOwner
         returns (uint rewardAmount) {
         // Make sure deposit can be taken.
 

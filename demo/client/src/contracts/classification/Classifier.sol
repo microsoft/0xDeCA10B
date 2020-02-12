@@ -1,4 +1,4 @@
-pragma solidity ^0.5.8;
+pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
 import "../../../lib/SafeMath.sol";
@@ -63,7 +63,7 @@ contract Classifier is Ownable {
  */
 // Use an abstract contract instead of an interface so that we can enforce internal functions
 // and not be forced to have some external.
-contract Classifier64 is Classifier {
+abstract contract Classifier64 is Classifier {
     using SafeMath for uint256;
     using SignedSafeMath for int256;
 
@@ -84,13 +84,13 @@ contract Classifier64 is Classifier {
      * @param data A single sample.
      * @return The normalization scalar for `data`.
      */
-    function norm(int64[] memory data) public pure returns (uint);
+    function norm(int64[] memory data) public virtual pure returns (uint);
 
     /**
      * @param data A single sample.
      * @return The predicted classification/label for `data`.
      */
-    function predict(int64[] memory data) public view returns (uint64);
+    function predict(int64[] memory data) public virtual view returns (uint64);
 
     /**
      * Train the classifier with one data sample.
@@ -98,5 +98,5 @@ contract Classifier64 is Classifier {
      * @param data The training data or features.
      * @param classification The label for `data`.
      */
-    function update(int64[] memory data, uint64 classification) public;
+    function update(int64[] memory data, uint64 classification) public virtual;
 }

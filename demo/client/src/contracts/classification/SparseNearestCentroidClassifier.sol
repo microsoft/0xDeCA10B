@@ -1,4 +1,4 @@
-pragma solidity ^0.5.8;
+pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
 import "../../../lib/Math.sol";
@@ -97,11 +97,11 @@ contract SparseNearestCentroidClassifier is Classifier64 {
         emit AddClass(classification, classifications.length - 1);
     }
 
-    function norm(int64[] memory /* data */) public pure returns (uint) {
+    function norm(int64[] memory /* data */) public override pure returns (uint) {
         revert("Normalization is not required.");
     }
 
-    function predict(int64[] memory data) public view returns (uint64 bestClass) {
+    function predict(int64[] memory data) public override view returns (uint64 bestClass) {
         // Sparse representation: each number in data is a feature index.
         // Assume values in data are sorted in increasing order.
 
@@ -133,7 +133,7 @@ contract SparseNearestCentroidClassifier is Classifier64 {
         }
     }
 
-    function update(int64[] memory data, uint64 classification) public onlyOwner {
+    function update(int64[] memory data, uint64 classification) public override onlyOwner {
         require(classification < classInfos.length, "This classification has not been added yet.");
         ClassInfo storage classInfo = classInfos[classification];
         uint64[] memory centroid = classInfo.centroid;
