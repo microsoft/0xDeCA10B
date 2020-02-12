@@ -19,7 +19,7 @@ Adding data consists of validation by three steps as described below.
 
 The basics of the framework can be found in our [blog post][blog1].
 A demo of one incentive mechanism can be found [here][demo].
-More details can be found in the [initial paper][overview-paper] describing the framework, accepted to Blockchain-2019, The IEEE International Conference on Blockchain: (coming July 2019)
+More details can be found in the [initial paper][overview-paper] describing the framework, accepted to Blockchain-2019, The IEEE International Conference on Blockchain.
 
 This repository contains:
 * [Demos][demo-folder] showcasing some proof of concept systems using the Ethereum blockchain. There is a locally deployable test blockchain and demo dashboard to interact with smart contracts written in Solidity.
