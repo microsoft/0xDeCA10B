@@ -1,0 +1,4 @@
+# Abstract contracts do not work yet: https://github.com/duaraghav8/Ethlint/issues/281
+# grep -R --files-with-matches '^abstract contract' client/src/contracts/
+client/src/contracts/classification/Classifier.sol
+client/src/contracts/incentive/IncentiveMechanism.sol
