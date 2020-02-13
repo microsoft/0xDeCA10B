@@ -62,6 +62,7 @@ const styles = theme => ({
   },
   dropPaper: {
     ...theme.mixins.gutters(),
+    cursor: 'pointer',
     paddingTop: theme.spacing(2),
     paddingBottom: theme.spacing(2),
   },

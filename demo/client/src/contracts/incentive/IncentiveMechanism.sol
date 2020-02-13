@@ -1,11 +1,11 @@
-pragma solidity ^0.5.8;
+pragma solidity ^0.6;
 
 import {Ownable} from "../ownership/Ownable.sol";
 
 /**
  * Defines incentives for others to contribute "good" quality data.
  */
-contract IncentiveMechanism {
+abstract contract IncentiveMechanism {
     struct AddressStats {
         uint128 numValid;
         uint128 numSubmitted;
@@ -65,14 +65,14 @@ contract IncentiveMechanism {
     /**
      * @return The current cost (in wei) to update a model with one sample of training data.
      */
-    function getNextAddDataCost() public view returns (uint);
+    function getNextAddDataCost() public virtual view returns (uint);
 
     /**
      * @param currentTimeS The current time in seconds since the epoch.
      *
      * @return The amount of wei required to add data at `currentTimeS`.
      */
-    function getNextAddDataCost(uint currentTimeS) public view returns (uint);
+    function getNextAddDataCost(uint currentTimeS) public virtual view returns (uint);
 
     /**
      * @return The number of samples that have been determined to be good for `submitter`.
@@ -85,7 +85,7 @@ contract IncentiveMechanism {
 /**
  * An `IncentiveMechanism` for data with 64-bit values.
  */
-contract IncentiveMechanism64 is Ownable, IncentiveMechanism {
+abstract contract IncentiveMechanism64 is Ownable, IncentiveMechanism {
 
     /**
      * This method allows contracts to change the required deposit depending on the specific data being added.
@@ -97,7 +97,7 @@ contract IncentiveMechanism64 is Ownable, IncentiveMechanism {
      * @return The current cost to update a model with a specific sample of training data.
      */
     function getNextAddDataCost(int64[] memory data, uint64 classification)
-        public view
+        public virtual view
         returns (uint);
 
     /**
@@ -106,10 +106,10 @@ contract IncentiveMechanism64 is Ownable, IncentiveMechanism {
      * @param msgValue The value sent with the initial transaction to add data.
      * @param data A single sample of training data for the model.
      * @param classification The label for `data`.
-     * @return The cost required to add new data.
+     * @return cost The cost required to add new data.
      */
     function handleAddData(uint msgValue, int64[] memory data, uint64 classification)
-        public
+        public virtual
         returns (uint cost);
 
     /**
@@ -123,7 +123,7 @@ contract IncentiveMechanism64 is Ownable, IncentiveMechanism {
      * @param claimedBySubmitter True if the data has already been claimed by `submitter`, otherwise false.
      * @param prediction The current prediction of the model for data.
      * @param numClaims The number of claims that have been made for the contribution before this request.
-     * @return The amount to refund to `submitter`.
+     * @return refundAmount The amount to refund to `submitter`.
      */
     function handleRefund(
         address submitter,
@@ -132,7 +132,7 @@ contract IncentiveMechanism64 is Ownable, IncentiveMechanism {
         uint claimableAmount, bool claimedBySubmitter,
         uint64 prediction,
         uint numClaims)
-        public
+        public virtual
         returns (uint refundAmount);
 
     /**
@@ -148,7 +148,7 @@ contract IncentiveMechanism64 is Ownable, IncentiveMechanism {
      * @param claimedByReporter True if the data has already been claimed by `reporter`, otherwise false.
      * @param prediction The current prediction of the model for data.
      * @param numClaims The number of claims that have been made for the contribution before this request.
-     * @return The amount to reward to `reporter`.
+     * @return rewardAmount The amount to reward to `reporter`.
      */
     function handleReport(
         address reporter,
@@ -157,6 +157,6 @@ contract IncentiveMechanism64 is Ownable, IncentiveMechanism {
         uint initialDeposit, uint claimableAmount, bool claimedByReporter,
         uint64 prediction,
         uint numClaims)
-        public
+        public virtual
         returns (uint rewardAmount);
 }

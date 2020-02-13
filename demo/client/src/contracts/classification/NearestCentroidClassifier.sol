@@ -1,4 +1,4 @@
-pragma solidity ^0.5.8;
+pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
 import "../../../lib/Math.sol";
@@ -52,7 +52,7 @@ contract NearestCentroidClassifier is Classifier64 {
         emit AddClass(classification, classifications.length - 1);
     }
 
-    function norm(int64[] memory data) public pure returns (uint result) {
+    function norm(int64[] memory data) public override pure returns (uint result) {
         result = 0;
         for (uint i = 0; i < data.length; ++i) {
             result = result.add(uint(int128(data[i]) * data[i]));
@@ -60,7 +60,7 @@ contract NearestCentroidClassifier is Classifier64 {
         result = Math.sqrt(result);
     }
 
-    function predict(int64[] memory data) public view returns (uint64 bestClass) {
+    function predict(int64[] memory data) public override view returns (uint64 bestClass) {
         require(data.length == centroids[0].length, "Data doesn't have the correct length.");
         uint minDistance = UINT256_MAX;
         bestClass = 0;
@@ -85,7 +85,7 @@ contract NearestCentroidClassifier is Classifier64 {
         }
     }
 
-    function update(int64[] memory data, uint64 classification) public onlyOwner {
+    function update(int64[] memory data, uint64 classification) public override onlyOwner {
         require(data.length == centroids[classification].length, "Data doesn't have the correct number of dimensions.");
         require(classification < classifications.length, "Classification is out of bounds.");
         int64[] memory centroid = centroids[classification];

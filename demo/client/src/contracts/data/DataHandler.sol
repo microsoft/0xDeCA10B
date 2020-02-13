@@ -1,4 +1,4 @@
-pragma solidity ^0.5.8;
+pragma solidity ^0.6;
 
 import "../../../lib/SafeMath.sol";
 
@@ -123,7 +123,7 @@ contract DataHandler64 is Ownable, DataHandler {
      * @param cost The cost required to add new data.
      * @param data A single sample of training data for the model.
      * @param classification The label for `data`.
-     * @return The time which the data was added, i.e. the current time in seconds.
+     * @return time The time which the data was added, i.e. the current time in seconds.
      */
     function handleAddData(address msgSender, uint cost, int64[] memory data, uint64 classification)
         public onlyOwner
@@ -155,9 +155,9 @@ contract DataHandler64 is Ownable, DataHandler {
      * @param data The data for which to attempt a refund.
      * @param classification The label originally submitted for `data`.
      * @param addedTime The time in seconds for which the data was added.
-     * @return The amount that can be claimed for the refund.
-     * @return `true` if the data has already been claimed by `submitter`, otherwise `false`.
-     * @return The number of claims that have been made for the contribution before this request.
+     * @return claimableAmount The amount that can be claimed for the refund.
+     * @return claimedBySubmitter `true` if the data has already been claimed by `submitter`, otherwise `false`.
+     * @return numClaims The number of claims that have been made for the contribution before this request.
      */
     function handleRefund(address submitter, int64[] memory data, uint64 classification, uint addedTime)
         public onlyOwner
@@ -189,11 +189,11 @@ contract DataHandler64 is Ownable, DataHandler {
      * @param classification The label submitted for `data`.
      * @param addedTime The time in seconds for which the data was added.
      * @param originalAuthor The address that originally added the data.
-     * @return The amount that was initially deposited when the data contribution was submitted.
-     * @return The amount remainining that can be claimed.
-     * @return `true` if the data has already been claimed by `reporter`, otherwise `false`.
-     * @return The number of claims that have been made for the contribution before this request.
-     * @return The key to the stored data.
+     * @return initialDeposit The amount that was initially deposited when the data contribution was submitted.
+     * @return claimableAmount The amount remainining that can be claimed.
+     * @return claimedByReporter `true` if the data has already been claimed by `reporter`, otherwise `false`.
+     * @return numClaims The number of claims that have been made for the contribution before this request.
+     * @return dataKey The key to the stored data.
      */
     function handleReport(
         address reporter,
@@ -238,7 +238,7 @@ contract DataHandler64 is Ownable, DataHandler {
     }
 
     function updateClaimableAmount(bytes32 dataKey, uint rewardAmount)
-        public onlyOwner {
+        public override onlyOwner {
         StoredData storage existingData = addedData[dataKey];
         // Already validated key lookup.
         existingData.claimableAmount = existingData.claimableAmount.sub(rewardAmount);

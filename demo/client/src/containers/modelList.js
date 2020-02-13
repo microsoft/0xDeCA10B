@@ -266,9 +266,12 @@ class ModelList extends React.Component {
                   </div>
                 }
               </div>
-              : <Typography component="p">
-                No models found.
-            </Typography>
+              :
+              <div className={this.props.classes.descriptionDiv}>
+                <Typography component="p">
+                  No models found.
+                </Typography>
+              </div>
           }
         </Container>
       </div>
