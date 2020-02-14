@@ -109,6 +109,7 @@ class ModelList extends React.Component {
 
   updateModels() {
     // TODO Also get valid contracts that the account has already interacted with.
+    // TODO Filter out models that are not on this network.
     const limit = 6
     Promise.all(this.state.permittedStorageTypes.map(storageType => {
       const afterId = this.storageAfterAddress[storageType]

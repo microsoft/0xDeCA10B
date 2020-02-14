@@ -194,7 +194,19 @@ class Model extends React.Component {
       const contractInfo = await storage.getModel(this.state.modelId, this.state.contractAddress);
       this.setState({ contractInfo },
         async _ => {
-          await this.setContractInstance();
+          await this.setContractInstance()
+          if (typeof window !== "undefined" && window.ethereum) {
+            window.ethereum.on('accountsChanged', accounts => {
+              this.setState({ accounts, addedData: [], rewardData: [] }, _ => {
+                this.updateDynamicAccountInfo().then(() => {
+                  this.handleTabChange(null, this.state.tab)
+                })
+              })
+            })
+            window.ethereum.on('networkChanged', netId => {
+              this.setContractInstance()
+            })
+          }
         });
     } catch (error) {
       console.error(error);
@@ -211,6 +223,7 @@ class Model extends React.Component {
   }
 
   setContractInstance = async () => {
+    this.setState({ readyForInput: false })
     const accounts = await this.web3.eth.getAccounts();
 
     let contractAddress = this.state.contractInfo.address || null;
@@ -271,34 +284,23 @@ class Model extends React.Component {
         })
       ]);
 
-      this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism }, async _ => {
-        await Promise.all([
+      this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism }, _ => {
+        Promise.all([
           this.updateContractInfo(),
           this.updateDynamicInfo(),
           this.setTransformInputMethod(),
           this.setFeatureIndices(),
         ]).then(_ => {
           this.setState({ readyForInput: true });
-        });
-
-        this.handleTabChange(null, this.state.tab);
-
-        setInterval(this.updateDynamicInfo, 15 * 1000);
-
-        if (typeof window !== "undefined" && window.ethereum) {
-          window.ethereum.on('accountsChanged', accounts => {
-            this.setState({ accounts, addedData: [], rewardData: [] }, _ => {
-              this.updateDynamicAccountInfo().then(() => {
-                this.handleTabChange(null, this.state.tab);
-              });
-            });
-          });
-          window.ethereum.on('networkChanged', netId => {
-            this.setContractInstance();
-          });
-        }
-      });
-    });
+          this.handleTabChange(null, this.state.tab);
+          setInterval(this.updateDynamicInfo, 15 * 1000);
+        })
+      })
+    }).catch(err => {
+      // TODO Display persistent error message.
+      this.notify(`There was an error loading the contract at ${contractAddress}. Try using a different network.`, { variant: 'error' })
+      console.error(err)
+    })
   }
 
   /**
