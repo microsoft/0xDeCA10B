@@ -55,6 +55,8 @@ class App extends Component {
                   <Route exact path="/" component={ModelList} />
                   <Route path="/about" component={About} />
                   <Route path="/add" component={AddModel} />
+                  {/* TODO Create a page for adding a deployed model. */}
+                  <Route path="/addDeployed" component={AddModel} />
                   <Route path="/model" component={Model} />
                 </div>
               </div>
