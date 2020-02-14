@@ -35,6 +35,8 @@ class Footer extends React.Component {
           &nbsp;| &nbsp;
           <Link href='https://go.microsoft.com/fwlink/?LinkID=246338' target='_blank'>Terms of Use</Link>
           &nbsp;| &nbsp;
+          <Link href='https://www.microsoft.com/en-us/legal/intellectualproperty/copyright/default.aspx' target='_blank'>Microsoft Terms of Use</Link>
+          &nbsp;| &nbsp;
           <Link href='/about#code-of-conduct' target='_blank'>Code of Conduct</Link>
           &nbsp;| &nbsp;
           <Link href='https://go.microsoft.com/fwlink/?LinkId=506942' target='_blank'>Trademarks</Link>

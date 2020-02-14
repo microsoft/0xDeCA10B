@@ -23,10 +23,14 @@ class About extends React.Component {
         {name}
       </Typography>
       <Typography className={classes.section} component="p">
-        ⚠ WARNING When you upload a model or data to train a model, that data is added to a public blockchain not controlled by Microsoft.
+        ⚠ WARNING When you upload a model or data to train a model, that data is most likely added to a version of a third party <Link href='https://ethereum.org/' target='_blank'>Ethereum</Link> blockchain network not controlled by Microsoft.
         Unless explicitly indicated, your data is not stored on Microsoft controlled machines.
-        Your internet browser allows you to create transactions directly with a public blockchain.
-        Microsoft has no control over these transaction since the request is not sent to Microsoft machines before being sent directly to the blockchain by your browser.
+        Your internet browser allows you to create transactions directly with a blockchain you have chosen through your browser or a browser extension like <Link href='https://metamask.io/' target='_blank'>MetaMask</Link>.
+        Microsoft has no control over these transactions since the request is never sent to Microsoft machines before being sent from your browser directly to the blockchain network.
+      </Typography>
+      <Typography className={classes.section} component="p">
+        If you have not changed the default blockchain network in your browser's or extension's settings, then it is likely set to use the public Ethereum mainnet.
+        Microsoft does not fully endorse nor support the use of the mainnet or any other third party network because all information in it is public.
       </Typography>
       <Typography className={classes.sectionTitle} variant="h5" component="h5">
         <Link color='inherit' href='#code-of-conduct' name='code-of-conduct'>Code of Conduct</Link>
@@ -35,9 +39,10 @@ class About extends React.Component {
         The <Link href='https://go.microsoft.com/fwlink/?LinkID=246338' target='_blank'>Code of Conduct</Link> for Microsoft should be followed.
       </Typography>
       <Typography className={classes.section} component="p">
-        Since all data uploaded for training is effectively public, we encourage you not to upload data with personal information.
+        Usually the blockchain you will select is public, therefore all data uploaded for training is effectively public.
+        We encourage you not to upload nor use data with personal information.
         In our example smart contracts, getting predictions from models when you give data should not save the data to a public blockchain.
-        You can tell if an action you take is saving data to a public blockchain because your browser should pop-up a notification asking you to confirm the transaction using something like <Link href='https://metamask.io/' target='_blank' rel="noopener">MetaMask</Link>.
+        You can tell if an action you take is saving data beyond your control because your browser should pop-up a notification asking you to confirm the transaction using something like <Link href='https://metamask.io/' target='_blank' rel="noopener">MetaMask</Link>.
       </Typography>
       <Typography className={classes.sectionTitle} variant="h5" component="h5">
         <Link color='inherit' href='#learn-more' name='learn-more'>Learn More</Link>
