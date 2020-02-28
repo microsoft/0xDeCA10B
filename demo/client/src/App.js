@@ -8,7 +8,7 @@ import { BrowserRouter as Router, Route } from 'react-router-dom';
 import About from './components/About';
 import AddModel from './components/addModel';
 import AppBar from './components/appBar';
-import ListDeployedModel from './components/listDeployedModel';
+import AddDeployedModel from './components/addDeployedModel';
 import Model from './components/model';
 import ModelList from './containers/modelList';
 import Footer from './Footer';
@@ -56,7 +56,7 @@ class App extends Component {
                   <Route exact path="/" component={ModelList} />
                   <Route path="/about" component={About} />
                   <Route path="/add" component={AddModel} />
-                  <Route path="/listDeployed" component={ListDeployedModel} />
+                  <Route path="/addDeployedModel" component={AddDeployedModel} />
                   <Route path="/model" component={Model} />
                 </div>
               </div>

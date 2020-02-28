@@ -239,7 +239,7 @@ class ModelList extends React.Component {
             </Typography>
             <div>
               <Button className={this.props.classes.button} variant="outlined" color="primary"
-                href='/listDeployed'
+                href='/addDeployedModel'
               >
                 <AddIcon />&nbsp;Use a deployed model
               </Button>
