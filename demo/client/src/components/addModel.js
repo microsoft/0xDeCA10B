@@ -457,6 +457,8 @@ class AddModel extends React.Component {
         }).catch(err => {
           console.error(err);
           console.error(err.response.data.message);
+          this.notify("There was an error saving the model information. Check the console for details.",
+            { variant: 'error' })
         });
       }
     });

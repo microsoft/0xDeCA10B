@@ -8,6 +8,7 @@ import { BrowserRouter as Router, Route } from 'react-router-dom';
 import About from './components/About';
 import AddModel from './components/addModel';
 import AppBar from './components/appBar';
+import ListDeployedModel from './components/listDeployedModel';
 import Model from './components/model';
 import ModelList from './containers/modelList';
 import Footer from './Footer';
@@ -55,8 +56,7 @@ class App extends Component {
                   <Route exact path="/" component={ModelList} />
                   <Route path="/about" component={About} />
                   <Route path="/add" component={AddModel} />
-                  {/* TODO Create a page for adding a deployed model. */}
-                  <Route path="/addDeployed" component={AddModel} />
+                  <Route path="/listDeployed" component={ListDeployedModel} />
                   <Route path="/model" component={Model} />
                 </div>
               </div>
