@@ -31,7 +31,6 @@ const styles = theme => ({
     flexDirection: 'column'
   },
   input: {
-    // display: 'none'
   },
   button: {
     marginTop: 20,
@@ -47,32 +46,18 @@ const styles = theme => ({
     // Some of the labels are long so we need long input boxes to show the entire label nicely.
     width: 300,
   },
-  dropPaper: {
-    ...theme.mixins.gutters(),
-    cursor: 'pointer',
-    paddingTop: theme.spacing(2),
-    paddingBottom: theme.spacing(2),
-  },
-  table: {
-    minWidth: 650,
-    wordBreak: 'break-word',
-  },
-});
+})
 
 class AddDeployedModel extends React.Component {
 
   constructor(props) {
-    super(props);
-    this.classes = props.classes;
+    super(props)
+    this.classes = props.classes
 
-    this.modelTypes = {
-      'dense perceptron': DensePerceptron,
-      'sparse perceptron': SparsePerceptron,
-    };
-    this.web3 = null;
+    this.web3 = null
 
     // Default to local storage for storing original data.
-    const storageType = localStorage.getItem('storageType') || 'local';
+    const storageType = localStorage.getItem('storageType') || 'local'
     this.storages = DataStoreFactory.getAll()
 
     this.state = {

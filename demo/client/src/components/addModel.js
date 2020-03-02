@@ -43,9 +43,6 @@ const styles = theme => ({
     flex: 1,
     flexDirection: 'column'
   },
-  input: {
-    // display: 'none'
-  },
   button: {
     marginTop: 20,
   },
