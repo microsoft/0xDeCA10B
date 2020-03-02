@@ -185,6 +185,7 @@ class Model extends React.Component {
 
   componentDidMount = async () => {
     checkStorages(this.storages).then(permittedStorageTypes => {
+      permittedStorageTypes.push('none')
       this.setState({ permittedStorageTypes })
     })
     try {

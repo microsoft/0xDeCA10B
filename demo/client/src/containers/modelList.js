@@ -59,6 +59,7 @@ class ModelList extends React.Component {
   constructor(props) {
     super(props);
 
+    this.validator = new OnlineSafetyValidator()
     this.storages = DataStoreFactory.getAll()
     this.storageAfterAddress = {}
 
@@ -75,7 +76,6 @@ class ModelList extends React.Component {
   }
 
   componentDidMount = async () => {
-    this.validator = new OnlineSafetyValidator()
     this.networkType = await getNetworkType()
 
     checkStorages(this.storages).then(permittedStorageTypes => {

@@ -1,4 +1,5 @@
 import Button from '@material-ui/core/Button';
+import clsx from 'clsx';
 import Container from '@material-ui/core/Container';
 import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
@@ -10,11 +11,11 @@ import Typography from '@material-ui/core/Typography';
 import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
 import React from 'react';
-import DensePerceptron from '../contracts/compiled/DensePerceptron.json';
-import SparsePerceptron from '../contracts/compiled/SparsePerceptron.json';
-import { getWeb3 } from '../getWeb3';
+import { getNetworkType, getWeb3 } from '../getWeb3';
+import { OnlineSafetyValidator } from '../safety/validator';
 import { ModelInformation } from '../storage/data-store';
 import { DataStoreFactory } from '../storage/data-store-factory';
+import { ContractValidator } from '../validator/contract-validator';
 import { checkStorages, renderStorageSelector } from './storageSelector';
 
 const styles = theme => ({
@@ -30,6 +31,9 @@ const styles = theme => ({
     flex: 1,
     flexDirection: 'column'
   },
+  addressInput: {
+    maxWidth: 500,
+  },
   input: {
   },
   button: {
@@ -42,9 +46,8 @@ const styles = theme => ({
     paddingTop: theme.spacing(1),
     marginBottom: 8,
   },
-  numberTextField: {
-    // Some of the labels are long so we need long input boxes to show the entire label nicely.
-    width: 300,
+  detailsDivider: {
+    paddingTop: 20,
   },
 })
 
@@ -54,6 +57,8 @@ class AddDeployedModel extends React.Component {
     super(props)
     this.classes = props.classes
 
+    this.validator = new OnlineSafetyValidator()
+    this.contractValidator = new ContractValidator()
     this.web3 = null
 
     // Default to local storage for storing original data.
@@ -64,8 +69,8 @@ class AddDeployedModel extends React.Component {
       // The contract at the specific address is valid.
       isValid: false,
       address: undefined,
-      name: "",
-      description: "",
+      name: undefined,
+      description: undefined,
       toFloat: 1E9,
       modelType: 'Classifier64',
       modelFileName: undefined,
@@ -87,7 +92,14 @@ class AddDeployedModel extends React.Component {
       this.web3 = await getWeb3()
     } catch (error) {
       this.notify("Failed to load web3, accounts, or contract. Check console for details.", { variant: 'error' })
-      console.error(error);
+      console.error(error)
+      return
+    }
+
+    const currentUrlParams = new URLSearchParams(window.location.search)
+    const address = currentUrlParams.get('address')
+    if (address) {
+      this.setState({ address }, this.validateContract)
     }
   }
 
@@ -110,15 +122,32 @@ class AddDeployedModel extends React.Component {
       if (name === 'storageType') {
         localStorage.setItem(name, value)
       } else if (name === 'address') {
-        this.validateContract(value)
+        this.validateContract()
       }
     })
   }
 
-  validateContract(address) {
-    // TODO Validate contract at `address`.
-    // TODO If online safety is disabled, then pre-populate the information from the contract.
-    this.setState({ isValid: true })
+  async validateContract() {
+    // TODO Start spinner.
+    const { address } = this.state
+
+    // TODO Make sure not already stored.
+
+    const isValid = await this.contractValidator.isValid(address)
+    let restrictContent = undefined
+
+    if (isValid) {
+      restrictContent = !this.validator.isPermitted(await getNetworkType(), address)
+      if (!restrictContent) {
+        // TODO Pre-populate the information from the contract.
+      }
+    }
+
+    this.setState({
+      checkedContentRestriction: true,
+      restrictContent,
+      isValid,
+    })
   }
 
   render() {
@@ -138,31 +167,40 @@ class AddDeployedModel extends React.Component {
               <TextField
                 name="address"
                 label="Entry point address"
+                value={this.state.address || ""}
                 inputProps={{ 'aria-label': "Entry point address" }}
-                className={this.classes.textField}
+                className={clsx(this.classes.textField, this.classes.addressInput)}
                 margin="normal"
                 onChange={this.handleInputChange}
               />
+              {/* TODO Show check mark if valid. */}
               <div className={this.classes.selector}>
-                {renderStorageSelector("where to store the supplied meta-data about this model like its address",
+                {renderStorageSelector("where to store the supplied meta-data about this model",
                   this.state.storageType, this.handleInputChange, this.state.permittedStorageTypes)}
               </div>
-              {/* TODO Disable some of these fields until address is given and validated. */}
+              <div className={this.classes.detailsDivider}></div>
+              <Typography component="p">
+                Provide a valid contract address before filling out the rest of the fields.
+              </Typography>
               <TextField
                 name="name"
                 label="Model name"
+                value={this.state.name || ""}
                 inputProps={{ 'aria-label': "Model name" }}
                 className={this.classes.textField}
                 margin="normal"
                 onChange={this.handleInputChange}
+                disabled={!this.state.isValid}
               />
               <TextField
                 name="description"
                 label="Model description"
+                value={this.state.description || ""}
                 inputProps={{ 'aria-label': "Model description" }}
                 className={this.classes.textField}
                 margin="normal"
                 onChange={this.handleInputChange}
+                disabled={!this.state.isValid}
               />
               <InputLabel className={this.classes.selectorLabel} htmlFor="model-type">Model type</InputLabel>
               <Select className={this.classes.selector}
@@ -171,6 +209,7 @@ class AddDeployedModel extends React.Component {
                 inputProps={{
                   name: 'modelType',
                 }}
+                disabled={!this.state.isValid}
               >
                 <MenuItem value={"Classifier64"}>Classifier64</MenuItem>
               </Select>
@@ -181,6 +220,7 @@ class AddDeployedModel extends React.Component {
                 inputProps={{
                   name: 'encoder',
                 }}
+                disabled={!this.state.isValid}
               >
                 <MenuItem value={"none"}>None</MenuItem>
                 <MenuItem value={"IMDB vocab"}>IMDB vocab (for English text)</MenuItem>
@@ -202,38 +242,37 @@ class AddDeployedModel extends React.Component {
 
 
   async save() {
-    // TODO
-    const { address, name, description, model, modelType, encoder } = this.state;
+    const { address, name, description, modelType, encoder } = this.state;
     const modelInfo = new ModelInformation({ name, address, description, modelType, encoder })
 
     // Validate
     if (!name) {
       this.notify("Please provide a name", { variant: 'error' });
-      return;
+      return
     }
-    if (modelType === undefined || model === undefined) {
-      this.notify("You must select model type and provide a model file", { variant: 'error' });
-      return;
+    if (modelType === undefined) {
+      this.notify("You must select model type", { variant: 'error' });
+      return
+    }
+    if (encoder === undefined) {
+      this.notify("You must select an encoder", { variant: 'error' });
+      return
     }
 
-    // TODO Make sure storage type is not 'none'.
-    if (this.state.storageType !== 'none') {
-      // Save to a database.
-      const storage = this.storages[this.state.storageType];
-      storage.saveModelInformation(modelInfo).then(() => {
-        // Redirect
-        const redirectWaitS = 5
-        this.notify(`Saved. Will redirect in ${redirectWaitS} seconds.`, { variant: 'success' })
-        setTimeout(_ => {
-          this.props.history.push(`/model?address=${address}&metaDataLocation=${this.state.storageType}`)
-        }, redirectWaitS * 1000)
-      }).catch(err => {
-        console.error(err)
-        console.error(err.response.data.message)
-        this.notify("There was an error saving the model information. Check the console for details.",
-          { variant: 'error' })
-      });
-    }
+    // Save to a database.
+    const storage = this.storages[this.state.storageType];
+    storage.saveModelInformation(modelInfo).then(() => {
+      // Redirect
+      const redirectWaitS = 5
+      this.notify(`Saved. Will redirect in ${redirectWaitS} seconds.`, { variant: 'success' })
+      setTimeout(_ => {
+        this.props.history.push(`/model?address=${address}&metaDataLocation=${this.state.storageType}`)
+      }, redirectWaitS * 1000)
+    }).catch(err => {
+      console.error(err)
+      this.notify("There was an error saving the model information. Check the console for details.",
+        { variant: 'error' })
+    })
   }
 }
 

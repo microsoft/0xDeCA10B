@@ -32,7 +32,9 @@ export function renderStorageSelector(detailedDescription, currentValue, handleI
             name: 'storageType',
             id: 'storage-selector',
         }}>
-            <MenuItem key="storage-select-none" value="none">None (do not store data)</MenuItem>
+            {permittedStorageTypes.indexOf('none') >= 0 &&
+                <MenuItem key="storage-select-none" value="none">None (do not store data)</MenuItem>
+            }
             {permittedStorageTypes.indexOf('local') >= 0 &&
                 <MenuItem key="storage-select-local" value="local">Local (only on this device)</MenuItem>
             }
@@ -40,5 +42,5 @@ export function renderStorageSelector(detailedDescription, currentValue, handleI
                 <MenuItem key="storage-select-service" value="service">External (a database elsewhere)</MenuItem>
             }
         </Select>
-    </div>;
+    </div>
 }
