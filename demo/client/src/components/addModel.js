@@ -221,7 +221,6 @@ class AddModel extends React.Component {
                 name="name"
                 label="Model name"
                 inputProps={{ 'aria-label': "Model name" }}
-                className={this.classes.textField}
                 margin="normal"
                 onChange={this.handleInputChange}
               />
@@ -229,7 +228,6 @@ class AddModel extends React.Component {
                 name="description"
                 label="Model description"
                 inputProps={{ 'aria-label': "Model description" }}
-                className={this.classes.textField}
                 margin="normal"
                 onChange={this.handleInputChange}
               />

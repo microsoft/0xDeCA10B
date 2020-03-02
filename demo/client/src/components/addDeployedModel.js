@@ -1,6 +1,6 @@
 import Button from '@material-ui/core/Button';
-import clsx from 'clsx';
 import Container from '@material-ui/core/Container';
+import Grid from '@material-ui/core/Grid';
 import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
 import Paper from '@material-ui/core/Paper';
@@ -8,6 +8,8 @@ import Select from '@material-ui/core/Select';
 import { withStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
+import CheckIcon from '@material-ui/icons/Check';
+import ClearIcon from '@material-ui/icons/Clear';
 import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
 import React from 'react';
@@ -30,6 +32,9 @@ const styles = theme => ({
     display: 'flex',
     flex: 1,
     flexDirection: 'column'
+  },
+  contractStatus: {
+    marginTop: 30,
   },
   addressInput: {
     maxWidth: 500,
@@ -67,7 +72,7 @@ class AddDeployedModel extends React.Component {
 
     this.state = {
       // The contract at the specific address is valid.
-      isValid: false,
+      isValid: undefined,
       address: undefined,
       name: undefined,
       description: undefined,
@@ -164,16 +169,24 @@ class AddDeployedModel extends React.Component {
           </Typography>
           <form className={this.classes.container} noValidate autoComplete="off">
             <div className={this.classes.form} >
-              <TextField
-                name="address"
-                label="Entry point address"
-                value={this.state.address || ""}
-                inputProps={{ 'aria-label': "Entry point address" }}
-                className={clsx(this.classes.textField, this.classes.addressInput)}
-                margin="normal"
-                onChange={this.handleInputChange}
-              />
-              {/* TODO Show check mark if valid. */}
+              {/* FIXME The first item has a reduced width. */}
+              <Grid container spacing={2}>
+                <Grid item>
+                  <TextField
+                    name="address"
+                    label="Entry point address"
+                    value={this.state.address || ""}
+                    inputProps={{ 'aria-label': "Entry point address" }}
+                    className={this.classes.addressInput}
+                    margin="normal"
+                    onChange={this.handleInputChange}
+                  />
+                </Grid>
+                <Grid item className={this.classes.contractStatus}>
+                  {this.state.isValid && <CheckIcon />}
+                  {this.state.isValid === false && <ClearIcon />}
+                </Grid>
+              </Grid>
               <div className={this.classes.selector}>
                 {renderStorageSelector("where to store the supplied meta-data about this model",
                   this.state.storageType, this.handleInputChange, this.state.permittedStorageTypes)}
@@ -187,7 +200,6 @@ class AddDeployedModel extends React.Component {
                 label="Model name"
                 value={this.state.name || ""}
                 inputProps={{ 'aria-label': "Model name" }}
-                className={this.classes.textField}
                 margin="normal"
                 onChange={this.handleInputChange}
                 disabled={!this.state.isValid}
@@ -197,7 +209,6 @@ class AddDeployedModel extends React.Component {
                 label="Model description"
                 value={this.state.description || ""}
                 inputProps={{ 'aria-label': "Model description" }}
-                className={this.classes.textField}
                 margin="normal"
                 onChange={this.handleInputChange}
                 disabled={!this.state.isValid}
