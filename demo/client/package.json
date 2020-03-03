@@ -32,7 +32,8 @@
     "serve": "^11.2.0",
     "truffle": "^5.1.12",
     "typescript": "^3.7.3",
-    "web3": "^1.2.6"
+    "web3": "^1.2.6",
+    "web3-eth-contract": "^1.2.6"
   },
   "scripts": {
     "start": "bash deploy_client.sh",

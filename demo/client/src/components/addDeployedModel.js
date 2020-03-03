@@ -66,7 +66,6 @@ class AddDeployedModel extends React.Component {
     this.classes = props.classes
 
     this.validator = new OnlineSafetyValidator()
-    this.contractValidator = new ContractValidator()
     this.web3 = null
 
     // Default to local storage for storing original data.
@@ -99,6 +98,7 @@ class AddDeployedModel extends React.Component {
     })
     try {
       this.web3 = await getWeb3()
+      this.contractValidator = new ContractValidator(this.web3)
     } catch (error) {
       this.notify("Failed to load web3, accounts, or contract. Check console for details.", { variant: 'error' })
       console.error(error)
@@ -167,25 +167,26 @@ class AddDeployedModel extends React.Component {
         // Nothing was found.
       }
 
-
-      const isValid = await this.contractValidator.isValid(address)
       let restrictContent = undefined
+      const validationStatus = await this.contractValidator.isValid(address)
+      const { isValid, reason } = validationStatus
 
       if (isValid) {
         restrictContent = !this.validator.isPermitted(await getNetworkType(), address)
         if (!restrictContent) {
           // TODO Pre-populate the information from the contract.
         }
+      } else {
+        this.notify(reason, { variant: 'error' })
       }
-      // FIXME Remove fake delay added for testing the UI.
-      setTimeout(_ => {
-        this.setState({
-          checkedContentRestriction: true,
-          restrictContent,
-          isValid,
-          validatingContract: false,
-        })
-      }, 1000)
+
+      this.setState({
+        checkedContentRestriction: true,
+        restrictContent,
+        isValid,
+        validatingContract: false,
+        invalidReason: reason,
+      })
     })
   }
 
@@ -306,8 +307,6 @@ class AddDeployedModel extends React.Component {
       </Container>
     );
   }
-
-
 
   async save() {
     const { address, name, description, modelType, encoder } = this.state;
