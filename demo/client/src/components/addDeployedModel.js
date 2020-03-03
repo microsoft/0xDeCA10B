@@ -1,4 +1,6 @@
 import Button from '@material-ui/core/Button';
+import CircularProgress from '@material-ui/core/CircularProgress';
+import green from '@material-ui/core/colors/green';
 import Container from '@material-ui/core/Container';
 import Grid from '@material-ui/core/Grid';
 import InputLabel from '@material-ui/core/InputLabel';
@@ -29,15 +31,16 @@ const styles = theme => ({
     marginBottom: theme.spacing(2),
   },
   form: {
+    paddingTop: 20,
     display: 'flex',
     flex: 1,
-    flexDirection: 'column'
+    flexDirection: 'column',
   },
   contractStatus: {
     marginTop: 30,
   },
   addressInput: {
-    maxWidth: 500,
+    maxWidth: 400,
   },
   input: {
   },
@@ -73,6 +76,7 @@ class AddDeployedModel extends React.Component {
     this.state = {
       // The contract at the specific address is valid.
       isValid: undefined,
+      validatingContract: false,
       address: undefined,
       name: undefined,
       description: undefined,
@@ -132,27 +136,75 @@ class AddDeployedModel extends React.Component {
     })
   }
 
-  async validateContract() {
-    // TODO Start spinner.
-    const { address } = this.state
-
-    // TODO Make sure not already stored.
-
-    const isValid = await this.contractValidator.isValid(address)
-    let restrictContent = undefined
-
-    if (isValid) {
-      restrictContent = !this.validator.isPermitted(await getNetworkType(), address)
-      if (!restrictContent) {
-        // TODO Pre-populate the information from the contract.
-      }
-    }
-
+  validateContract() {
     this.setState({
-      checkedContentRestriction: true,
-      restrictContent,
-      isValid,
+      checkedContentRestriction: false,
+      restrictContent: undefined,
+      isValid: undefined,
+      validatingContract: true,
+    }, async () => {
+      const { address } = this.state
+
+      if (!address || address.length === 0) {
+        this.setState({
+          isValid: undefined,
+          validatingContract: false,
+        })
+        return
+      }
+
+      // TODO Make sure not already stored.
+
+      const isValid = await this.contractValidator.isValid(address)
+      let restrictContent = undefined
+
+      if (isValid) {
+        restrictContent = !this.validator.isPermitted(await getNetworkType(), address)
+        if (!restrictContent) {
+          // TODO Pre-populate the information from the contract.
+        }
+      }
+      // FIXME Remove fake delay added for testing the UI.
+      setTimeout(_ => {
+        this.setState({
+          checkedContentRestriction: true,
+          restrictContent,
+          isValid,
+          validatingContract: false,
+        })
+      }, 1000)
     })
+  }
+
+  renderContractStatus() {
+    let status, detailedStatus
+    if (this.state.validatingContract) {
+      status = <CircularProgress size={25} />
+      detailedStatus = "Checking"
+    } else if (this.state.isValid) {
+      status = <CheckIcon style={{ color: green[500] }} />
+      detailedStatus = "The contract is likely valid"
+    } else if (this.state.isValid === false) {
+      status = <ClearIcon color="error" />
+      detailedStatus = "The contract is likely not valid"
+    } else {
+      detailedStatus = "enter a contract address"
+    }
+    return (<Grid container spacing={2}>
+      <Grid item>
+        <Typography component="p">
+          Contract Status:
+        </Typography>
+      </Grid>
+      <Grid item xs={1}>
+        {status}
+      </Grid>
+      <Grid item>
+        <Typography component="p">
+          {detailedStatus}
+        </Typography>
+      </Grid>
+    </Grid>)
   }
 
   render() {
@@ -169,24 +221,16 @@ class AddDeployedModel extends React.Component {
           </Typography>
           <form className={this.classes.container} noValidate autoComplete="off">
             <div className={this.classes.form} >
-              {/* FIXME The first item has a reduced width. */}
-              <Grid container spacing={2}>
-                <Grid item>
-                  <TextField
-                    name="address"
-                    label="Entry point address"
-                    value={this.state.address || ""}
-                    inputProps={{ 'aria-label': "Entry point address" }}
-                    className={this.classes.addressInput}
-                    margin="normal"
-                    onChange={this.handleInputChange}
-                  />
-                </Grid>
-                <Grid item className={this.classes.contractStatus}>
-                  {this.state.isValid && <CheckIcon />}
-                  {this.state.isValid === false && <ClearIcon />}
-                </Grid>
-              </Grid>
+              {this.renderContractStatus()}
+              <TextField
+                name="address"
+                label="Entry point address"
+                value={this.state.address || ""}
+                inputProps={{ 'aria-label': "Entry point address" }}
+                className={this.classes.addressInput}
+                margin="normal"
+                onChange={this.handleInputChange}
+              />
               <div className={this.classes.selector}>
                 {renderStorageSelector("where to store the supplied meta-data about this model",
                   this.state.storageType, this.handleInputChange, this.state.permittedStorageTypes)}
