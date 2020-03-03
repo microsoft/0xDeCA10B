@@ -153,7 +153,20 @@ class AddDeployedModel extends React.Component {
         return
       }
 
-      // TODO Make sure not already stored.
+      // Make sure not already stored.
+      const storage = this.storages[this.state.storageType]
+      try {
+        await storage.getModel(null, address)
+        this.setState({
+          isValid: false,
+          validatingContract: false,
+        })
+        this.notify("A model at this address has already been recorded", { variant: 'error' })
+        return
+      } catch (err) {
+        // Nothing was found.
+      }
+
 
       const isValid = await this.contractValidator.isValid(address)
       let restrictContent = undefined
