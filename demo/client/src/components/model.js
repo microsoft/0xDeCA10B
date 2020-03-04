@@ -28,10 +28,8 @@ import React from 'react';
 import Dropzone from 'react-dropzone';
 import ClipLoader from 'react-spinners/ClipLoader';
 import GridLoader from 'react-spinners/GridLoader';
-import Classifier from "../contracts/compiled/Classifier64.json";
 import CollaborativeTrainer from '../contracts/compiled/CollaborativeTrainer64.json';
-import DataHandler from '../contracts/compiled/DataHandler64.json';
-import IncentiveMechanism from '../contracts/compiled/IncentiveMechanism.json';
+import { ContractLoader } from '../contracts/loader';
 import ImdbVocab from '../data/imdb.json';
 import { getNetworkType, getWeb3 } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
@@ -185,6 +183,7 @@ class Model extends React.Component {
 
   componentDidMount = async () => {
     checkStorages(this.storages).then(permittedStorageTypes => {
+      permittedStorageTypes.push('none')
       this.setState({ permittedStorageTypes })
     })
     try {
@@ -194,7 +193,19 @@ class Model extends React.Component {
       const contractInfo = await storage.getModel(this.state.modelId, this.state.contractAddress);
       this.setState({ contractInfo },
         async _ => {
-          await this.setContractInstance();
+          await this.setContractInstance()
+          if (typeof window !== "undefined" && window.ethereum) {
+            window.ethereum.on('accountsChanged', accounts => {
+              this.setState({ accounts, addedData: [], rewardData: [] }, _ => {
+                this.updateDynamicAccountInfo().then(() => {
+                  this.handleTabChange(null, this.state.tab)
+                })
+              })
+            })
+            window.ethereum.on('networkChanged', netId => {
+              this.setContractInstance()
+            })
+          }
         });
     } catch (error) {
       console.error(error);
@@ -211,6 +222,7 @@ class Model extends React.Component {
   }
 
   setContractInstance = async () => {
+    this.setState({ readyForInput: false })
     const accounts = await this.web3.eth.getAccounts();
 
     let contractAddress = this.state.contractInfo.address || null;
@@ -235,70 +247,27 @@ class Model extends React.Component {
     }
 
     // Using one `.then` and then awaiting helps with making the page more responsive.
-    this.getContractInstance({
-      abi: CollaborativeTrainer.abi,
-      address: contractAddress
-    }).then(async contractInstance => {
-      const [
-        dataHandler,
-        classifier,
-        incentiveMechanism,
-      ] = await Promise.all([
-        contractInstance.methods.dataHandler().call().then(dataHandlerAddress => {
-          return this.getContractInstance({
-            abi: DataHandler.abi,
-            address: dataHandlerAddress
-          })
-        }),
-        contractInstance.methods.classifier().call().then(classifierAddress => {
-          let modelAbi;
-          if (this.state.contractInfo.modelType === "Classifier64") {
-            modelAbi = Classifier.abi;
-          } else {
-            // TODO Get abi from https://etherscan.io/apis#contracts
-            this.notify("Couldn't determine model ABI", { variant: 'error' })
-          }
-          return this.getContractInstance({
-            abi: modelAbi,
-            address: classifierAddress
-          });
-        }),
-        contractInstance.methods.incentiveMechanism().call().then(incentiveMechanismAddress => {
-          return this.getContractInstance({
-            abi: IncentiveMechanism.abi,
-            address: incentiveMechanismAddress
-          });
-        })
-      ]);
+    new ContractLoader(this.web3).load(contractAddress).then(async collabTrainer => {
+      const contractInstance = collabTrainer.mainEntryPoint
+      const {classifier, dataHandler,incentiveMechanism} = collabTrainer
 
-      this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism }, async _ => {
-        await Promise.all([
+      this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism }, _ => {
+        Promise.all([
           this.updateContractInfo(),
           this.updateDynamicInfo(),
           this.setTransformInputMethod(),
           this.setFeatureIndices(),
         ]).then(_ => {
           this.setState({ readyForInput: true });
-        });
-
-        this.handleTabChange(null, this.state.tab);
-
-        setInterval(this.updateDynamicInfo, 15 * 1000);
-
-        if (typeof window !== "undefined" && window.ethereum) {
-          window.ethereum.on('accountsChanged', accounts => {
-            this.setState({ accounts, addedData: [], rewardData: [] }, _ => {
-              this.updateDynamicAccountInfo().then(() => {
-                this.handleTabChange(null, this.state.tab);
-              });
-            });
-          });
-          window.ethereum.on('networkChanged', netId => {
-            this.setContractInstance();
-          });
-        }
-      });
-    });
+          this.handleTabChange(null, this.state.tab);
+          setInterval(this.updateDynamicInfo, 15 * 1000);
+        })
+      })
+    }).catch(err => {
+      // TODO Display persistent error message.
+      this.notify(`There was an error loading the contract at ${contractAddress}. Try using a different network.`, { variant: 'error' })
+      console.error(err)
+    })
   }
 
   /**

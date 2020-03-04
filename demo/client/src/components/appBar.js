@@ -112,7 +112,7 @@ class CustomAppBar extends React.Component {
               <Link className={classes.navButton} title="Add a new model" to='/add'>
                 <Button>
                   <AddIcon />&nbsp;Add model
-              </Button>
+                </Button>
               </Link>
               <Link className={classes.navButton} title="About this site" to='/about'>
                 <Button>

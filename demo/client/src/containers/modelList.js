@@ -10,6 +10,7 @@ import Modal from '@material-ui/core/Modal';
 import Paper from '@material-ui/core/Paper';
 import { withStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
+import AddIcon from '@material-ui/icons/Add';
 import ClearIcon from '@material-ui/icons/Clear';
 import DeleteIcon from '@material-ui/icons/Delete';
 import { withSnackbar } from 'notistack';
@@ -58,6 +59,7 @@ class ModelList extends React.Component {
   constructor(props) {
     super(props);
 
+    this.validator = new OnlineSafetyValidator()
     this.storages = DataStoreFactory.getAll()
     this.storageAfterAddress = {}
 
@@ -74,7 +76,6 @@ class ModelList extends React.Component {
   }
 
   componentDidMount = async () => {
-    this.validator = new OnlineSafetyValidator()
     this.networkType = await getNetworkType()
 
     checkStorages(this.storages).then(permittedStorageTypes => {
@@ -109,6 +110,7 @@ class ModelList extends React.Component {
 
   updateModels() {
     // TODO Also get valid contracts that the account has already interacted with.
+    // TODO Filter out models that are not on this network.
     const limit = 6
     Promise.all(this.state.permittedStorageTypes.map(storageType => {
       const afterId = this.storageAfterAddress[storageType]
@@ -233,8 +235,15 @@ class ModelList extends React.Component {
             <Typography component="p">
               Here you will find models stored on a blockchain that you can interact with.
               Models are added to this list if you have recorded them locally in this browser
-              {serviceStorageEnabled && " or if they are listed on a centralized server"}.
+              {serviceStorageEnabled ? " or if they are listed on a centralized database" : ""}.
             </Typography>
+            <div>
+              <Button className={this.props.classes.button} variant="outlined" color="primary"
+                href='/addDeployedModel'
+              >
+                <AddIcon />&nbsp;Use a deployed model
+              </Button>
+            </div>
           </div>
           {this.state.loadingModels ?
             <div className={this.props.classes.spinnerDiv}>

@@ -2,6 +2,7 @@ import Button from '@material-ui/core/Button';
 import Container from '@material-ui/core/Container';
 import Grid from '@material-ui/core/Grid';
 import InputLabel from '@material-ui/core/InputLabel';
+import Link from '@material-ui/core/Link';
 import MenuItem from '@material-ui/core/MenuItem';
 import Paper from '@material-ui/core/Paper';
 import Select from '@material-ui/core/Select';
@@ -42,9 +43,6 @@ const styles = theme => ({
     display: 'flex',
     flex: 1,
     flexDirection: 'column'
-  },
-  input: {
-    // display: 'none'
   },
   button: {
     marginTop: 20,
@@ -129,6 +127,7 @@ class AddModel extends React.Component {
 
   componentDidMount = async () => {
     checkStorages(this.storages).then(permittedStorageTypes => {
+      permittedStorageTypes.push('none')
       this.setState({ permittedStorageTypes })
     })
     try {
@@ -210,13 +209,18 @@ class AddModel extends React.Component {
           <Typography variant="h5" component="h3">
             Add your model
           </Typography>
+          <Typography component="p">
+            Add the information for the model you want to deploy.
+          </Typography>
+          <Typography component="p">
+            If you want to use a model that is already deployed, then you can add its information <Link href='/addDeployedModel'>here</Link>.
+          </Typography>
           <form className={this.classes.container} noValidate autoComplete="off">
             <div className={this.classes.form} >
               <TextField
                 name="name"
                 label="Model name"
                 inputProps={{ 'aria-label': "Model name" }}
-                className={this.classes.textField}
                 margin="normal"
                 onChange={this.handleInputChange}
               />
@@ -224,7 +228,6 @@ class AddModel extends React.Component {
                 name="description"
                 label="Model description"
                 inputProps={{ 'aria-label': "Model description" }}
-                className={this.classes.textField}
                 margin="normal"
                 onChange={this.handleInputChange}
               />
@@ -455,8 +458,12 @@ class AddModel extends React.Component {
             this.props.history.push(`/model?address=${mainContract.options.address}&metaDataLocation=${this.state.storageType}`)
           }, redirectWaitS * 1000)
         }).catch(err => {
-          console.error(err);
-          console.error(err.response.data.message);
+          console.error(err)
+          if (err.response && err.response.data && err.response.data.message) {
+            console.error(err.response.data.message)
+          }
+          this.notify("There was an error saving the model information. Check the console for details.",
+            { variant: 'error' })
         });
       }
     });

@@ -14,6 +14,10 @@ export class OnlineSafetyValidator {
         return `${networkType}-${address.toLowerCase()}`
     }
 
+    isEnabled(): boolean {
+        return this.enabled
+    }
+
     isPermitted(networkType: string, address: string): boolean {
         if (!this.enabled) {
             // Everything is permitted.
