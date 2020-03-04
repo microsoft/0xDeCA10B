@@ -190,7 +190,14 @@ class Model extends React.Component {
       this.web3 = await getWeb3()
 
       const storage = this.storages[this.state.metaDataLocation];
-      const contractInfo = await storage.getModel(this.state.modelId, this.state.contractAddress);
+      let contractInfo
+      try {
+        contractInfo = await storage.getModel(this.state.modelId, this.state.contractAddress);
+      } catch (err) {
+        // `setContractInstance` will set the other fields on `contractInfo`.
+        contractInfo = {}
+        contractInfo.address = this.state.contractAddress
+      }
       this.setState({ contractInfo },
         async _ => {
           await this.setContractInstance()
@@ -249,7 +256,9 @@ class Model extends React.Component {
     // Using one `.then` and then awaiting helps with making the page more responsive.
     new ContractLoader(this.web3).load(contractAddress).then(async collabTrainer => {
       const contractInstance = collabTrainer.mainEntryPoint
-      const {classifier, dataHandler,incentiveMechanism} = collabTrainer
+      const { classifier, dataHandler, incentiveMechanism } = collabTrainer
+      
+      // TODO Set fields in this.state.contractInfo that are not set yet.
 
       this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism }, _ => {
         Promise.all([
