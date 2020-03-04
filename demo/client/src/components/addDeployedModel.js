@@ -19,7 +19,7 @@ import { getNetworkType, getWeb3 } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
 import { ModelInformation } from '../storage/data-store';
 import { DataStoreFactory } from '../storage/data-store-factory';
-import { ContractValidator } from '../validator/contract-validator';
+import { ContractLoader } from '../contracts/loader';
 import { checkStorages, renderStorageSelector } from './storageSelector';
 
 const styles = theme => ({
@@ -98,7 +98,7 @@ class AddDeployedModel extends React.Component {
     })
     try {
       this.web3 = await getWeb3()
-      this.contractValidator = new ContractValidator(this.web3)
+      this.contractLoader = new ContractLoader(this.web3)
     } catch (error) {
       this.notify("Failed to load web3, accounts, or contract. Check console for details.", { variant: 'error' })
       console.error(error)
@@ -142,6 +142,7 @@ class AddDeployedModel extends React.Component {
       restrictContent: undefined,
       isValid: undefined,
       validatingContract: true,
+      invalidReason: undefined,
     }, async () => {
       const { address } = this.state
 
@@ -149,6 +150,7 @@ class AddDeployedModel extends React.Component {
         this.setState({
           isValid: undefined,
           validatingContract: false,
+          invalidReason: "No address was given",
         })
         return
       }
@@ -160,32 +162,39 @@ class AddDeployedModel extends React.Component {
         this.setState({
           isValid: false,
           validatingContract: false,
+          invalidReason: "A model at this address has already been recorded",
         })
         this.notify("A model at this address has already been recorded", { variant: 'error' })
         return
-      } catch (err) {
+      } catch (_) {
         // Nothing was found.
       }
 
-      let restrictContent = undefined
-      const validationStatus = await this.contractValidator.isValid(address)
-      const { isValid, reason } = validationStatus
-
-      if (isValid) {
-        restrictContent = !this.validator.isPermitted(await getNetworkType(), address)
+      this.contractLoader.load(address).then(async collabTrainer => {
+        const restrictContent = !this.validator.isPermitted(await getNetworkType(), address)
         if (!restrictContent) {
-          // TODO Pre-populate the information from the contract.
+          const name = await collabTrainer.mainEntryPoint.methods.name().call()
+          const description = await collabTrainer.mainEntryPoint.methods.description().call()
+          const encoder = await collabTrainer.mainEntryPoint.methods.encoder().call()
+          this.setState({
+            name, description, encoder,
+          })
         }
-      } else {
-        this.notify(reason, { variant: 'error' })
-      }
-
-      this.setState({
-        checkedContentRestriction: true,
-        restrictContent,
-        isValid,
-        validatingContract: false,
-        invalidReason: reason,
+        this.setState({
+          checkedContentRestriction: true,
+          restrictContent,
+          isValid: true,
+          validatingContract: false,
+        })
+      }).catch(err => {
+        console.error(err)
+        this.setState({
+          isValid: false,
+          validatingContract: false,
+          invalidReason: err.toString(),
+        })
+        this.notify(`The contract is not valid: ${err}`, { variant: 'error' })
+        return
       })
     })
   }
@@ -200,7 +209,7 @@ class AddDeployedModel extends React.Component {
       detailedStatus = "The contract is likely valid"
     } else if (this.state.isValid === false) {
       status = <ClearIcon color="error" />
-      detailedStatus = "The contract is likely not valid"
+      detailedStatus = `The contract is likely invalid${this.state.invalidReason !== undefined ? `. ${this.state.invalidReason}.` : ""}`
     } else {
       detailedStatus = "enter a contract address"
     }

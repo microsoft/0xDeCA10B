@@ -28,10 +28,8 @@ import React from 'react';
 import Dropzone from 'react-dropzone';
 import ClipLoader from 'react-spinners/ClipLoader';
 import GridLoader from 'react-spinners/GridLoader';
-import Classifier from "../contracts/compiled/Classifier64.json";
 import CollaborativeTrainer from '../contracts/compiled/CollaborativeTrainer64.json';
-import DataHandler from '../contracts/compiled/DataHandler64.json';
-import IncentiveMechanism from '../contracts/compiled/IncentiveMechanism.json';
+import { ContractLoader } from '../contracts/loader';
 import ImdbVocab from '../data/imdb.json';
 import { getNetworkType, getWeb3 } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
@@ -244,46 +242,15 @@ class Model extends React.Component {
       const networkType = await getNetworkType()
       this.setState({
         checkedContentRestriction: true,
+        // TODO It might be always okay to show the content if it is stored locally.
         restrictContent: !validator.isPermitted(networkType, contractAddress)
       })
     }
 
     // Using one `.then` and then awaiting helps with making the page more responsive.
-    this.getContractInstance({
-      abi: CollaborativeTrainer.abi,
-      address: contractAddress
-    }).then(async contractInstance => {
-      const [
-        dataHandler,
-        classifier,
-        incentiveMechanism,
-      ] = await Promise.all([
-        contractInstance.methods.dataHandler().call().then(dataHandlerAddress => {
-          return this.getContractInstance({
-            abi: DataHandler.abi,
-            address: dataHandlerAddress
-          })
-        }),
-        contractInstance.methods.classifier().call().then(classifierAddress => {
-          let modelAbi;
-          if (this.state.contractInfo.modelType === "Classifier64") {
-            modelAbi = Classifier.abi;
-          } else {
-            // TODO Get abi from https://etherscan.io/apis#contracts
-            this.notify("Couldn't determine model ABI", { variant: 'error' })
-          }
-          return this.getContractInstance({
-            abi: modelAbi,
-            address: classifierAddress
-          });
-        }),
-        contractInstance.methods.incentiveMechanism().call().then(incentiveMechanismAddress => {
-          return this.getContractInstance({
-            abi: IncentiveMechanism.abi,
-            address: incentiveMechanismAddress
-          });
-        })
-      ]);
+    new ContractLoader(this.web3).load(contractAddress).then(async collabTrainer => {
+      const contractInstance = collabTrainer.mainEntryPoint
+      const {classifier, dataHandler,incentiveMechanism} = collabTrainer
 
       this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism }, _ => {
         Promise.all([
