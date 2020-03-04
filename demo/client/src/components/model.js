@@ -242,7 +242,6 @@ class Model extends React.Component {
       const networkType = await getNetworkType()
       this.setState({
         checkedContentRestriction: true,
-        // TODO It might be always okay to show the content if it is stored locally.
         restrictContent: !validator.isPermitted(networkType, contractAddress)
       })
     }
