@@ -51,6 +51,14 @@ const styles = theme => ({
     display: 'flex',
     flexDirection: 'column'
   },
+  descriptionDiv: {
+    paddingBottom: theme.spacing(2),
+  },
+  addToStorageDiv: {
+    // Only line of text.
+    minHeight: theme.spacing(4),
+    paddingBottom: theme.spacing(1),
+  },
   info: {
     paddingBottom: theme.spacing(1),
   },
@@ -131,6 +139,7 @@ class Model extends React.Component {
     this.state = {
       readyForInput: false,
       contractInfo: {},
+      foundModelInStorage: undefined,
       modelId: currentUrlParams.get('modelId'),
       metaDataLocation: currentUrlParams.get('metaDataLocation') || 'local',
       contractAddress: currentUrlParams.get('address'),
@@ -191,14 +200,16 @@ class Model extends React.Component {
 
       const storage = this.storages[this.state.metaDataLocation];
       let contractInfo
+      let foundModelInStorage = false
       try {
         contractInfo = await storage.getModel(this.state.modelId, this.state.contractAddress);
+        foundModelInStorage = true
       } catch (err) {
         // `setContractInstance` will set the other fields on `contractInfo`.
         contractInfo = {}
         contractInfo.address = this.state.contractAddress
       }
-      this.setState({ contractInfo },
+      this.setState({ contractInfo, foundModelInStorage, },
         async _ => {
           await this.setContractInstance()
           if (typeof window !== "undefined" && window.ethereum) {
@@ -259,18 +270,16 @@ class Model extends React.Component {
       const { classifier, dataHandler, incentiveMechanism } = collabTrainer
 
       const { contractInfo } = this.state
-      if (contractInfo.name === undefined) {
+      if (this.state.foundModelInStorage === false) {
         contractInfo.name = await contractInstance.methods.name().call()
-      }
-      if (contractInfo.description === undefined) {
         contractInfo.description = await contractInstance.methods.description().call()
-      }
-      if (contractInfo.encoder === undefined) {
         contractInfo.encoder = await contractInstance.methods.encoder().call()
       }
 
-      this.setState({ accounts, contractInfo,
-        classifier, contractInstance, dataHandler, incentiveMechanism }, _ => {
+      this.setState({
+        accounts, contractInfo,
+        classifier, contractInstance, dataHandler, incentiveMechanism
+      }, _ => {
         Promise.all([
           this.updateContractInfo(),
           this.updateDynamicInfo(),
@@ -943,19 +952,25 @@ class Model extends React.Component {
             }
           </Typography>
 
-          {this.state.checkedContentRestriction ?
-            this.state.contractInfo.description && this.state.restrictContent ?
-              <Typography component="p">
-                {"⚠ The details for this model cannot be shown because it has not been verified. \
+          <div className={this.classes.descriptionDiv}>
+            {this.state.checkedContentRestriction ?
+              this.state.contractInfo.description && this.state.restrictContent ?
+                <Typography component="p">
+                  {"⚠ The details for this model cannot be shown because it has not been verified. \
                   Text and images from other users will not be shown in order to ensure online safety. "}
-                <Link href='/about' target='_blank'>Learn more</Link>.
+                  <Link href='/about' target='_blank'>Learn more</Link>.
               </Typography>
-              : <Typography component="p">{this.state.contractInfo.description}</Typography>
-            : <Typography component="p">{"(loading)"}</Typography>
-          }
+                : <Typography component="p">{this.state.contractInfo.description}</Typography>
+              : <Typography component="p">{"(loading)"}</Typography>
+            }
+          </div>
 
-          <br />
-          <br />
+          <div className={this.classes.addToStorageDiv}>
+            {this.state.foundModelInStorage === false &&
+              <Typography component="p">
+                What to use this model again later? List it in your storage <Link href={`/addDeployedModel?address=${this.state.contractAddress}`}>here</Link>.
+              </Typography>}
+          </div>
           <div className={this.classes.info}>
             <Typography component="p">
               <b>Your score: </b>
