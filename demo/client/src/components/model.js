@@ -257,10 +257,20 @@ class Model extends React.Component {
     new ContractLoader(this.web3).load(contractAddress).then(async collabTrainer => {
       const contractInstance = collabTrainer.mainEntryPoint
       const { classifier, dataHandler, incentiveMechanism } = collabTrainer
-      
-      // TODO Set fields in this.state.contractInfo that are not set yet.
 
-      this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism }, _ => {
+      const { contractInfo } = this.state
+      if (contractInfo.name === undefined) {
+        contractInfo.name = await contractInstance.methods.name().call()
+      }
+      if (contractInfo.description === undefined) {
+        contractInfo.description = await contractInstance.methods.description().call()
+      }
+      if (contractInfo.encoder === undefined) {
+        contractInfo.encoder = await contractInstance.methods.encoder().call()
+      }
+
+      this.setState({ accounts, contractInfo,
+        classifier, contractInstance, dataHandler, incentiveMechanism }, _ => {
         Promise.all([
           this.updateContractInfo(),
           this.updateDynamicInfo(),

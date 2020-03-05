@@ -79,11 +79,8 @@ class AddDeployedModel extends React.Component {
       address: undefined,
       name: undefined,
       description: undefined,
-      toFloat: 1E9,
       modelType: 'Classifier64',
-      modelFileName: undefined,
       encoder: 'none',
-      incentiveMechanism: 'Points64',
       storageType,
       permittedStorageTypes: [],
     }
