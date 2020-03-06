@@ -1,7 +1,5 @@
-const SparseNearestCentroidClassifier = artifacts.require("./classification/SparseNearestCentroidClassifier")
-
 const { convertData } = require('../../../src/float-utils-node')
-const { loadSparseNearestCentroidClassifier } = require('../../../src/ml-models/load-model-node')
+const { deploySparseNearestCentroidClassifier } = require('../../../src/ml-models/deploy-model-node')
 
 contract('SparseNearestCentroidClassifier', function (accounts) {
 	const toFloat = 1E9
@@ -35,7 +33,7 @@ contract('SparseNearestCentroidClassifier', function (accounts) {
 				}
 			}
 		}
-		classifier = (await loadSparseNearestCentroidClassifier(model, web3, toFloat)).classifierContract
+		classifier = (await deploySparseNearestCentroidClassifier(model, web3, toFloat)).classifierContract
 	})
 
 	it("...should get the classifications", function () {

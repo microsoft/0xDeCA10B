@@ -1,9 +1,9 @@
 const fs = require('fs')
 
-const CollaborativeTrainer64 = artifacts.require("./CollaborativeTrainer64")
-const DataHandler64 = artifacts.require("./data/DataHandler64")
-const Stakeable64 = artifacts.require("./incentive/Stakeable64")
-const { loadModel } = require('../../src/ml-models/load-model-node')
+const CollaborativeTrainer64 = artifacts.require('./CollaborativeTrainer64')
+const DataHandler64 = artifacts.require('./data/DataHandler64')
+const Stakeable64 = artifacts.require('./incentive/Stakeable64')
+const { deployModel } = require('../../src/ml-models/deploy-model-node')
 const { convertData } = require('../../src/float-utils-node')
 
 /**
@@ -40,7 +40,7 @@ contract('CheckGasUsage', function (accounts) {
     gasUsed += (await web3.eth.getTransactionReceipt(dataHandler.transactionHash)).gasUsed
     console.log(`  Deployed data handler to ${dataHandler.address}. Total gasUsed: ${gasUsed}.`)
 
-    const classifierInfo = await loadModel(modelPath, web3, toFloat)
+    const classifierInfo = await deployModel(modelPath, web3, toFloat)
     const classifier = classifierInfo.classifierContract
     gasUsed += classifierInfo.gasUsed
     console.log("  Deploying Incentive Mechanism.")

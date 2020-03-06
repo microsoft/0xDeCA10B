@@ -6,11 +6,11 @@ const NearestCentroidClassifier = artifacts.require("./classification/NearestCen
 const SparseNearestCentroidClassifier = artifacts.require("./classification/SparseNearestCentroidClassifier")
 const SparsePerceptron = artifacts.require("./classification/SparsePerceptron")
 
-const { convertData, convertNum } = require('../../src/float-utils-node')
+const { convertData, convertNum } = require('../float-utils-node')
 
 const _toFloat = 1E9
 
-async function loadDensePerceptron(model, web3, toFloat) {
+async function deployDensePerceptron(model, web3, toFloat) {
     let gasUsed = 0
     const weightChunkSize = 450
     const { classifications } = model
@@ -36,7 +36,7 @@ async function loadDensePerceptron(model, web3, toFloat) {
     }
 }
 
-async function loadSparsePerceptron(model, web3, toFloat) {
+async function deploySparsePerceptron(model, web3, toFloat) {
     const weightChunkSize = 300
     const { classifications } = model
     const weights = convertData(model.weights, web3, toFloat)
@@ -62,7 +62,7 @@ async function loadSparsePerceptron(model, web3, toFloat) {
     }
 }
 
-async function loadNearestCentroidClassifier(model, web3, toFloat) {
+async function deployNearestCentroidClassifier(model, web3, toFloat) {
     let gasUsed = 0
     const classifications = []
     const centroids = []
@@ -105,7 +105,7 @@ async function loadNearestCentroidClassifier(model, web3, toFloat) {
     })
 }
 
-exports.loadSparseNearestCentroidClassifier = async function (model, web3, toFloat) {
+exports.deploySparseNearestCentroidClassifier = async function (model, web3, toFloat) {
     let gasUsed = 0
     const initialChunkSize = 500
     const chunkSize = 500
@@ -167,7 +167,7 @@ exports.loadSparseNearestCentroidClassifier = async function (model, web3, toFlo
     })
 }
 
-async function loadNaiveBayes(model, web3, toFloat) {
+async function deployNaiveBayes(model, web3, toFloat) {
     let gasUsed = 0
     const initialFeatureChunkSize = 150
     const featureChunkSize = 350
@@ -213,20 +213,20 @@ async function loadNaiveBayes(model, web3, toFloat) {
  * @returns The contract for the model, an instance of `Classifier64`
  * along with the the total amount of gas used to deploy the model.
  */
-exports.loadModel = async function (path, web3, toFloat = _toFloat) {
+exports.deployModel = async function (path, web3, toFloat = _toFloat) {
     const model = JSON.parse(fs.readFileSync(path, 'utf8'))
     switch (model.type) {
         case 'dense perceptron':
-            return loadDensePerceptron(model, web3, toFloat)
+            return deployDensePerceptron(model, web3, toFloat)
         case 'naive bayes':
-            return loadNaiveBayes(model, web3, toFloat)
+            return deployNaiveBayes(model, web3, toFloat)
         case 'dense nearest centroid classifier':
         case 'nearest centroid classifier':
-            return loadNearestCentroidClassifier(model, web3, toFloat)
+            return deployNearestCentroidClassifier(model, web3, toFloat)
         case 'sparse nearest centroid classifier':
-            return exports.loadSparseNearestCentroidClassifier(model, web3, toFloat)
+            return exports.deploySparseNearestCentroidClassifier(model, web3, toFloat)
         case 'sparse perceptron':
-            return loadSparsePerceptron(model, web3, toFloat)
+            return deploySparsePerceptron(model, web3, toFloat)
         default:
             // Should not happen.
             throw new Error(`Unrecognized model type: "${model.type}"`)

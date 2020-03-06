@@ -215,6 +215,7 @@ class AddModel extends React.Component {
           <Typography component="p">
             If you want to use a model that is already deployed, then you can add its information <Link href='/addDeployedModel'>here</Link>.
           </Typography>
+          {/* TODO Recommend using a test net for the first time if the network is not a test net. */}
           <form className={this.classes.container} noValidate autoComplete="off">
             <div className={this.classes.form} >
               <TextField
@@ -613,7 +614,7 @@ class AddModel extends React.Component {
       from: account,
     })
 
-    const pleaseAcceptKey = this.notify("Please accept to deploy the incentive mechanism contract");
+    const pleaseAcceptKey = this.notify("Please accept the prompt to deploy the incentive mechanism contract")
     const result = imContract.deploy({
       data: contractInfo.bytecode,
       arguments: args,
