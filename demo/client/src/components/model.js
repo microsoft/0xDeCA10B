@@ -968,7 +968,7 @@ class Model extends React.Component {
           <div className={this.classes.addToStorageDiv}>
             {this.state.foundModelInStorage === false &&
               <Typography component="p">
-                What to use this model again later? List it in your storage <Link href={`/addDeployedModel?address=${this.state.contractAddress}`}>here</Link>.
+                Want to use this model again later? Save a link to it in your storage <Link href={`/addDeployedModel?address=${this.state.contractAddress}`}>here</Link>.
               </Typography>}
           </div>
           <div className={this.classes.info}>
