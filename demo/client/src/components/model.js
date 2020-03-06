@@ -51,6 +51,14 @@ const styles = theme => ({
     display: 'flex',
     flexDirection: 'column'
   },
+  descriptionDiv: {
+    paddingBottom: theme.spacing(2),
+  },
+  addToStorageDiv: {
+    // Only line of text.
+    minHeight: theme.spacing(4),
+    paddingBottom: theme.spacing(1),
+  },
   info: {
     paddingBottom: theme.spacing(1),
   },
@@ -131,6 +139,7 @@ class Model extends React.Component {
     this.state = {
       readyForInput: false,
       contractInfo: {},
+      foundModelInStorage: undefined,
       modelId: currentUrlParams.get('modelId'),
       metaDataLocation: currentUrlParams.get('metaDataLocation') || 'local',
       contractAddress: currentUrlParams.get('address'),
@@ -190,8 +199,17 @@ class Model extends React.Component {
       this.web3 = await getWeb3()
 
       const storage = this.storages[this.state.metaDataLocation];
-      const contractInfo = await storage.getModel(this.state.modelId, this.state.contractAddress);
-      this.setState({ contractInfo },
+      let contractInfo
+      let foundModelInStorage = false
+      try {
+        contractInfo = await storage.getModel(this.state.modelId, this.state.contractAddress);
+        foundModelInStorage = true
+      } catch (err) {
+        // `setContractInstance` will set the other fields on `contractInfo`.
+        contractInfo = {}
+        contractInfo.address = this.state.contractAddress
+      }
+      this.setState({ contractInfo, foundModelInStorage, },
         async _ => {
           await this.setContractInstance()
           if (typeof window !== "undefined" && window.ethereum) {
@@ -249,9 +267,20 @@ class Model extends React.Component {
     // Using one `.then` and then awaiting helps with making the page more responsive.
     new ContractLoader(this.web3).load(contractAddress).then(async collabTrainer => {
       const contractInstance = collabTrainer.mainEntryPoint
-      const {classifier, dataHandler,incentiveMechanism} = collabTrainer
+      const { classifier, dataHandler, incentiveMechanism } = collabTrainer
 
-      this.setState({ accounts, classifier, contractInstance, dataHandler, incentiveMechanism }, _ => {
+      const { contractInfo } = this.state
+      if (this.state.foundModelInStorage === false) {
+        contractInfo.name = await collabTrainer.name()
+        contractInfo.description = await collabTrainer.description()
+        contractInfo.encoder = await collabTrainer.encoder()
+      }
+
+      this.setState({
+        accounts, contractInfo,
+        collabTrainer,
+        classifier, contractInstance, dataHandler, incentiveMechanism
+      }, _ => {
         Promise.all([
           this.updateContractInfo(),
           this.updateDynamicInfo(),
@@ -787,8 +816,7 @@ class Model extends React.Component {
 
   /* MAIN CONTRACT FUNCTIONS */
   predict(data) {
-    // IMPORTANT: Use .call to not create a transaction as explained in the about page.
-    return this.state.classifier.methods.predict(data).call().then(parseInt);
+    return this.state.collabTrainer.predictEncoded(data)
   }
 
   predictInput() {
@@ -924,19 +952,25 @@ class Model extends React.Component {
             }
           </Typography>
 
-          {this.state.checkedContentRestriction ?
-            this.state.contractInfo.description && this.state.restrictContent ?
-              <Typography component="p">
-                {"⚠ The details for this model cannot be shown because it has not been verified. \
+          <div className={this.classes.descriptionDiv}>
+            {this.state.checkedContentRestriction ?
+              this.state.contractInfo.description && this.state.restrictContent ?
+                <Typography component="p">
+                  {"⚠ The details for this model cannot be shown because it has not been verified. \
                   Text and images from other users will not be shown in order to ensure online safety. "}
-                <Link href='/about' target='_blank'>Learn more</Link>.
+                  <Link href='/about' target='_blank'>Learn more</Link>.
               </Typography>
-              : <Typography component="p">{this.state.contractInfo.description}</Typography>
-            : <Typography component="p">{"(loading)"}</Typography>
-          }
+                : <Typography component="p">{this.state.contractInfo.description}</Typography>
+              : <Typography component="p">{"(loading)"}</Typography>
+            }
+          </div>
 
-          <br />
-          <br />
+          <div className={this.classes.addToStorageDiv}>
+            {this.state.foundModelInStorage === false &&
+              <Typography component="p">
+                Want to use this model again later? Save a link to it in your storage <Link href={`/addDeployedModel?address=${this.state.contractAddress}`}>here</Link>.
+              </Typography>}
+          </div>
           <div className={this.classes.info}>
             <Typography component="p">
               <b>Your score: </b>
