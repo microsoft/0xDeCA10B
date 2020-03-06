@@ -271,13 +271,14 @@ class Model extends React.Component {
 
       const { contractInfo } = this.state
       if (this.state.foundModelInStorage === false) {
-        contractInfo.name = await contractInstance.methods.name().call()
-        contractInfo.description = await contractInstance.methods.description().call()
-        contractInfo.encoder = await contractInstance.methods.encoder().call()
+        contractInfo.name = await collabTrainer.name()
+        contractInfo.description = await collabTrainer.description()
+        contractInfo.encoder = await collabTrainer.encoder()
       }
 
       this.setState({
         accounts, contractInfo,
+        collabTrainer,
         classifier, contractInstance, dataHandler, incentiveMechanism
       }, _ => {
         Promise.all([
@@ -815,8 +816,7 @@ class Model extends React.Component {
 
   /* MAIN CONTRACT FUNCTIONS */
   predict(data) {
-    // IMPORTANT: Use .call to not create a transaction as explained in the about page.
-    return this.state.classifier.methods.predict(data).call().then(parseInt);
+    return this.state.collabTrainer.predictEncoded(data)
   }
 
   predictInput() {

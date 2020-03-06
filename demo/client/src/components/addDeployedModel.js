@@ -170,9 +170,9 @@ class AddDeployedModel extends React.Component {
       this.contractLoader.load(address).then(async collabTrainer => {
         const restrictContent = !this.validator.isPermitted(await getNetworkType(), address)
         if (!restrictContent) {
-          const name = await collabTrainer.mainEntryPoint.methods.name().call()
-          const description = await collabTrainer.mainEntryPoint.methods.description().call()
-          const encoder = await collabTrainer.mainEntryPoint.methods.encoder().call()
+          const name = await collabTrainer.name()
+          const description = await collabTrainer.description()
+          const encoder = await collabTrainer.encoder()
           this.setState({
             name, description, encoder,
           })

@@ -6,7 +6,7 @@ import DataHandler from './compiled/DataHandler64.json'
 import IncentiveMechanism from './compiled/IncentiveMechanism.json'
 
 /**
- * The result of checking if a contract is valid.
+ * An already deployed instance of a CollaborativeTrainer contract.
  */
 export class CollaborativeTrainer {
 	constructor(
@@ -15,6 +15,36 @@ export class CollaborativeTrainer {
 		public dataHandler: Contract,
 		public incentiveMechanism: Contract,
 	) {
+	}
+
+	/**
+	 * @returns The name of the model.
+	 */
+	name(): Promise<string> {
+		return this.mainEntryPoint.methods.name().call()
+	}
+
+	/**
+	 * @returns A description of the model.
+	 */
+	description(): Promise<string> {
+		return this.mainEntryPoint.methods.description().call()
+	}
+
+	/**
+	 * @returns The name of the encoder used by the model.
+	 */
+	encoder(): Promise<string> {
+		return this.mainEntryPoint.methods.encoder().call()
+	}
+
+	/**
+	 * @param data Encoded data.
+	 * Already transformed data by operations such as encoding, normalization, and `web3.utils.toHex`.
+	 * @returns The model's prediction for `data`.
+	 */
+	predictEncoded(data: Array<string>): Promise<number> {
+		return this.classifier.methods.predict(data).call().then(parseInt)
 	}
 }
 
