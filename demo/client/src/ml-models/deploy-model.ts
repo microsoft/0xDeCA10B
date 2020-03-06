@@ -9,6 +9,20 @@ import SparseNearestCentroidClassifier from '../contracts/compiled/SparseNearest
 
 import { convertData, convertNum } from '../float-utils'
 
+class Model {
+	type!: string
+}
+
+class CentroidInfo {
+	centroid!: number[]
+	dataCount!: number
+}
+
+class NearestCentroidModel extends Model {
+
+	intents!: Map<string, CentroidInfo>
+}
+
 export class ModelDeployer {
 	/**
 	 * The default value for toFloat.
@@ -18,12 +32,14 @@ export class ModelDeployer {
 	static readonly modelTypes: any = {
 		'dense perceptron': DensePerceptron,
 		'sparse perceptron': SparsePerceptron,
+		'dense nearest centroid classifier': NearestCentroidClassifier,
+		'nearest centroid classifier': NearestCentroidClassifier,
 	}
 
 	constructor(private web3: Web3) {
 	}
 
-	async deployDensePerceptron(model: any, options: any): Promise<Contract> {
+	async deployPerceptron(model: any, options: any): Promise<Contract> {
 		const { account, toFloat,
 			notify, dismissNotification,
 			saveTransactionHash, saveAddress,
@@ -39,10 +55,9 @@ export class ModelDeployer {
 			return Promise.reject("The number of features must match the number of weights.")
 		}
 
-		const pleaseAcceptKey = notify(`Please accept the prompt to deploy the Dense Perceptron classifier with the first ${Math.min(weights.length, weightChunkSize)} weights`)
-
 		const ContractInfo = ModelDeployer.modelTypes[model.type]
 		const contract = new this.web3.eth.Contract(ContractInfo.abi, undefined, { from: account })
+		const pleaseAcceptKey = notify(`Please accept the prompt to deploy the Perceptron classifier with the first ${Math.min(weights.length, weightChunkSize)} weights`)
 		return contract.deploy({
 			data: ContractInfo.bytecode,
 			arguments: [classifications, weights.slice(0, weightChunkSize), intercept, learningRate],
@@ -109,46 +124,18 @@ export class ModelDeployer {
 		})
 	}
 
-	async deploySparsePerceptron(model: any, options: any): Promise<Contract> {
-		// FIXME
-		const toFloat = options.toFloat || _toFloat
-		const weightChunkSize = 300
-		const { classifications } = model
-		const weights = convertData(model.weights, web3, toFloat)
-		const intercept = convertNum(model.bias, web3, toFloat)
-		const learningRate = convertNum(1, web3, toFloat)
-		console.log(`  Deploying Sparse Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights...`)
-		const classifierContract = await SparsePerceptron.new(classifications, weights.slice(0, weightChunkSize), intercept, learningRate)
-		let gasUsed = (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
-		console.log(`  Deployed Sparse Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights. gasUsed: ${gasUsed}`)
-
-		// Add remaining weights.
-		for (let i = weightChunkSize; i < weights.length; i += weightChunkSize) {
-			const r = await classifierContract.initializeWeights(i, weights.slice(i, i + weightChunkSize))
-			console.debug(`    Added classifier weights [${i}, ${Math.min(i + weightChunkSize, weights.length)}) gasUsed: ${r.receipt.gasUsed}`)
-			gasUsed += r.receipt.gasUsed
-		}
-
-		console.log(`  Deployed Sparse Perceptron classifier to ${classifierContract.address}. gasUsed: ${gasUsed}`)
-
-		return {
-			classifierContract,
-			gasUsed,
-		}
-	}
-
-	async deployNearestCentroidClassifier(model: any, options: any): Promise<Contract> {
-		// FIXME
-		const toFloat = options.toFloat || _toFloat
-		let gasUsed = 0
+	async deployNearestCentroidClassifier(model: NearestCentroidModel, options: any): Promise<Contract> {
+		const { account, toFloat,
+			notify, dismissNotification,
+			saveTransactionHash, saveAddress,
+		} = options
 		const classifications = []
 		const centroids = []
 		const dataCounts = []
-		console.log("  Deploying Dense Nearest Centroid Classifier model.")
 		let numDimensions = null
 		for (let [classification, centroidInfo] of Object.entries(model.intents)) {
 			classifications.push(classification)
-			centroids.push(convertData(centroidInfo.centroid, web3, toFloat))
+			centroids.push(convertData(centroidInfo.centroid, this.web3, toFloat))
 			dataCounts.push(centroidInfo.dataCount)
 			if (numDimensions === null) {
 				numDimensions = centroidInfo.centroid.length
@@ -159,12 +146,13 @@ export class ModelDeployer {
 			}
 		}
 
+		const ContractInfo = ModelDeployer.modelTypes[model.type]
+		const contract = new this.web3.eth.Contract(ContractInfo.abi, undefined, { from: account })
+		const pleaseAcceptKey = notify("Please accept the prompt to deploy the first class for the Nearest Centroid classifier")
+		// FIXME
 		const classifierContract = await NearestCentroidClassifier.new(
 			[classifications[0]], [centroids[0]], [dataCounts[0]]
 		)
-
-		gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
-		console.log(`  Deployed classifier to ${classifierContract.address}. gasUsed: ${gasUsed}`)
 		// Add classes separately to avoid hitting gasLimit.
 		const addClassPromises = []
 		for (let i = 1; i < classifications.length; ++i) {
@@ -304,7 +292,8 @@ export class ModelDeployer {
 
 		switch (model.type) {
 			case 'dense perceptron':
-				return this.deployDensePerceptron(model, options)
+			case 'sparse perceptron':
+				return this.deployPerceptron(model, options)
 			case 'naive bayes':
 				return this.deployNaiveBayes(model, options)
 			case 'dense nearest centroid classifier':
@@ -312,8 +301,6 @@ export class ModelDeployer {
 				return this.deployNearestCentroidClassifier(model, options)
 			case 'sparse nearest centroid classifier':
 				return this.deploySparseNearestCentroidClassifier(model, options)
-			case 'sparse perceptron':
-				return this.deploySparsePerceptron(model, options)
 			default:
 				// Should not happen.
 				throw new Error(`Unrecognized model type: "${model.type}"`)
