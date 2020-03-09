@@ -43,6 +43,41 @@ describe("ModelDeployer", () => {
 		account = accounts[2 + Math.min(Math.floor(Math.random() * 8), 7)]
 	})
 
+	it("should deploy Naive Bayes", async () => {
+		const model = {
+			classifications: [
+				"A",
+				"B"
+			],
+			classCounts: [
+				2,
+				3
+			],
+			featureCounts: [
+				[[0, 2], [1, 1]],
+				[[1, 3], [2, 2]],
+			],
+			totalNumFeatures: 9,
+			smoothingFactor: 1.0,
+			type: "naive bayes"
+		}
+		const m = await deployer.deployModel(
+			model,
+			{
+				account,
+			})
+
+		for (let i = 0; i < model.classifications.length; ++i) {
+			assert.equal(await m.methods.classifications(i).call(), model.classifications[i])
+			assertEqualNumbers(await m.methods.getNumSamples(i).call(), model.classCounts[i])
+			for (const [featureIndex, count] of model.featureCounts[i]) {
+				assertEqualNumbers(await m.methods.getFeatureCount(i, featureIndex).call(), count)
+			}
+		}
+		assertEqualNumbers(await m.methods.getClassTotalFeatureCount(0).call(), 3)
+		assertEqualNumbers(await m.methods.getClassTotalFeatureCount(1).call(), 5)
+	})
+
 	it("should deploy dense Nearest Centroid", async () => {
 		const model = new NearestCentroidModel(
 			'dense nearest centroid classifier',
@@ -55,7 +90,6 @@ describe("ModelDeployer", () => {
 			model,
 			{
 				account,
-				notify: console.log,
 			})
 
 		let i = -1
@@ -81,7 +115,6 @@ describe("ModelDeployer", () => {
 			model,
 			{
 				account,
-				notify: console.log,
 			})
 
 		let i = -1
@@ -132,7 +165,6 @@ describe("ModelDeployer", () => {
 			},
 			{
 				account,
-				// notify: console.log,
 			})
 
 		for (let i = 0; i < classifications.length; ++i) {

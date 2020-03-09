@@ -1,13 +1,12 @@
 import Web3 from 'web3'
 import { Contract } from 'web3-eth-contract'
-
 import DensePerceptron from '../contracts/compiled/DensePerceptron.json'
-import SparsePerceptron from '../contracts/compiled/SparsePerceptron.json'
 import NaiveBayesClassifier from '../contracts/compiled/NaiveBayesClassifier.json'
 import NearestCentroidClassifier from '../contracts/compiled/NearestCentroidClassifier.json'
 import SparseNearestCentroidClassifier from '../contracts/compiled/SparseNearestCentroidClassifier.json'
-
+import SparsePerceptron from '../contracts/compiled/SparsePerceptron.json'
 import { convertDataToHex, convertToHex } from '../float-utils'
+
 
 class Model {
 	constructor(public type: string) {
@@ -42,6 +41,7 @@ export class ModelDeployer {
 	public readonly gasLimit = 8.9E6
 
 	static readonly modelTypes: any = {
+		'naive bayes': NaiveBayesClassifier,
 		'nearest centroid classifier': NearestCentroidClassifier,
 		'dense nearest centroid classifier': NearestCentroidClassifier,
 		'sparse nearest centroid classifier': SparseNearestCentroidClassifier,
@@ -51,6 +51,163 @@ export class ModelDeployer {
 	}
 
 	constructor(private web3: Web3) {
+	}
+
+	async deployNaiveBayes(model: any, options: any): Promise<Contract> {
+		const { account, toFloat,
+			notify, dismissNotification,
+			saveTransactionHash, saveAddress,
+		} = options
+
+		const defaultSmoothingFactor = 1
+		const initialFeatureChunkSize = 150
+		const featureChunkSize = 350
+		const { classifications, classCounts, featureCounts, totalNumFeatures } = model
+		const smoothingFactor = convertToHex(model.smoothingFactor || defaultSmoothingFactor, this.web3, toFloat)
+
+		const ContractInfo = ModelDeployer.modelTypes[model.type]
+		const contract = new this.web3.eth.Contract(ContractInfo.abi, undefined, { from: account })
+		const pleaseAcceptKey = notify(`Please accept the prompt to deploy the Naive Bayes classifier`)
+
+		return contract.deploy({
+			data: ContractInfo.bytecode,
+			arguments: [[classifications[0]], [classCounts[0]], [featureCounts[0].slice(0, initialFeatureChunkSize)], totalNumFeatures, smoothingFactor]
+		}).send({
+			from: account,
+			gas: this.gasLimit,
+		}).on('transactionHash', transactionHash => {
+			dismissNotification(pleaseAcceptKey)
+			notify(`Submitted the model with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`)
+			saveTransactionHash('model', transactionHash)
+		}).on('error', err => {
+			dismissNotification(pleaseAcceptKey)
+			notify("Error deploying the model", { variant: 'error' })
+			throw err
+		}).then(async newContractInstance => {
+			const addClassPromises = []
+			for (let i = 1; i < classifications.length; ++i) {
+				addClassPromises.push(new Promise((resolve, reject) => {
+					const notification = notify(`Please accept the prompt to create the \"${classifications[i]}\" class`)
+					newContractInstance.methods.addClass(
+						classCounts[i], featureCounts[i].slice(0, initialFeatureChunkSize), classifications[i]
+					).send({
+						from: account,
+						// Block gas limit by most miners as of October 2019.
+						gas: this.gasLimit,
+					}).on('transactionHash', () => {
+						dismissNotification(notification)
+					}).on('error', (err: any) => {
+						dismissNotification(notification)
+						notify(`Error creating the \"${classifications[i]}\" class`, { variant: 'error' })
+						reject(err)
+					}).then(resolve)
+
+				}))
+			}
+			return Promise.all(addClassPromises).then(async _ => {
+				// Add remaining feature counts.
+				for (let classification = 0; classification < classifications.length; ++classification) {
+					for (let j = initialFeatureChunkSize; j < featureCounts[classification].length; j += featureChunkSize) {
+						const notification = notify(`Please accept the prompt to upload the features [${j},${Math.min(j + featureChunkSize, featureCounts[classification].length)}) for the \"${classifications[classification]}\" class`)
+						await newContractInstance.methods.initializeCounts(
+							featureCounts[classification].slice(j, j + featureChunkSize), classification).send().on('transactionHash', () => {
+								dismissNotification(notification)
+							}).on('error', (err: any) => {
+								dismissNotification(notification)
+								notify(`Error setting feature indices for [${j},${Math.min(j + featureChunkSize, featureCounts[classification].length)}) for the \"${classifications[classification]}\" class`, { variant: 'error' })
+								throw err
+							})
+					}
+				}
+				notify(`The model contract has been deployed to ${newContractInstance.options.address}`, { variant: 'success' })
+				saveAddress('model', newContractInstance.options.address)
+				return newContractInstance
+			})
+		})
+	}
+
+	async deployNearestCentroidClassifier(model: NearestCentroidModel, options: any): Promise<Contract> {
+		const { account, toFloat,
+			notify, dismissNotification,
+			saveTransactionHash, saveAddress,
+		} = options
+		const initialChunkSize = 500
+		const chunkSize = 500
+		const classifications: string[] = []
+		const centroids: number[][] = []
+		const dataCounts: number[] = []
+		let numDimensions = null
+		for (let [classification, centroidInfo] of Object.entries(model.intents)) {
+			classifications.push(classification)
+			centroids.push(convertDataToHex(centroidInfo.centroid, this.web3, toFloat))
+			dataCounts.push(centroidInfo.dataCount)
+			if (numDimensions === null) {
+				numDimensions = centroidInfo.centroid.length
+			} else {
+				if (centroidInfo.centroid.length !== numDimensions) {
+					throw new Error(`Found a centroid with ${centroidInfo.centroid.length} dimensions. Expected: ${numDimensions}.`)
+				}
+			}
+		}
+
+		const ContractInfo = ModelDeployer.modelTypes[model.type]
+		const contract = new this.web3.eth.Contract(ContractInfo.abi, undefined, { from: account })
+		const pleaseAcceptKey = notify("Please accept the prompt to deploy the first class for the Nearest Centroid classifier")
+		return contract.deploy({
+			data: ContractInfo.bytecode,
+			arguments: [[classifications[0]], [centroids[0].slice(0, initialChunkSize)], [dataCounts[0]]],
+		}).send({
+			from: account,
+			// Block gas limit by most miners as of October 2019.
+			gas: this.gasLimit,
+		}).on('transactionHash', transactionHash => {
+			dismissNotification(pleaseAcceptKey)
+			notify(`Submitted the model with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`)
+			saveTransactionHash('model', transactionHash)
+		}).on('error', err => {
+			dismissNotification(pleaseAcceptKey)
+			notify("Error deploying the model", { variant: 'error' })
+			throw err
+		}).then(async newContractInstance => {
+			// Set up each class.
+			const addClassPromises = []
+			for (let i = 1; i < classifications.length; ++i) {
+				addClassPromises.push(new Promise((resolve, reject) => {
+					const notification = notify(`Please accept the prompt to create the \"${classifications[i]}\" class`)
+					newContractInstance.methods.addClass(centroids[i].slice(0, initialChunkSize), classifications[i], dataCounts[i]).send({
+						from: account,
+						// Block gas limit by most miners as of October 2019.
+						gas: this.gasLimit,
+					}).on('transactionHash', () => {
+						dismissNotification(notification)
+					}).on('error', (err: any) => {
+						dismissNotification(notification)
+						notify(`Error creating the \"${classifications[i]}\" class`, { variant: 'error' })
+						reject(err)
+					}).then(resolve)
+				}))
+			}
+			return Promise.all(addClassPromises).then(async _ => {
+				// Extend each class.
+				// Tried with promises but got weird unhelpful errors from Truffle (some were like network timeout errors).
+				for (let classification = 0; classification < classifications.length; ++classification) {
+					for (let j = initialChunkSize; j < centroids[classification].length; j += chunkSize) {
+						const notification = notify(`Please accept the prompt to upload the values for dimensions [${j},${j + chunkSize}) for the \"${classifications[classification]}\" class`)
+						await newContractInstance.methods.extendCentroid(
+							centroids[classification].slice(j, j + chunkSize), classification).send().on('transactionHash', () => {
+								dismissNotification(notification)
+							}).on('error', (err: any) => {
+								dismissNotification(notification)
+								notify(`Error setting feature indices for [${j},${j + chunkSize}) for the \"${classifications[classification]}\" class`, { variant: 'error' })
+								throw err
+							})
+					}
+				}
+				notify(`The model contract has been deployed to ${newContractInstance.options.address}`, { variant: 'success' })
+				saveAddress('model', newContractInstance.options.address)
+				return newContractInstance
+			})
+		})
 	}
 
 	async deployPerceptron(model: any, options: any): Promise<Contract> {
@@ -134,132 +291,6 @@ export class ModelDeployer {
 				saveAddress('model', newContractInstance.options.address)
 				return newContractInstance
 			})
-		})
-	}
-
-	async deployNearestCentroidClassifier(model: NearestCentroidModel, options: any): Promise<Contract> {
-		const { account, toFloat,
-			notify, dismissNotification,
-			saveTransactionHash, saveAddress,
-		} = options
-		const initialChunkSize = 500
-		const chunkSize = 500
-		const classifications: string[] = []
-		const centroids: number[][] = []
-		const dataCounts: number[] = []
-		let numDimensions = null
-		for (let [classification, centroidInfo] of Object.entries(model.intents)) {
-			classifications.push(classification)
-			centroids.push(convertDataToHex(centroidInfo.centroid, this.web3, toFloat))
-			dataCounts.push(centroidInfo.dataCount)
-			if (numDimensions === null) {
-				numDimensions = centroidInfo.centroid.length
-			} else {
-				if (centroidInfo.centroid.length !== numDimensions) {
-					throw new Error(`Found a centroid with ${centroidInfo.centroid.length} dimensions. Expected: ${numDimensions}.`)
-				}
-			}
-		}
-
-		const ContractInfo = ModelDeployer.modelTypes[model.type]
-		const contract = new this.web3.eth.Contract(ContractInfo.abi, undefined, { from: account })
-		const pleaseAcceptKey = notify("Please accept the prompt to deploy the first class for the Nearest Centroid classifier")
-		return contract.deploy({
-			data: ContractInfo.bytecode,
-			arguments: [[classifications[0]], [centroids[0].slice(0, initialChunkSize)], [dataCounts[0]]],
-		}).send({
-			from: account,
-			// Block gas limit by most miners as of October 2019.
-			gas: this.gasLimit,
-		}).on('transactionHash', transactionHash => {
-			dismissNotification(pleaseAcceptKey)
-			notify(`Submitted the model with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`)
-			saveTransactionHash('model', transactionHash)
-		}).on('error', err => {
-			dismissNotification(pleaseAcceptKey)
-			notify("Error deploying the model", { variant: 'error' })
-			throw err
-		}).then(async newContractInstance => {
-			// Set up each class.
-			const addClassPromises = []
-			for (let i = 1; i < classifications.length; ++i) {
-				addClassPromises.push(new Promise((resolve, reject) => {
-					const notification = notify(`Please accept the prompt to create the \"${classifications[i]}\" class`)
-					const transaction = newContractInstance.methods.addClass(centroids[i].slice(0, initialChunkSize), classifications[i], dataCounts[i])
-					transaction.send({
-						from: account,
-						// Block gas limit by most miners as of October 2019.
-						gas: this.gasLimit,
-					}).on('transactionHash', () => {
-						dismissNotification(notification)
-					}).on('error', (err: any) => {
-						dismissNotification(notification)
-						notify(`Error creating the \"${classifications[i]}\" class`, { variant: 'error' })
-						reject(err)
-					}).then(resolve)
-				}))
-			}
-			return Promise.all(addClassPromises).then(async _ => {
-				// Extend each class.
-				// Tried with promises but got weird unhelpful errors from Truffle (some were like network timeout errors).
-				for (let classification = 0; classification < classifications.length; ++classification) {
-					for (let j = initialChunkSize; j < centroids[classification].length; j += chunkSize) {
-						const notification = notify(`Please accept the prompt to upload the values for dimensions [${j},${j + chunkSize}) for the \"${classifications[classification]}\" class`)
-						await newContractInstance.methods.extendCentroid(
-							centroids[classification].slice(j, j + chunkSize), classification).send().on('transactionHash', () => {
-								dismissNotification(notification)
-							}).on('error', (err: any) => {
-								dismissNotification(notification)
-								notify(`Error setting feature indices for [${j},${j + chunkSize}) for the \"${classifications[classification]}\" class`, { variant: 'error' })
-								throw err
-							})
-					}
-				}
-				notify(`The model contract has been deployed to ${newContractInstance.options.address}`, { variant: 'success' })
-				saveAddress('model', newContractInstance.options.address)
-				return newContractInstance
-			})
-		})
-	}
-
-	async  deployNaiveBayes(model: any, options: any): Promise<Contract> {
-		// FIXME
-		const toFloat = options.toFloat || _toFloat
-		let gasUsed = 0
-		const initialFeatureChunkSize = 150
-		const featureChunkSize = 350
-		const { classifications, classCounts, featureCounts, totalNumFeatures } = model
-		const smoothingFactor = convertNum(model.smoothingFactor, web3, toFloat)
-		console.log(`  Deploying Naive Bayes classifier.`)
-		const classifierContract = await NaiveBayesClassifier.new([classifications[0]], [classCounts[0]], [featureCounts[0].slice(0, initialFeatureChunkSize)], totalNumFeatures, smoothingFactor)
-		gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
-
-		const addClassPromises = []
-		for (let i = 1; i < classifications.length; ++i) {
-			addClassPromises.push(classifierContract.addClass(
-				classCounts[i], featureCounts[i].slice(0, initialFeatureChunkSize), classifications[i]
-			).then(r => {
-				console.debug(`    Added class ${i}. gasUsed: ${r.receipt.gasUsed}`)
-				return r
-			}))
-		}
-		return Promise.all(addClassPromises).then(async responses => {
-			for (const r of responses) {
-				gasUsed += r.receipt.gasUsed
-			}
-			// Add remaining feature counts.
-			// Tried with promises but got weird unhelpful errors from Truffle (some were like network timeout errors).
-			for (let classification = 0; classification < classifications.length; ++classification) {
-				for (let j = initialFeatureChunkSize; j < featureCounts[classification].length; j += featureChunkSize) {
-					const r = await classifierContract.initializeCounts(
-						featureCounts[classification].slice(j, j + featureChunkSize), classification
-					)
-					console.debug(`    Added features [${j}, ${Math.min(j + featureChunkSize, featureCounts[classification].length)}) for class ${classification}. gasUsed: ${r.receipt.gasUsed}`)
-					gasUsed += r.receipt.gasUsed
-				}
-			}
-			console.debug(`  Deployed all Naive Bayes classifier classes. gasUsed: ${gasUsed}.`)
-			return classifierContract
 		})
 	}
 

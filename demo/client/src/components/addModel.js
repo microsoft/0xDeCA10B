@@ -21,12 +21,10 @@ import React from 'react';
 import Dropzone from 'react-dropzone';
 import CollaborativeTrainer64 from '../contracts/compiled/CollaborativeTrainer64.json';
 import DataHandler64 from '../contracts/compiled/DataHandler64.json';
-import DensePerceptron from '../contracts/compiled/DensePerceptron.json';
 import Points64 from '../contracts/compiled/Points64.json';
-import SparsePerceptron from '../contracts/compiled/SparsePerceptron.json';
 import Stakeable64 from '../contracts/compiled/Stakeable64.json';
-import { convertDataToHex, convertToHex } from '../float-utils';
 import { getWeb3 } from '../getWeb3';
+import { ModelDeployer } from '../ml-models/deploy-model';
 import { ModelInformation } from '../storage/data-store';
 import { DataStoreFactory } from '../storage/data-store-factory';
 import { checkStorages, renderStorageSelector } from './storageSelector';
@@ -76,10 +74,6 @@ class AddModel extends React.Component {
     super(props);
     this.classes = props.classes;
 
-    this.modelTypes = {
-      'dense perceptron': DensePerceptron,
-      'sparse perceptron': SparsePerceptron,
-    };
     this.web3 = null;
 
     // Default to local storage for storing original data.
@@ -132,6 +126,7 @@ class AddModel extends React.Component {
     })
     try {
       this.web3 = await getWeb3()
+      this.deployer = new ModelDeployer(this.web3)
     } catch (error) {
       this.notify("Failed to load web3, accounts, or contract. Check console for details.", { variant: 'error' })
       console.error(error);
@@ -189,8 +184,8 @@ class AddModel extends React.Component {
     reader.onload = () => {
       const binaryStr = reader.result
       const model = JSON.parse(binaryStr);
-      if (!(model.type in this.modelTypes)) {
-        this.notify(`The "type" of the model must be one of ${JSON.stringify(Object.keys(this.modelTypes))}`, { variant: 'error' })
+      if (!(model.type in ModelDeployer.modelTypes)) {
+        this.notify(`The "type" of the model must be one of ${JSON.stringify(Object.keys(ModelDeployer.modelTypes))}`, { variant: 'error' })
       } else {
         this.setState({ model, modelFileName: file.path });
       }
@@ -440,7 +435,12 @@ class AddModel extends React.Component {
       const [dataHandler, incentiveMechanism, model] = await Promise.all([
         this.deployDataHandler(account),
         this.deployIncentiveMechanism(account),
-        this.deployModel(account),
+        this.deployer.deployModel(this.state.model, {
+          account,
+          toFloat: this.state.toFloat,
+          notify: this.notify, dismissNotification: this.dismissNotification,
+          saveTransactionHash: this.saveTransactionHash, saveAddress: this.saveAddress,
+        }),
       ]);
 
       const mainContract = await this.deployMainEntryPoint(account, dataHandler, incentiveMechanism, model);
@@ -467,125 +467,6 @@ class AddModel extends React.Component {
             { variant: 'error' })
         });
       }
-    });
-  }
-
-  async deployModel(account) {
-    const { model, modelType } = this.state;
-    const pleaseAcceptKey = this.notify("Please accept the prompt to deploy the classifier");
-    let result;
-
-    switch (modelType) {
-      case 'Classifier64':
-        switch (model.type) {
-          case 'nearest centroid classifier':
-            // TODO Load the model from the file and set up deployment.
-            this.dismissNotification(pleaseAcceptKey);
-            throw new Error("Nearest centroid classifier is not supported yet.")
-          // break;
-          case 'dense perceptron':
-          case 'sparse perceptron':
-            result = this.deployPerceptron(pleaseAcceptKey, account);
-            break;
-          default:
-            // Should not happen.
-            this.dismissNotification(pleaseAcceptKey);
-            throw new Error(`Unrecognized model type: "${model.type}"`);
-        }
-        break;
-      default:
-        // Should not happen.
-        this.dismissNotification(pleaseAcceptKey);
-        throw new Error(`Unrecognized model type: "${modelType}"`);
-    }
-
-    return result;
-  }
-
-  async deployPerceptron(pleaseAcceptKey, account) {
-    const defaultPerceptronLearningRate = 0.5;
-    const weightChunkSize = 250;
-
-    const { model } = this.state;
-    const { classifications, featureIndices } = model;
-    const weights = convertDataToHex(model.weights, this.web3, this.state.toFloat);
-    const intercept = convertToHex(model.bias, this.web3, this.state.toFloat);
-    const learningRate = convertToHex(model.learningRate || defaultPerceptronLearningRate, this.web3, this.state.toFloat);
-
-    if (featureIndices !== undefined && featureIndices.length !== weights.length) {
-      console.error("The number of features must match the number of weights.");
-      this.notify("The number of features must match the number of weights", { variant: 'error' });
-    }
-
-    const Contract = this.modelTypes[model.type];
-    const contract = new this.web3.eth.Contract(Contract.abi, {
-      from: account,
-    });
-    return contract.deploy({
-      data: Contract.bytecode,
-      arguments: [classifications, weights.slice(0, weightChunkSize), intercept, learningRate],
-    }).send({
-      // Block gas limit by most miners as of October 2019.
-      gas: 8.9E6,
-    }).on('transactionHash', transactionHash => {
-      this.dismissNotification(pleaseAcceptKey);
-      this.notify(`Submitted the model with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
-      this.saveTransactionHash('model', transactionHash);
-    }).on('error', err => {
-      this.dismissNotification(pleaseAcceptKey);
-      console.error(err);
-      this.notify("Error deploying the model", { variant: 'error' });
-      throw err;
-    }).then(async newContractInstance => {
-      // Could create a batch but I was getting various errors when trying to do and could not find docs on what `execute` returns.
-      const transactions = [];
-      // Add remaining weights.
-      for (let i = weightChunkSize; i < weights.length; i += weightChunkSize) {
-        let transaction;
-        if (model.type === 'dense perceptron') {
-          transaction = newContractInstance.methods.initializeWeights(weights.slice(i, i + weightChunkSize));
-        } else if (model.type === 'sparse perceptron') {
-          transaction = newContractInstance.methods.initializeWeights(i, weights.slice(i, i + weightChunkSize));
-        } else {
-          throw new Error(`Unrecognized model type: "${model.type}"`);
-        }
-        transactions.push(new Promise((resolve, reject) => {
-          // Subtract 1 from the count because the first chunk has already been uploaded.
-          const notification = this.notify(`Please accept the prompt to upload classifier 
-          weights [${i},${i + weightChunkSize}) (${i / weightChunkSize}/${Math.ceil(weights.length / weightChunkSize) - 1})`);
-          transaction.send().on('transactionHash', _ => {
-            this.dismissNotification(notification);
-          }).on('error', err => {
-            this.dismissNotification(notification);
-            console.error(err);
-            this.notify(`Error setting weights classifier weights [${i},${i + weightChunkSize})`, { variant: 'error' });
-            reject(err);
-          }).then(resolve);
-        }));
-      }
-      if (featureIndices !== undefined) {
-        // Add feature indices to use.
-        for (let i = 0; i < featureIndices.length; i += weightChunkSize) {
-          transactions.push(new Promise((resolve, reject) => {
-            const notification = this.notify(`Please accept the prompt to upload the feature indices [${i},${i + weightChunkSize})`);
-            newContractInstance.methods.addFeatureIndices(featureIndices.slice(i, i + weightChunkSize)).send()
-              .on('transactionHash', _ => {
-                this.dismissNotification(notification);
-              }).on('error', err => {
-                this.dismissNotification(notification);
-                console.error(err);
-                this.notify(`Error setting feature indices for [${i},${i + weightChunkSize})`, { variant: 'error' });
-                reject(err);
-              }).then(resolve);
-          }));
-        }
-      }
-
-      return Promise.all(transactions).then(_ => {
-        this.notify(`The model contract has been deployed to ${newContractInstance.options.address}`, { variant: 'success' });
-        this.saveAddress('model', newContractInstance.options.address);
-        return newContractInstance;
-      });
     });
   }
 
