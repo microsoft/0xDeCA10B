@@ -1,6 +1,6 @@
 const fs = require('fs')
 
-const DensePerceptron = artifacts.require("classification/DensePerceptron")
+const DensePerceptron = artifacts.require("./classification/DensePerceptron")
 const NaiveBayesClassifier = artifacts.require("./classification/NaiveBayesClassifier")
 const NearestCentroidClassifier = artifacts.require("./classification/NearestCentroidClassifier")
 const SparseNearestCentroidClassifier = artifacts.require("./classification/SparseNearestCentroidClassifier")

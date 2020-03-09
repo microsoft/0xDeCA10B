@@ -36,6 +36,11 @@ export class ModelDeployer {
 	 */
 	private static readonly toFloat = 1E9
 
+	/**
+	 * Block gas limit by most miners as of October 2019.
+	 */
+	public readonly gasLimit = 8.9E6
+
 	static readonly modelTypes: any = {
 		'nearest centroid classifier': NearestCentroidClassifier,
 		'dense nearest centroid classifier': NearestCentroidClassifier,
@@ -72,8 +77,7 @@ export class ModelDeployer {
 			arguments: [classifications, weights.slice(0, weightChunkSize), intercept, learningRate],
 		}).send({
 			from: account,
-			// Block gas limit by most miners as of October 2019.
-			gas: 8.9E6,
+			gas: this.gasLimit,
 		}).on('transactionHash', transactionHash => {
 			dismissNotification(pleaseAcceptKey)
 			notify(`Submitted the model with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`)
@@ -162,11 +166,11 @@ export class ModelDeployer {
 		const pleaseAcceptKey = notify("Please accept the prompt to deploy the first class for the Nearest Centroid classifier")
 		return contract.deploy({
 			data: ContractInfo.bytecode,
-			arguments: [classifications[0], [centroids[0].slice(0, initialChunkSize)], [dataCounts[0]]],
+			arguments: [[classifications[0]], [centroids[0].slice(0, initialChunkSize)], [dataCounts[0]]],
 		}).send({
 			from: account,
 			// Block gas limit by most miners as of October 2019.
-			gas: 8.9E6,
+			gas: this.gasLimit,
 		}).on('transactionHash', transactionHash => {
 			dismissNotification(pleaseAcceptKey)
 			notify(`Submitted the model with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`)
@@ -182,7 +186,11 @@ export class ModelDeployer {
 				addClassPromises.push(new Promise((resolve, reject) => {
 					const notification = notify(`Please accept the prompt to create the \"${classifications[i]}\" class`)
 					const transaction = newContractInstance.methods.addClass(centroids[i].slice(0, initialChunkSize), classifications[i], dataCounts[i])
-					transaction.send().on('transactionHash', () => {
+					transaction.send({
+						from: account,
+						// Block gas limit by most miners as of October 2019.
+						gas: this.gasLimit,
+					}).on('transactionHash', () => {
 						dismissNotification(notification)
 					}).on('error', (err: any) => {
 						dismissNotification(notification)
