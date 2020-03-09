@@ -87,7 +87,7 @@ export class ModelDeployer {
 			const addClassPromises = []
 			for (let i = 1; i < classifications.length; ++i) {
 				addClassPromises.push(new Promise((resolve, reject) => {
-					const notification = notify(`Please accept the prompt to create the \"${classifications[i]}\" class`)
+					const notification = notify(`Please accept the prompt to create the "${classifications[i]}" class`)
 					newContractInstance.methods.addClass(
 						classCounts[i], featureCounts[i].slice(0, initialFeatureChunkSize), classifications[i]
 					).send({
@@ -98,7 +98,7 @@ export class ModelDeployer {
 						dismissNotification(notification)
 					}).on('error', (err: any) => {
 						dismissNotification(notification)
-						notify(`Error creating the \"${classifications[i]}\" class`, { variant: 'error' })
+						notify(`Error creating the "${classifications[i]}" class`, { variant: 'error' })
 						reject(err)
 					}).then(resolve)
 
@@ -108,13 +108,13 @@ export class ModelDeployer {
 				// Add remaining feature counts.
 				for (let classification = 0; classification < classifications.length; ++classification) {
 					for (let j = initialFeatureChunkSize; j < featureCounts[classification].length; j += featureChunkSize) {
-						const notification = notify(`Please accept the prompt to upload the features [${j},${Math.min(j + featureChunkSize, featureCounts[classification].length)}) for the \"${classifications[classification]}\" class`)
+						const notification = notify(`Please accept the prompt to upload the features [${j},${Math.min(j + featureChunkSize, featureCounts[classification].length)}) for the "${classifications[classification]}" class`)
 						await newContractInstance.methods.initializeCounts(
 							featureCounts[classification].slice(j, j + featureChunkSize), classification).send().on('transactionHash', () => {
 								dismissNotification(notification)
 							}).on('error', (err: any) => {
 								dismissNotification(notification)
-								notify(`Error setting feature indices for [${j},${Math.min(j + featureChunkSize, featureCounts[classification].length)}) for the \"${classifications[classification]}\" class`, { variant: 'error' })
+								notify(`Error setting feature indices for [${j},${Math.min(j + featureChunkSize, featureCounts[classification].length)}) for the "${classifications[classification]}" class`, { variant: 'error' })
 								throw err
 							})
 					}
@@ -173,7 +173,7 @@ export class ModelDeployer {
 			const addClassPromises = []
 			for (let i = 1; i < classifications.length; ++i) {
 				addClassPromises.push(new Promise((resolve, reject) => {
-					const notification = notify(`Please accept the prompt to create the \"${classifications[i]}\" class`)
+					const notification = notify(`Please accept the prompt to create the "${classifications[i]}" class`)
 					newContractInstance.methods.addClass(centroids[i].slice(0, initialChunkSize), classifications[i], dataCounts[i]).send({
 						from: account,
 						// Block gas limit by most miners as of October 2019.
@@ -182,7 +182,7 @@ export class ModelDeployer {
 						dismissNotification(notification)
 					}).on('error', (err: any) => {
 						dismissNotification(notification)
-						notify(`Error creating the \"${classifications[i]}\" class`, { variant: 'error' })
+						notify(`Error creating the "${classifications[i]}" class`, { variant: 'error' })
 						reject(err)
 					}).then(resolve)
 				}))
@@ -192,13 +192,13 @@ export class ModelDeployer {
 				// Tried with promises but got weird unhelpful errors from Truffle (some were like network timeout errors).
 				for (let classification = 0; classification < classifications.length; ++classification) {
 					for (let j = initialChunkSize; j < centroids[classification].length; j += chunkSize) {
-						const notification = notify(`Please accept the prompt to upload the values for dimensions [${j},${j + chunkSize}) for the \"${classifications[classification]}\" class`)
+						const notification = notify(`Please accept the prompt to upload the values for dimensions [${j},${j + chunkSize}) for the "${classifications[classification]}" class`)
 						await newContractInstance.methods.extendCentroid(
 							centroids[classification].slice(j, j + chunkSize), classification).send().on('transactionHash', () => {
 								dismissNotification(notification)
 							}).on('error', (err: any) => {
 								dismissNotification(notification)
-								notify(`Error setting feature indices for [${j},${j + chunkSize}) for the \"${classifications[classification]}\" class`, { variant: 'error' })
+								notify(`Error setting feature indices for [${j},${j + chunkSize}) for the "${classifications[classification]}" class`, { variant: 'error' })
 								throw err
 							})
 					}

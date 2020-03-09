@@ -114,9 +114,14 @@ class AddModel extends React.Component {
       permittedStorageTypes: [],
     };
 
-    this.save = this.save.bind(this);
-    this.handleInputChange = this.handleInputChange.bind(this);
-    this.processUploadedModel = this.processUploadedModel.bind(this);
+    this.notify = this.notify.bind(this)
+    this.dismissNotification = this.dismissNotification.bind(this)
+    this.saveAddress = this.saveAddress.bind(this)
+    this.saveTransactionHash = this.saveTransactionHash.bind(this)
+
+    this.save = this.save.bind(this)
+    this.handleInputChange = this.handleInputChange.bind(this)
+    this.processUploadedModel = this.processUploadedModel.bind(this)
   }
 
   componentDidMount = async () => {
