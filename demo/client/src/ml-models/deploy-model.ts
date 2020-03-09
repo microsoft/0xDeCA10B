@@ -7,7 +7,7 @@ import NaiveBayesClassifier from '../contracts/compiled/NaiveBayesClassifier.jso
 import NearestCentroidClassifier from '../contracts/compiled/NearestCentroidClassifier.json'
 import SparseNearestCentroidClassifier from '../contracts/compiled/SparseNearestCentroidClassifier.json'
 
-import { convertData, convertNum } from '../float-utils'
+import { convertDataToHex, convertToHex } from '../float-utils'
 
 class Model {
 	type!: string
@@ -47,9 +47,9 @@ export class ModelDeployer {
 		const defaultLearningRate = 0.5
 		const weightChunkSize = 450
 		const { classifications, featureIndices } = model
-		const weights = convertData(model.weights, this.web3, toFloat)
-		const intercept = convertNum(model.bias, this.web3, toFloat)
-		const learningRate = convertNum(model.learningRate || defaultLearningRate, this.web3, toFloat)
+		const weights = convertDataToHex(model.weights, this.web3, toFloat)
+		const intercept = convertToHex(model.bias || model.intercept, this.web3, toFloat)
+		const learningRate = convertToHex(model.learningRate || defaultLearningRate, this.web3, toFloat)
 
 		if (featureIndices !== undefined && featureIndices.length !== weights.length) {
 			return Promise.reject("The number of features must match the number of weights.")
@@ -64,7 +64,7 @@ export class ModelDeployer {
 		}).send({
 			from: account,
 			// Block gas limit by most miners as of October 2019.
-			// gas: 8.9E6,
+			gas: 8.9E6,
 		}).on('transactionHash', transactionHash => {
 			dismissNotification(pleaseAcceptKey)
 			notify(`Submitted the model with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`)

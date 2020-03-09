@@ -25,7 +25,7 @@ import DensePerceptron from '../contracts/compiled/DensePerceptron.json';
 import Points64 from '../contracts/compiled/Points64.json';
 import SparsePerceptron from '../contracts/compiled/SparsePerceptron.json';
 import Stakeable64 from '../contracts/compiled/Stakeable64.json';
-import { convertToHex, convertToHexData } from '../float-utils';
+import { convertDataToHex, convertToHex } from '../float-utils';
 import { getWeb3 } from '../getWeb3';
 import { ModelInformation } from '../storage/data-store';
 import { DataStoreFactory } from '../storage/data-store-factory';
@@ -508,7 +508,7 @@ class AddModel extends React.Component {
 
     const { model } = this.state;
     const { classifications, featureIndices } = model;
-    const weights = convertToHexData(model.weights, this.web3, this.state.toFloat);
+    const weights = convertDataToHex(model.weights, this.web3, this.state.toFloat);
     const intercept = convertToHex(model.bias, this.web3, this.state.toFloat);
     const learningRate = convertToHex(model.learningRate || defaultPerceptronLearningRate, this.web3, this.state.toFloat);
 
