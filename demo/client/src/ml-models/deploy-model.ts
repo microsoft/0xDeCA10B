@@ -10,17 +10,24 @@ import SparseNearestCentroidClassifier from '../contracts/compiled/SparseNearest
 import { convertDataToHex, convertToHex } from '../float-utils'
 
 class Model {
-	type!: string
+	constructor(public type: string) {
+	}
 }
 
-class CentroidInfo {
-	centroid!: number[]
-	dataCount!: number
+export class CentroidInfo {
+	constructor(
+		public centroid: number[],
+		public dataCount: number) {
+	}
 }
 
-class NearestCentroidModel extends Model {
-
-	intents!: Map<string, CentroidInfo>
+export class NearestCentroidModel extends Model {
+	constructor(
+		type: 'nearest centroid classifier' | 'sparse nearest centroid classifier' | 'dense nearest centroid classifier',
+		public intents: { [key: string]: CentroidInfo },
+	) {
+		super(type)
+	}
 }
 
 export class ModelDeployer {
@@ -30,10 +37,12 @@ export class ModelDeployer {
 	private static readonly toFloat = 1E9
 
 	static readonly modelTypes: any = {
+		'nearest centroid classifier': NearestCentroidClassifier,
+		'dense nearest centroid classifier': NearestCentroidClassifier,
+		'sparse nearest centroid classifier': SparseNearestCentroidClassifier,
+		'perceptron': DensePerceptron,
 		'dense perceptron': DensePerceptron,
 		'sparse perceptron': SparsePerceptron,
-		'dense nearest centroid classifier': NearestCentroidClassifier,
-		'nearest centroid classifier': NearestCentroidClassifier,
 	}
 
 	constructor(private web3: Web3) {
@@ -89,7 +98,7 @@ export class ModelDeployer {
 				transactions.push(new Promise((resolve, reject) => {
 					// Subtract 1 from the count because the first chunk has already been uploaded.
 					const notification = notify(`Please accept the prompt to upload classifier 
-				weights [${i},${i + weightChunkSize}) (${i / weightChunkSize}/${Math.ceil(weights.length / weightChunkSize) - 1})`)
+					weights [${i},${i + weightChunkSize}) (${i / weightChunkSize}/${Math.ceil(weights.length / weightChunkSize) - 1})`)
 					transaction.send().on('transactionHash', () => {
 						dismissNotification(notification)
 					}).on('error', (err: any) => {
@@ -129,13 +138,15 @@ export class ModelDeployer {
 			notify, dismissNotification,
 			saveTransactionHash, saveAddress,
 		} = options
-		const classifications = []
-		const centroids = []
-		const dataCounts = []
+		const initialChunkSize = 500
+		const chunkSize = 500
+		const classifications: string[] = []
+		const centroids: number[][] = []
+		const dataCounts: number[] = []
 		let numDimensions = null
 		for (let [classification, centroidInfo] of Object.entries(model.intents)) {
 			classifications.push(classification)
-			centroids.push(convertData(centroidInfo.centroid, this.web3, toFloat))
+			centroids.push(convertDataToHex(centroidInfo.centroid, this.web3, toFloat))
 			dataCounts.push(centroidInfo.dataCount)
 			if (numDimensions === null) {
 				numDimensions = centroidInfo.centroid.length
@@ -149,82 +160,57 @@ export class ModelDeployer {
 		const ContractInfo = ModelDeployer.modelTypes[model.type]
 		const contract = new this.web3.eth.Contract(ContractInfo.abi, undefined, { from: account })
 		const pleaseAcceptKey = notify("Please accept the prompt to deploy the first class for the Nearest Centroid classifier")
-		// FIXME
-		const classifierContract = await NearestCentroidClassifier.new(
-			[classifications[0]], [centroids[0]], [dataCounts[0]]
-		)
-		// Add classes separately to avoid hitting gasLimit.
-		const addClassPromises = []
-		for (let i = 1; i < classifications.length; ++i) {
-			addClassPromises.push(classifierContract.addClass(centroids[i], classifications[i], dataCounts[i]))
-		}
-		return Promise.all(addClassPromises).then(responses => {
-			console.debug("  All classes added.")
-			for (const r of responses) {
-				gasUsed += r.receipt.gasUsed
+		return contract.deploy({
+			data: ContractInfo.bytecode,
+			arguments: [classifications[0], [centroids[0].slice(0, initialChunkSize)], [dataCounts[0]]],
+		}).send({
+			from: account,
+			// Block gas limit by most miners as of October 2019.
+			gas: 8.9E6,
+		}).on('transactionHash', transactionHash => {
+			dismissNotification(pleaseAcceptKey)
+			notify(`Submitted the model with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`)
+			saveTransactionHash('model', transactionHash)
+		}).on('error', err => {
+			dismissNotification(pleaseAcceptKey)
+			notify("Error deploying the model", { variant: 'error' })
+			throw err
+		}).then(async newContractInstance => {
+			// Set up each class.
+			const addClassPromises = []
+			for (let i = 1; i < classifications.length; ++i) {
+				addClassPromises.push(new Promise((resolve, reject) => {
+					const notification = notify(`Please accept the prompt to create the \"${classifications[i]}\" class`)
+					const transaction = newContractInstance.methods.addClass(centroids[i].slice(0, initialChunkSize), classifications[i], dataCounts[i])
+					transaction.send().on('transactionHash', () => {
+						dismissNotification(notification)
+					}).on('error', (err: any) => {
+						dismissNotification(notification)
+						notify(`Error creating the \"${classifications[i]}\" class`, { variant: 'error' })
+						reject(err)
+					}).then(resolve)
+				}))
 			}
-			return classifierContract
-		})
-	}
-
-	async  deploySparseNearestCentroidClassifier(model: any, options: any): Promise<Contract> {
-		// FIXME
-		const toFloat = options.toFloat || _toFloat
-		let gasUsed = 0
-		const initialChunkSize = 500
-		const chunkSize = 500
-		const classifications = []
-		const centroids = []
-		const dataCounts = []
-		console.log("  Deploying Sparse Nearest Centroid Classifier model.")
-		let numDimensions = null
-		for (let [classification, centroidInfo] of Object.entries(model.intents)) {
-			classifications.push(classification)
-			centroids.push(convertData(centroidInfo.centroid, web3, toFloat))
-			dataCounts.push(centroidInfo.dataCount)
-			if (numDimensions === null) {
-				numDimensions = centroidInfo.centroid.length
-			} else {
-				if (centroidInfo.centroid.length !== numDimensions) {
-					throw new Error(`Found a centroid with ${centroidInfo.centroid.length} dimensions. Expected: ${numDimensions}.`)
+			return Promise.all(addClassPromises).then(async _ => {
+				// Extend each class.
+				// Tried with promises but got weird unhelpful errors from Truffle (some were like network timeout errors).
+				for (let classification = 0; classification < classifications.length; ++classification) {
+					for (let j = initialChunkSize; j < centroids[classification].length; j += chunkSize) {
+						const notification = notify(`Please accept the prompt to upload the values for dimensions [${j},${j + chunkSize}) for the \"${classifications[classification]}\" class`)
+						await newContractInstance.methods.extendCentroid(
+							centroids[classification].slice(j, j + chunkSize), classification).send().on('transactionHash', () => {
+								dismissNotification(notification)
+							}).on('error', (err: any) => {
+								dismissNotification(notification)
+								notify(`Error setting feature indices for [${j},${j + chunkSize}) for the \"${classifications[classification]}\" class`, { variant: 'error' })
+								throw err
+							})
+					}
 				}
-			}
-		}
-
-		const classifierContract = await SparseNearestCentroidClassifier.new(
-			[classifications[0]], [centroids[0].slice(0, initialChunkSize)], [dataCounts[0]]
-		)
-
-		gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
-		console.log(`  Deployed classifier to ${classifierContract.address}. gasUsed: ${gasUsed}`)
-		// Add classes separately to avoid hitting gasLimit.
-		const addClassPromises = []
-		for (let i = 1; i < classifications.length; ++i) {
-			addClassPromises.push(classifierContract.addClass(
-				centroids[i].slice(0, initialChunkSize), classifications[i], dataCounts[i]
-			).then(r => {
-				console.debug(`    Added class ${i}. gasUsed: ${r.receipt.gasUsed}`)
-				return r
-			}))
-		}
-		return Promise.all(addClassPromises).then(async responses => {
-			console.debug("  All classes added.")
-			for (const r of responses) {
-				gasUsed += r.receipt.gasUsed
-			}
-
-			// Tried with promises but got weird unhelpful errors from Truffle (some were like network timeout errors).
-			console.debug("  Adding remaining dimensions.")
-			for (let classification = 0; classification < classifications.length; ++classification) {
-				for (let j = initialChunkSize; j < centroids[classification].length; j += chunkSize) {
-					const r = await classifierContract.extendCentroid(
-						centroids[classification].slice(j, j + chunkSize), classification)
-					console.debug(`    Added dimensions [${j}, ${Math.min(j + chunkSize, centroids[classification].length)}) for class ${classification}. gasUsed: ${r.receipt.gasUsed}`)
-					gasUsed += r.receipt.gasUsed
-				}
-			}
-			console.log(`  Set all centroids. gasUsed: ${gasUsed}.`)
-			return classifierContract
+				notify(`The model contract has been deployed to ${newContractInstance.options.address}`, { variant: 'success' })
+				saveAddress('model', newContractInstance.options.address)
+				return newContractInstance
+			})
 		})
 	}
 
@@ -290,17 +276,17 @@ export class ModelDeployer {
 			options.saveTransactionHash = (() => { })
 		}
 
-		switch (model.type) {
+		switch (model.type.toLocaleLowerCase('en')) {
 			case 'dense perceptron':
 			case 'sparse perceptron':
+			case 'perceptron':
 				return this.deployPerceptron(model, options)
 			case 'naive bayes':
 				return this.deployNaiveBayes(model, options)
 			case 'dense nearest centroid classifier':
+			case 'sparse nearest centroid classifier':
 			case 'nearest centroid classifier':
 				return this.deployNearestCentroidClassifier(model, options)
-			case 'sparse nearest centroid classifier':
-				return this.deploySparseNearestCentroidClassifier(model, options)
 			default:
 				// Should not happen.
 				throw new Error(`Unrecognized model type: "${model.type}"`)

@@ -123,7 +123,7 @@ contract('SparseNearestCentroidClassifier', function (accounts) {
 			return classifier.getCentroidValue(classification, dimension).then(parseFloatBN)
 		}))
 		const expectedCentroidValues = Array.prototype.concat(originalCentroidValues, extension)
-		await classifier.extendCentroid(convertData([2, 2], web3, toFloat), classification)
+		await classifier.extendCentroid(convertData(extension, web3, toFloat), classification)
 
 		for (let dimension = 0; dimension < expectedCentroidValues.length; ++dimension) {
 			const v = await classifier.getCentroidValue(classification, dimension).then(parseFloatBN)

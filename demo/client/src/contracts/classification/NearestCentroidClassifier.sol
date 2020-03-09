@@ -42,6 +42,20 @@ contract NearestCentroidClassifier is Classifier64 {
         }
     }
 
+    /**
+     * Extend the number of dimensions of a centroid.
+     * Made to be called just after the contract is created and never again.
+     * @param extension The values to append to a centroid vector.
+     * @param classification The class to add the extension to.
+     */
+    function extendCentroid(int64[] memory extension, uint64 classification) public onlyOwner {
+        require(classification < classifications.length, "This classification has not been added yet.");
+        require(centroids[classification].length + extension.length < 2 ** 63, "Centroid would be too long.");
+        for (uint i = 0; i < extension.length; ++i) {
+            centroids[classification].push(extension[i]);
+        }
+    }
+
     function addClass(int64[] memory centroid, string memory classification, uint dataCount) public onlyOwner {
         require(classifications.length + 1 < 2 ** 64, "There are too many classes already.");
         require(centroid.length == centroids[0].length, "Data doesn't have the correct number of dimensions.");
@@ -113,5 +127,17 @@ contract NearestCentroidClassifier is Classifier64 {
         uint oneSquared = uint(toFloat).mul(toFloat);
         uint offset = uint(toFloat) * 100;
         require(oneSquared - offset < _norm && _norm < oneSquared + offset, "The provided data does not have a norm of 1.");
+    }
+
+    // Useful methods to view the underlying data:
+    // To match the `SparseNearestCentroidClassifier`.
+    // These methods are not really needed now but they are added in case the implementation of the class
+    // changes later after some gas cost analysis.
+    function getNumSamples(uint classIndex) public view returns (uint) {
+        return dataCounts[classIndex];
+    }
+
+    function getCentroidValue(uint classIndex, uint featureIndex) public view returns (int64) {
+        return centroids[classIndex][featureIndex];
     }
 }
