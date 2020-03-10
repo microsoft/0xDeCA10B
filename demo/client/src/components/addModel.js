@@ -13,6 +13,7 @@ import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import TextField from '@material-ui/core/TextField';
+import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
 import update from 'immutability-helper';
 import { withSnackbar } from 'notistack';
@@ -71,13 +72,13 @@ const styles = theme => ({
 class AddModel extends React.Component {
 
   constructor(props) {
-    super(props);
-    this.classes = props.classes;
+    super(props)
+    this.classes = props.classes
 
-    this.web3 = null;
+    this.web3 = null
 
     // Default to local storage for storing original data.
-    const storageType = localStorage.getItem('storageType') || 'local';
+    const storageType = localStorage.getItem('storageType') || 'local'
     this.storages = DataStoreFactory.getAll()
 
     this.state = {
@@ -112,7 +113,7 @@ class AddModel extends React.Component {
       },
       storageType,
       permittedStorageTypes: [],
-    };
+    }
 
     this.notify = this.notify.bind(this)
     this.dismissNotification = this.dismissNotification.bind(this)
@@ -229,7 +230,8 @@ class AddModel extends React.Component {
             Add your model
           </Typography>
           <Typography component="p">
-            Add the information for the model you want to deploy.
+            Provide the information for the model and then deploy it to a blockchain.
+            You can hover over (or long press for touch screens) certain items to get more details.
           </Typography>
           <Typography component="p">
             If you want to use a model that is already deployed, then you can add its information <Link href='/addDeployedModel'>here</Link>.
@@ -272,7 +274,12 @@ class AddModel extends React.Component {
                   </Paper>
                 )}
               </Dropzone>
-              <InputLabel className={this.classes.selectorLabel} htmlFor="encoder">Encoder</InputLabel>
+
+              {/* Encoder */}
+              <Tooltip placement="top-start"
+                title="The method that will be used to convert the input (text, image, etc.) into a machine readable format">
+                <InputLabel className={this.classes.selectorLabel} htmlFor="encoder">Encoder</InputLabel>
+              </Tooltip>
               <Select className={this.classes.selector}
                 onChange={this.handleInputChange}
                 value={this.state.encoder}
@@ -280,12 +287,29 @@ class AddModel extends React.Component {
                   name: 'encoder',
                 }}
               >
-                <MenuItem value={"none"}>None</MenuItem>
-                <MenuItem value={"IMDB vocab"}>IMDB vocab (for English text)</MenuItem>
-                <MenuItem value={"universal sentence encoder"}>Universal Sentence Encoder (for English text)</MenuItem>
-                <MenuItem value={"MobileNetv2"}>MobileNetv2 (for images)</MenuItem>
+                <Tooltip value="none" placement="top-start"
+                  title="No transformation will be applied">
+                  <MenuItem>None</MenuItem>
+                </Tooltip>
+                <Tooltip value="IMDB vocab" placement="top-start"
+                  title="Convert each word in English text to a number using the 1000 most frequent words in the IMDB review dataset">
+                  <MenuItem>IMDB vocab</MenuItem>
+                </Tooltip>
+                <Tooltip value="universal sentence encoder" placement="top-start"
+                  title="Use Universal Sentence Encoder to convert English text to a vector of numbers">
+                  <MenuItem>Universal Sentence Encoder (for English text)</MenuItem>
+                </Tooltip>
+                <Tooltip value="MobileNetv2" placement="top-start"
+                  title="Use MobileNetv2 to convert images to a vector of numbers">
+                  <MenuItem>MobileNetv2 (for images)</MenuItem>
+                </Tooltip>
               </Select>
-              <InputLabel className={this.classes.selectorLabel} htmlFor="incentiveMechanism">Incentive mechanism</InputLabel>
+
+              {/* Incentive Mechanism */}
+              <Tooltip placement="top-start"
+                title={"The system that will be used to determine rewards for data that is determined to be \"good\"."}>
+                <InputLabel className={this.classes.selectorLabel} htmlFor="incentiveMechanism">Incentive mechanism (IM)</InputLabel>
+              </Tooltip>
               <Select className={this.classes.selector}
                 onChange={this.handleInputChange}
                 value={this.state.incentiveMechanism}
@@ -293,15 +317,23 @@ class AddModel extends React.Component {
                   name: 'incentiveMechanism',
                 }}
               >
-                <MenuItem value={"Points64"}>Points</MenuItem>
-                <MenuItem value={"Stakeable64"}>Stakeable</MenuItem>
+                <Tooltip value="Points64" placement="top-start"
+                  title="Collect and earn points. No deposits required.">
+                  <MenuItem>Points</MenuItem>
+                </Tooltip>
+                <Tooltip value="Stakeable64" placement="top-start"
+                  title="Stake a deposit when giving data. Contributors have the possibility to earn rewards by taking the deposits of others.">
+                  <MenuItem>Stakeable</MenuItem>
+                </Tooltip>
               </Select>
-              {this.state.incentiveMechanism === "Stakeable64" &&
-                this.renderStakeableOptions()
-              }
               {this.state.incentiveMechanism === "Points64" &&
                 this.renderPointsOptions()
               }
+              {this.state.incentiveMechanism === "Stakeable64" &&
+                this.renderStakeableOptions()
+              }
+
+              {/* Storage */}
               <div className={this.classes.selector}>
                 {renderStorageSelector("Where to store the supplied meta-data about this model like its address",
                   this.state.storageType, this.handleInputChange, this.state.permittedStorageTypes)}
@@ -386,20 +418,17 @@ class AddModel extends React.Component {
           onChange={this.handleInputChange} />
       </Grid>
       <Grid item xs={12} sm={12}>
-        <Typography component="h4">
-          Deposit Weight
-        </Typography>
-        <Typography component="p">
-          A multiplicative factor to the required deposit.
-          Setting this to 0 will mean that no deposit is required but will allow you to stil use the IM to track "good" and "bad" contributions.
-        </Typography>
-        <TextField name="costWeight" label="Cost weight (in wei)"
-          inputProps={{ 'aria-label': "Cost weight in wei" }}
-          className={this.classes.numberTextField}
-          value={this.state.costWeight}
-          type="number"
-          margin="normal"
-          onChange={this.handleInputChange} />
+        <Tooltip placement="top-start"
+          title={"A multiplicative factor to the required deposit. \
+            Setting this to 0 will mean that no deposit is required but will allow you to stil use the IM to track \"good\" and \"bad\" contributions."}>
+          <TextField name="costWeight" label="Deposit weight (in wei)"
+            inputProps={{ 'aria-label': "Deposit weight in wei" }}
+            className={this.classes.numberTextField}
+            value={this.state.costWeight}
+            type="number"
+            margin="normal"
+            onChange={this.handleInputChange} />
+        </Tooltip>
       </Grid>
     </Grid>;
   }
