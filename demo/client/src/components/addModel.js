@@ -178,31 +178,41 @@ class AddModel extends React.Component {
   }
 
   processUploadedModel(acceptedFiles) {
-    if (acceptedFiles.length !== 1) {
-      this.notify("Please only provide one file", { variant: 'error' })
-      return
-    }
-    const reader = new FileReader();
-    const file = acceptedFiles[0];
-    reader.onabort = () => console.error("File reading was aborted.");
-    reader.onerror = () => console.error("File reading has failed.");
-    reader.onload = () => {
-      const binaryStr = reader.result
-      const model = JSON.parse(binaryStr);
-      if (!(model.type in ModelDeployer.modelTypes)) {
-        this.notify(`The "type" of the model must be one of ${JSON.stringify(Object.keys(ModelDeployer.modelTypes))}`, { variant: 'error' })
-      } else {
-        this.setState({ model, modelFileName: file.path });
+    this.setState({ model: undefined, modelFileName: undefined }, _ => {
+      if (acceptedFiles.length !== 1) {
+        this.notify("Please only provide one file", { variant: 'error' })
+        return
       }
-    };
-    reader.readAsBinaryString(file);
+      const reader = new FileReader();
+      const file = acceptedFiles[0];
+      reader.onabort = () => console.error("File reading was aborted.");
+      reader.onerror = () => console.error("File reading has failed.");
+      reader.onload = () => {
+        try {
+          const binaryStr = reader.result
+          const model = JSON.parse(binaryStr);
+
+          if (!(model.type in ModelDeployer.modelTypes)) {
+            this.notify(`The "type" of the model must be one of ${JSON.stringify(Object.keys(ModelDeployer.modelTypes))}`, { variant: 'error' })
+          } else {
+            this.setState({ model, modelFileName: file.path })
+          }
+        } catch (err) {
+          console.error(`Error reading "${file.path}".`)
+          console.error(err)
+          this.notify(`There was an error reading ${file.path}. See the console for details.`, { variant: 'error' })
+        }
+      }
+      reader.readAsBinaryString(file)
+    })
   }
 
   render() {
     const disableSave = this.state.deploymentInfo.main.address !== undefined
       || !(this.state.refundTimeWaitTimeS <= this.state.ownerClaimWaitTimeS)
       || !(this.state.ownerClaimWaitTimeS <= this.state.anyAddressClaimWaitTimeS)
-      || this.state.costWeight < 0;
+      || this.state.costWeight < 0
+      || this.state.model === undefined
     return (
       <Container>
         <Paper className={this.classes.root} elevation={1}>
@@ -476,20 +486,19 @@ class AddModel extends React.Component {
   }
 
   async deployIncentiveMechanism(account) {
-    let contractInfo;
-    let args = undefined
+    let contractInfo, notification, args
     const { incentiveMechanism,
       refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS,
-      costWeight } = this.state;
+      costWeight } = this.state
     switch (incentiveMechanism) {
       case 'Points64':
         contractInfo = Points64
         args = [refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS]
-        break;
+        break
       case 'Stakeable64':
         contractInfo = Stakeable64
         args = [refundTimeWaitTimeS, ownerClaimWaitTimeS, anyAddressClaimWaitTimeS, costWeight]
-        break;
+        break
       default:
         // Should not happen.
         this.notify(`Unrecognized incentive mechanism: "${incentiveMechanism}"`, { variant: 'error' });
@@ -507,9 +516,12 @@ class AddModel extends React.Component {
     }).send({
     }).on('transactionHash', transactionHash => {
       this.dismissNotification(pleaseAcceptKey);
-      this.notify(`Submitted the incentive mechanism with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+      notification = this.notify(`Submitted the incentive mechanism with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
       this.saveTransactionHash('incentiveMechanism', transactionHash);
     }).on('receipt', receipt => {
+      if (notification !== undefined) {
+        this.dismissNotification(notification)
+      }
       this.notify(`The incentive mechanism contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
       this.saveAddress('incentiveMechanism', receipt.contractAddress);
     }).on('error', err => {
@@ -523,7 +535,8 @@ class AddModel extends React.Component {
   }
 
   async deployDataHandler(account) {
-    const pleaseAcceptKey = this.notify("Please accept the prompt to deploy the data handler");
+    const pleaseAcceptKey = this.notify("Please accept the prompt to deploy the data handler")
+    let notification
     const dataHandlerContract = new this.web3.eth.Contract(DataHandler64.abi, {
       from: account,
     });
@@ -532,9 +545,12 @@ class AddModel extends React.Component {
     }).send({
     }).on('transactionHash', transactionHash => {
       this.dismissNotification(pleaseAcceptKey);
-      this.notify(`Submitted the data handler with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+      notification = this.notify(`Submitted the data handler with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
       this.saveTransactionHash('dataHandler', transactionHash);
     }).on('receipt', receipt => {
+      if (notification !== undefined) {
+        this.dismissNotification(notification)
+      }
       this.notify(`The data handler contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
       this.saveAddress('dataHandler', receipt.contractAddress);
     }).on('error', err => {
@@ -546,10 +562,11 @@ class AddModel extends React.Component {
   }
 
   async deployMainEntryPoint(account, dataHandler, incentiveMechanism, model) {
-    const pleaseAcceptKey = this.notify("Please accept the prompt to deploy the main entry point contact");
+    const pleaseAcceptKey = this.notify("Please accept the prompt to deploy the main entry point contact")
+    let notification
     const collaborativeTrainer64Contract = new this.web3.eth.Contract(CollaborativeTrainer64.abi, {
       from: account,
-    });
+    })
     return collaborativeTrainer64Contract.deploy({
       data: CollaborativeTrainer64.bytecode,
       arguments: [
@@ -559,9 +576,12 @@ class AddModel extends React.Component {
     }).send({
     }).on('transactionHash', transactionHash => {
       this.dismissNotification(pleaseAcceptKey);
-      this.notify(`Submitted the main entry point with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
+      notification = this.notify(`Submitted the main entry point with transaction hash: ${transactionHash}. Please wait for a deployment confirmation.`);
       this.saveTransactionHash('main', transactionHash);
     }).on('receipt', receipt => {
+      if (notification !== undefined) {
+        this.dismissNotification(notification)
+      }
       this.notify(`The main entry point contract has been deployed to ${receipt.contractAddress}`, { variant: 'success' });
       this.saveAddress('main', receipt.contractAddress);
     }).on('error', err => {
@@ -570,12 +590,13 @@ class AddModel extends React.Component {
       this.notify(`Error deploying the main entry point contract`, { variant: 'error' });
       throw err;
     }).then(newContractInstance => {
-      this.notify(`Please accept the next 3 transactions to transfer ownership of the components to the main entry point contract`);
+      notification = this.notify(`Please accept the next 3 transactions to transfer ownership of the components to the main entry point contract`);
       return Promise.all([
         dataHandler.methods.transferOwnership(newContractInstance.options.address).send(),
         incentiveMechanism.methods.transferOwnership(newContractInstance.options.address).send(),
         model.methods.transferOwnership(newContractInstance.options.address).send(),
       ]).then(_ => {
+        this.dismissNotification(notification)
         return newContractInstance;
       });
     });
