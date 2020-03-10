@@ -23,7 +23,7 @@ import CollaborativeTrainer64 from '../contracts/compiled/CollaborativeTrainer64
 import DataHandler64 from '../contracts/compiled/DataHandler64.json';
 import Points64 from '../contracts/compiled/Points64.json';
 import Stakeable64 from '../contracts/compiled/Stakeable64.json';
-import { getWeb3 } from '../getWeb3';
+import { getNetworkType, getWeb3 } from '../getWeb3';
 import { ModelDeployer } from '../ml-models/deploy-model';
 import { ModelInformation } from '../storage/data-store';
 import { DataStoreFactory } from '../storage/data-store-factory';
@@ -129,9 +129,17 @@ class AddModel extends React.Component {
       permittedStorageTypes.push('none')
       this.setState({ permittedStorageTypes })
     })
+    window.ethereum.on('networkChanged', netId => {
+      this.setupWeb3()
+    })
+    this.setupWeb3()
+  }
+
+  async setupWeb3() {
     try {
       this.web3 = await getWeb3()
       this.deployer = new ModelDeployer(this.web3)
+      this.setState({ networkType: await getNetworkType() })
     } catch (error) {
       this.notify("Failed to load web3, accounts, or contract. Check console for details.", { variant: 'error' })
       console.error(error);
@@ -213,6 +221,7 @@ class AddModel extends React.Component {
       || !(this.state.ownerClaimWaitTimeS <= this.state.anyAddressClaimWaitTimeS)
       || this.state.costWeight < 0
       || this.state.model === undefined
+
     return (
       <Container>
         <Paper className={this.classes.root} elevation={1}>
@@ -225,7 +234,7 @@ class AddModel extends React.Component {
           <Typography component="p">
             If you want to use a model that is already deployed, then you can add its information <Link href='/addDeployedModel'>here</Link>.
           </Typography>
-          {/* TODO Recommend using a test net for the first time if the network is not a test net. */}
+
           <form className={this.classes.container} noValidate autoComplete="off">
             <div className={this.classes.form} >
               <TextField
@@ -299,6 +308,9 @@ class AddModel extends React.Component {
               </div>
             </div>
           </form>
+          {this.state.networkType === 'main' && <Typography component="p">
+            {"⚠ You are currently set up to deploy to a main network. Please consider deploying to a test network before deploying to a main network. "}
+          </Typography>}
           <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}
             disabled={disableSave}
           >
