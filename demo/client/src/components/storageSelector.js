@@ -1,7 +1,8 @@
-import InputLabel from '@material-ui/core/InputLabel';
-import MenuItem from '@material-ui/core/MenuItem';
-import Select from '@material-ui/core/Select';
-import React from 'react';
+import InputLabel from '@material-ui/core/InputLabel'
+import MenuItem from '@material-ui/core/MenuItem'
+import Select from '@material-ui/core/Select'
+import Tooltip from '@material-ui/core/Tooltip'
+import React from 'react'
 
 export function checkStorages(storages) {
     return Promise.all(Object.entries(storages).map(([key, storage]) => {
@@ -25,9 +26,12 @@ export function renderStorageSelector(detailedDescription, currentValue, handleI
         currentValue = ''
     }
     return <div>
+        <Tooltip placement="top-start"
+              title={detailedDescription}>
         <InputLabel htmlFor="storage-selector">
-            {`Storage (${detailedDescription})`}
+            {`Storage`}
         </InputLabel>
+        </Tooltip>
         <Select value={currentValue} onChange={handleInputChange} inputProps={{
             name: 'storageType',
             id: 'storage-selector',

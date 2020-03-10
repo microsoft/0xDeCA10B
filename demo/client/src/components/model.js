@@ -15,6 +15,7 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Tabs from '@material-ui/core/Tabs';
 import TextField from '@material-ui/core/TextField';
+import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
 import * as mobilenet from '@tensorflow-models/mobilenet';
 import * as UniversalSentenceEncoder from '@tensorflow-models/universal-sentence-encoder';
@@ -52,12 +53,12 @@ const styles = theme => ({
     flexDirection: 'column'
   },
   descriptionDiv: {
+    paddingTop: theme.spacing(1),
     paddingBottom: theme.spacing(2),
   },
   addToStorageDiv: {
     // Only line of text.
     minHeight: theme.spacing(4),
-    paddingBottom: theme.spacing(1),
   },
   info: {
     paddingBottom: theme.spacing(1),
@@ -625,6 +626,14 @@ class Model extends React.Component {
           console.warn("Couldn't get toFloat value from classifier.");
           console.warn(err);
         }),
+      this.state.incentiveMechanism.methods.refundWaitTimeS().call()
+        .then(parseInt)
+        .then(refundWaitTimeS => {
+          this.setState({ refundWaitTimeS });
+        }).catch(err => {
+          console.error("Couldn't get refundWaitTimeS value from IM.");
+          console.error(err);
+        }),
       this.state.incentiveMechanism.methods.ownerClaimWaitTimeS().call()
         .then(parseInt)
         .then(ownerClaimWaitTimeS => {
@@ -633,12 +642,12 @@ class Model extends React.Component {
           console.error("Couldn't get ownerClaimWaitTimeS value from IM.");
           console.error(err);
         }),
-      this.state.incentiveMechanism.methods.refundWaitTimeS().call()
+      this.state.incentiveMechanism.methods.anyAddressClaimWaitTimeS().call()
         .then(parseInt)
-        .then(refundWaitTimeS => {
-          this.setState({ refundWaitTimeS });
+        .then(anyAddressClaimWaitTimeS => {
+          this.setState({ anyAddressClaimWaitTimeS });
         }).catch(err => {
-          console.error("Couldn't get refundWaitTimeS value from IM.");
+          console.error("Couldn't get anyAddressClaimWaitTimeS value from IM.");
           console.error(err);
         }),
     ]);
@@ -943,14 +952,18 @@ class Model extends React.Component {
     return (
       <Container>
         <Paper className={this.classes.root} elevation={1}>
-          <Typography variant="h5" component="h3">
-            {this.state.checkedContentRestriction ?
-              this.state.contractInfo.name && this.state.restrictContent ?
-                "(hidden)"
-                : this.state.contractInfo.name
-              : "(loading)"
-            }
-          </Typography>
+          <Tooltip placement="top-start" title={this.state.restrictContent === true ?
+            "In order to ensure online safety, the name for the model will not be shown"
+            : "The name set for the model"}>
+            <Typography variant="h5" component="h3">
+              {this.state.checkedContentRestriction ?
+                this.state.contractInfo.name && this.state.restrictContent ?
+                  "(hidden)"
+                  : this.state.contractInfo.name
+                : "(loading)"
+              }
+            </Typography>
+          </Tooltip>
 
           <div className={this.classes.descriptionDiv}>
             {this.state.checkedContentRestriction ?
@@ -959,10 +972,21 @@ class Model extends React.Component {
                   {"⚠ The details for this model cannot be shown because it has not been verified. \
                   Text and images from other users will not be shown in order to ensure online safety. "}
                   <Link href='/about' target='_blank'>Learn more</Link>.
-              </Typography>
-                : <Typography component="p">{this.state.contractInfo.description}</Typography>
+                </Typography>
+                : <Tooltip placement="top-start" title="The description for this model">
+                  <Typography component="p">
+                    {this.state.contractInfo.description}
+                  </Typography>
+                </Tooltip>
               : <Typography component="p">{"(loading)"}</Typography>
             }
+          </div>
+
+          <div>
+            <Typography component="p">
+              This page allows you interact with a model deployed to a blockchain.
+              You can hover over (or long press for touch screens) certain items to get more details.
+            </Typography>
           </div>
 
           <div className={this.classes.addToStorageDiv}>
@@ -972,39 +996,52 @@ class Model extends React.Component {
               </Typography>}
           </div>
           <div className={this.classes.info}>
-            <Typography component="p">
-              <b>Your score: </b>
-              {this.state.accountScore !== undefined ? this.state.accountScore : "(loading)"}
-              {this.state.totalGoodDataCount !== undefined ?
-                ` (${this.state.numGood || 0}/${this.state.totalGoodDataCount || 0})`
-                : ""
-              }
-            </Typography>
-            <Typography component="p">
-              <b>Time to wait before requesting a refund: </b>
-              {this.state.refundWaitTimeS !== undefined ?
-                this.state.refundWaitTimeS !== 0 ?
-                  moment.duration(this.state.refundWaitTimeS, 's').humanize()
-                  : "0 seconds"
-                : "(loading)"}
-            </Typography>
-            <Typography component="p">
-              <b>Time to wait before taking another's deposit: </b>
-              {this.state.ownerClaimWaitTimeS !== undefined ?
-                this.state.ownerClaimWaitTimeS !== 0 ?
-                  moment.duration(this.state.ownerClaimWaitTimeS, 's').humanize()
-                  : "0 seconds"
-                : "(loading)"}
-            </Typography>
-            <Typography component="p" title={`${this.state.depositCost} wei`}>
-              <b>Current Required Deposit: </b>
-              {this.state.depositCost !== undefined ?
-                this.getHumanReadableEth(this.state.depositCost)
-                : "(loading)"}
-            </Typography>
+            <Tooltip placement="top-start"
+              title={"The number of data samples that you have contributed that were determined to be \"good\" compared to the total number of \"good\" samples contributed"}>
+              <Typography component="p">
+                <b>Your score: </b>
+                {this.state.accountScore !== undefined ? this.state.accountScore : "(loading)"}
+                {this.state.totalGoodDataCount !== undefined ?
+                  ` (${this.state.numGood || 0}/${this.state.totalGoodDataCount || 0})`
+                  : ""
+                }
+              </Typography>
+            </Tooltip>
+            <Tooltip placement="top-start"
+              title={"The amount of time that you must wait before requesting a refund and to verify data you claim is correct. \
+              This is also the amount of time that you must wait before reporting another account's data as incorrect."}>
+              <Typography component="p">
+                <b>Refund/reward wait time: </b>
+                {this.state.refundWaitTimeS !== undefined ?
+                  this.state.refundWaitTimeS !== 0 ?
+                    moment.duration(this.state.refundWaitTimeS, 's').humanize()
+                    : "0 seconds"
+                  : "(loading)"}
+              </Typography>
+            </Tooltip>
+            <Tooltip placement="top-start"
+              title={"The amount of time that you must wait before taking another account's full deposit given with their data contribution."}>
+              <Typography component="p">
+                <b>Full deposit take wait time: </b>
+                {this.state.anyAddressClaimWaitTimeS !== undefined ?
+                  this.state.anyAddressClaimWaitTimeS !== 0 ?
+                    moment.duration(this.state.anyAddressClaimWaitTimeS, 's').humanize()
+                    : "0 seconds"
+                  : "(loading)"}
+              </Typography>
+            </Tooltip>
+            <Tooltip placement="top-start"
+              title={`The amount that is required to deposit when providing data (${this.state.depositCost} wei)`}>
+              <Typography component="p">
+                <b>Current required deposit: </b>
+                {this.state.depositCost !== undefined ?
+                  this.getHumanReadableEth(this.state.depositCost)
+                  : "(loading)"}
+              </Typography>
+            </Tooltip>
           </div>
           <div className={this.classes.controls}>
-            {renderStorageSelector("where to store the link between your update and your original unprocessed data",
+            {renderStorageSelector("Where to store the link between your update and your original unprocessed data",
               this.state.storageType, this.handleInputChange, this.state.permittedStorageTypes)}
           </div>
           <div>
@@ -1022,6 +1059,9 @@ class Model extends React.Component {
             </AppBar>
             {this.state.tab === this.PREDICT_TAB &&
               <TabContainer>
+                <Typography component="p">
+                  Test out the model by providing data and getting a prediction.
+                </Typography>
                 <form id="predict-form" onSubmit={(e) => { e.preventDefault(); this.predictInput(); }}>
                   <div className={this.classes.tabContainer}>
                     {this.renderInputBox()}
@@ -1180,7 +1220,7 @@ class Model extends React.Component {
             }
           </div>
         </Paper>
-      </Container>
+      </Container >
     );
   }
 

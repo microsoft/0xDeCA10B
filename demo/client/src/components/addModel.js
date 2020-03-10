@@ -129,7 +129,7 @@ class AddModel extends React.Component {
       permittedStorageTypes.push('none')
       this.setState({ permittedStorageTypes })
     })
-    window.ethereum.on('networkChanged', netId => {
+    window.ethereum.on('networkChanged', _ => {
       this.setupWeb3()
     })
     this.setupWeb3()
@@ -303,7 +303,7 @@ class AddModel extends React.Component {
                 this.renderPointsOptions()
               }
               <div className={this.classes.selector}>
-                {renderStorageSelector("where to store the supplied meta-data about this model like its address",
+                {renderStorageSelector("Where to store the supplied meta-data about this model like its address",
                   this.state.storageType, this.handleInputChange, this.state.permittedStorageTypes)}
               </div>
             </div>
