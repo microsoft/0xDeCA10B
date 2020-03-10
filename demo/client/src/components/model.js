@@ -1008,7 +1008,7 @@ class Model extends React.Component {
               </Typography>
             </Tooltip>
             <Tooltip placement="top-start"
-              title={"The amount of time that you must wait before requesting a refund and to verify data you claim is correct. \
+              title={"The amount of time that you must wait after submitting data before requesting a refund and to verify data you claim is correct. \
               This is also the amount of time that you must wait before reporting another account's data as incorrect."}>
               <Typography component="p">
                 <b>Refund/reward wait time: </b>
@@ -1020,7 +1020,7 @@ class Model extends React.Component {
               </Typography>
             </Tooltip>
             <Tooltip placement="top-start"
-              title={"The amount of time that you must wait before taking another account's full deposit given with their data contribution."}>
+              title={"The amount of time that you must wait before taking another account's full deposit given with their data contribution"}>
               <Typography component="p">
                 <b>Full deposit take wait time: </b>
                 {this.state.anyAddressClaimWaitTimeS !== undefined ?
@@ -1072,9 +1072,11 @@ class Model extends React.Component {
                       Get Prediction
                     </Button>
                     <br />
-                    <Typography component="p" title={this.state.encodedPredictionData}>
-                      <b>Prediction: {this.state.restrictContent ? this.state.prediction : this.getClassificationName(this.state.prediction)}</b>
-                    </Typography>
+                    <Tooltip placement="top-start" title={this.state.encodedPredictionData || ""}>
+                      <Typography component="p">
+                        <b>Prediction: {this.state.restrictContent ? this.state.prediction : this.getClassificationName(this.state.prediction)}</b>
+                      </Typography>
+                    </Tooltip>
                     <GridLoader loading={this.state.predicting}
                       size="15"
                       color="#2196f3"
@@ -1085,6 +1087,9 @@ class Model extends React.Component {
             }
             {this.state.tab === this.TRAIN_TAB &&
               <TabContainer>
+                <Typography component="p">
+                  Improve the model by providing training data and a label for the data.
+                </Typography>
                 <form id="train-form" onSubmit={(e) => { e.preventDefault(); this.train(); }}>
                   <div className={this.classes.tabContainer}>
                     {this.renderInputBox()}
@@ -1113,7 +1118,14 @@ class Model extends React.Component {
               </TabContainer>
             }
             {this.state.tab === this.REFUND_TAB &&
-              <div>
+              <TabContainer>
+                <Typography component="p">
+                  You can attempt to get a refund for data that is "good".
+                  There are various ways that the system can identify data as "good".
+                  Currently it is done by checking if the model's prediction matches the label that you provided when you submitted the data for training.
+                  The main idea is that if your label was wrong, then others should submit data to correct the model before you can validate your contribution.
+                  Some incorrect data might get submitted but it would be expensive to submit a lot of incorrect data so overall the model should be mostly okay as long as it is being monitored.
+                </Typography>
                 {this.state.addedData.length === 0 &&
                   <Typography component="p">
                     No data has been submitted by you yet.
@@ -1132,13 +1144,17 @@ class Model extends React.Component {
                   <TableBody>
                     {this.state.addedData.map(d => {
                       return (<TableRow key={`refund-row-${d.time}`}>
-                        <TableCell title={`Encoded data: ${this.getDisplayableEncodedData(d.data)}`}>
-                          {d.originalData}{d.dataMatches === false && " ⚠ The actual data doesn't match this!"}
-                        </TableCell>
+                        <Tooltip title={`Encoded data: ${this.getDisplayableEncodedData(d.data)}`}>
+                          <TableCell>
+                            {d.originalData}{d.dataMatches === false && " ⚠ The actual data doesn't match this!"}
+                          </TableCell>
+                        </Tooltip>
                         <TableCell>{this.state.restrictContent ? d.classification : this.getClassificationName(d.classification)}</TableCell>
-                        <TableCell title={`${d.initialDeposit} wei`}>
-                          {this.getHumanReadableEth(d.initialDeposit)}
-                        </TableCell>
+                        <Tooltip title={`${d.initialDeposit} wei`}>
+                          <TableCell >
+                            {this.getHumanReadableEth(d.initialDeposit)}
+                          </TableCell>
+                        </Tooltip>
                         <TableCell>{new Date(d.time * 1000).toString()}</TableCell>
                         <TableCell>
                           {/* Most of these checks should actually just be warnings and not explicitly forbid requesting
@@ -1161,13 +1177,16 @@ class Model extends React.Component {
                     })}
                   </TableBody>
                 </Table>}
-              </div>
+              </TabContainer>
             }
             {this.state.tab === this.REWARD_TAB &&
-              <div>
+              <TabContainer>
+                <Typography component="p">
+                  You can attempt to report data that other accounts have submitted as incorrect.
+                </Typography>
                 {(this.state.numGood === 0 || this.state.numGood === undefined) &&
                   <Typography component="p">
-                    You must have some good data submitted before trying to take other's deposits.
+                    You must have some data submitted and collected refunds for it before trying to take another's deposits.
                 </Typography>}
                 {this.state.rewardData.length === 0 &&
                   <Typography component="p">
@@ -1187,13 +1206,17 @@ class Model extends React.Component {
                   <TableBody>
                     {this.state.rewardData.map(d => {
                       return (<TableRow key={`reward-row-${d.time}`}>
-                        <TableCell title={`Encoded data: ${this.getDisplayableEncodedData(d.data)}`}>
-                          {d.originalData}{d.dataMatches === false && " ⚠ The actual data doesn't match this!"}
-                        </TableCell>
+                        <Tooltip title={`Encoded data: ${this.getDisplayableEncodedData(d.data)}`}>
+                          <TableCell>
+                            {d.originalData}{d.dataMatches === false && " ⚠ The actual data doesn't match this!"}
+                          </TableCell>
+                        </Tooltip>
                         <TableCell>{this.state.restrictContent ? d.classification : this.getClassificationName(d.classification)}</TableCell>
-                        <TableCell title={`${d.initialDeposit} wei`}>
-                          {this.getHumanReadableEth(d.initialDeposit)}
-                        </TableCell>
+                        <Tooltip title={`${d.initialDeposit} wei`}>
+                          <TableCell>
+                            {this.getHumanReadableEth(d.initialDeposit)}
+                          </TableCell>
+                        </Tooltip>
                         <TableCell>{new Date(d.time * 1000).toString()}</TableCell>
                         <TableCell>
                           {d.errorCheckingStatus ?
@@ -1216,7 +1239,7 @@ class Model extends React.Component {
                     })}
                   </TableBody>
                 </Table>}
-              </div>
+              </TabContainer>
             }
           </div>
         </Paper>
