@@ -17,5 +17,11 @@ module.exports = class CustomTestEnvironment extends Environment {
         if (typeof this.global.IDBKeyRange === 'undefined') {
             this.global.IDBKeyRange = require("fake-indexeddb/lib/FDBKeyRange")
         }
+        if (typeof this.global.web3 === 'undefined') {
+            const Web3 = require('web3')
+            const truffleConfig = require('../truffle')
+            const networkConfig = truffleConfig.networks.development
+            this.global.web3 = new Web3(new Web3.providers.HttpProvider(`http://${networkConfig.host}:${networkConfig.port}`))
+        }
     }
 }

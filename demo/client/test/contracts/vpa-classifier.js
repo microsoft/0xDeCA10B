@@ -78,7 +78,7 @@ contract('VpaClassifier', function (accounts) {
     classifier = await NearestCentroidClassifier.new(
       [classifications[0]], [centroids[0]], [dataCounts[0]],
       // Block gasLimit by most miners as of May 2019.
-      { gas: 8E6 }
+      { gas: 8.9E6 }
     );
     console.log(`  Deployed classifier to ${classifier.address}.`);
     // Add classes separately to avoid hitting gasLimit.

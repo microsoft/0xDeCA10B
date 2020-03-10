@@ -59,7 +59,7 @@ module.exports = function (deployer) {
       return deployer.deploy(NearestCentroidClassifier,
         [classifications[0]], [centroids[0]], [dataCounts[0]],
         // Block gasLimit by most miners as of May 2019.
-        { gas: 8E6 }
+        { gas: 8.8E6 }
       ).then(classifier => {
         // Add classes separately to avoid hitting gasLimit.
         const addClassPromises = [];

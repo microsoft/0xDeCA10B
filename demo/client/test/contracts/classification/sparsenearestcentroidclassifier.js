@@ -1,7 +1,5 @@
-const SparseNearestCentroidClassifier = artifacts.require("./classification/SparseNearestCentroidClassifier")
-
 const { convertData } = require('../../../src/float-utils-node')
-const { loadSparseNearestCentroidClassifier } = require('../../../src/ml-models/load-model-node')
+const { deploySparseNearestCentroidClassifier } = require('../../../src/ml-models/deploy-model-node')
 
 contract('SparseNearestCentroidClassifier', function (accounts) {
 	const toFloat = 1E9
@@ -35,7 +33,7 @@ contract('SparseNearestCentroidClassifier', function (accounts) {
 				}
 			}
 		}
-		classifier = (await loadSparseNearestCentroidClassifier(model, web3, toFloat)).classifierContract
+		classifier = (await deploySparseNearestCentroidClassifier(model, web3, toFloat)).classifierContract
 	})
 
 	it("...should get the classifications", function () {
@@ -125,7 +123,7 @@ contract('SparseNearestCentroidClassifier', function (accounts) {
 			return classifier.getCentroidValue(classification, dimension).then(parseFloatBN)
 		}))
 		const expectedCentroidValues = Array.prototype.concat(originalCentroidValues, extension)
-		await classifier.extendCentroid(convertData([2, 2], web3, toFloat), classification)
+		await classifier.extendCentroid(convertData(extension, web3, toFloat), classification)
 
 		for (let dimension = 0; dimension < expectedCentroidValues.length; ++dimension) {
 			const v = await classifier.getCentroidValue(classification, dimension).then(parseFloatBN)

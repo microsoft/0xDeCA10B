@@ -12,6 +12,6 @@ export function convertData(data, web3, toFloat = _toFloat) {
     return data.map(num => convertNum(num, web3, toFloat));
 }
 
-export function convertToHexData(data, web3, toFloat = _toFloat) {
+export function convertDataToHex(data, web3, toFloat = _toFloat) {
     return data.map(num => convertToHex(num, web3, toFloat));
 }

@@ -76,8 +76,6 @@ class ModelList extends React.Component {
   }
 
   componentDidMount = async () => {
-    this.networkType = await getNetworkType()
-
     checkStorages(this.storages).then(permittedStorageTypes => {
       permittedStorageTypes = permittedStorageTypes.filter(storageType => storageType !== undefined)
       this.setState({ permittedStorageTypes }, this.updateModels)
@@ -108,9 +106,10 @@ class ModelList extends React.Component {
     }, this.updateModels)
   }
 
-  updateModels() {
+  async updateModels() {
     // TODO Also get valid contracts that the account has already interacted with.
     // TODO Filter out models that are not on this network.
+    const networkType = await getNetworkType()
     const limit = 6
     Promise.all(this.state.permittedStorageTypes.map(storageType => {
       const afterId = this.storageAfterAddress[storageType]
@@ -118,7 +117,7 @@ class ModelList extends React.Component {
         const newModels = response.models
         const { remaining } = response
         newModels.forEach(model => {
-          model.restrictContent = !this.validator.isPermitted(this.networkType, model.address)
+          model.restrictContent = !this.validator.isPermitted(networkType, model.address)
           model.metaDataLocation = storageType
         })
         if (newModels.length > 0) {

@@ -147,4 +147,19 @@ contract('NearestCentroidClassifier', function (accounts) {
       });
     });
   });
-});
+
+  it("...should extend centroids", async function () {
+    const classification = 0
+    const extension = [2, 2]
+    const originalCentroidValues = await Promise.all([...Array(2).keys()].map(dimension => {
+      return classifier.centroids(classification, dimension).then(parseFloatBN)
+    }))
+    const expectedCentroidValues = Array.prototype.concat(originalCentroidValues, extension)
+    await classifier.extendCentroid(convertData(extension, web3, toFloat), classification)
+
+    for (let dimension = 0; dimension < expectedCentroidValues.length; ++dimension) {
+      const v = await classifier.centroids(classification, dimension).then(parseFloatBN)
+      assert.closeTo(v, expectedCentroidValues[dimension], 1 / toFloat, `value for centroid[${dimension}]`)
+    }
+  })
+})
