@@ -64,7 +64,6 @@ const styles = theme => ({
     paddingBottom: theme.spacing(2),
   },
   table: {
-    minWidth: 650,
     wordBreak: 'break-word',
   },
 });
@@ -164,9 +163,12 @@ class AddModel extends React.Component {
   }
 
   handleInputChange(event) {
-    const target = event.target;
-    const value = target.type === "checkbox" ? target.checked : target.value;
-    const name = target.name;
+    const target = event.target
+    let value = target.type === "checkbox" ? target.checked : target.value
+    if (event.target.type === 'number') {
+      value = parseInt(value)
+    }
+    const name = target.name
 
     let valid = true
     if (['costWeight', 'refundTimeWaitTimeS', 'ownerClaimWaitTimeS', 'anyAddressClaimWaitTimeS'].indexOf(name) >= 0) {
@@ -204,7 +206,10 @@ class AddModel extends React.Component {
           if (!(model.type in ModelDeployer.modelTypes)) {
             this.notify(`The "type" of the model must be one of ${JSON.stringify(Object.keys(ModelDeployer.modelTypes))}`, { variant: 'error' })
           } else {
-            this.setState({ model, modelFileName: file.path })
+            this.setState({
+              model, modelFileName: file.path,
+              encoder: model.encoder || this.state.encoder,
+            })
           }
         } catch (err) {
           console.error(`Error reading "${file.path}".`)
@@ -216,12 +221,27 @@ class AddModel extends React.Component {
     })
   }
 
+  getDisabledReason() {
+    if (this.state.deploymentInfo.main.address !== undefined) {
+      return "Already deployed"
+    }
+    if (this.state.model === undefined) {
+      return "A model file must be uploaded"
+    }
+    if (!(this.state.refundTimeWaitTimeS <= this.state.ownerClaimWaitTimeS)) {
+      return "The refund/reward wait time must be at most the owner wait time"
+    }
+    if (!(this.state.ownerClaimWaitTimeS <= this.state.anyAddressClaimWaitTimeS)) {
+      return "The owner wait time must be at most the full deposit take wait time"
+    }
+    if (this.state.costWeight < 0) {
+      return "The deposit wait must be at least 0"
+    }
+    return null
+  }
+
   render() {
-    const disableSave = this.state.deploymentInfo.main.address !== undefined
-      || !(this.state.refundTimeWaitTimeS <= this.state.ownerClaimWaitTimeS)
-      || !(this.state.ownerClaimWaitTimeS <= this.state.anyAddressClaimWaitTimeS)
-      || this.state.costWeight < 0
-      || this.state.model === undefined
+    let disableReason = this.getDisabledReason()
 
     return (
       <Container>
@@ -253,6 +273,9 @@ class AddModel extends React.Component {
                 margin="normal"
                 onChange={this.handleInputChange}
               />
+
+              {/* Model */}
+              {/* Don't need to ask for the model type since there is only one option and in the future, it should be inferred from the provided file.
               <InputLabel className={this.classes.selectorLabel} htmlFor="model-type">Model type</InputLabel>
               <Select className={this.classes.selector}
                 onChange={this.handleInputChange}
@@ -262,7 +285,16 @@ class AddModel extends React.Component {
                 }}
               >
                 <MenuItem value={"Classifier64"}>Classifier64</MenuItem>
-              </Select>
+              </Select> */}
+
+              <Typography variant="h6" component="h6">
+                Model
+              </Typography>
+              <Typography component="p">
+                Provide a file containing the model's information.
+                The syntax for the file can be found <Link href='https://github.com/microsoft/0xDeCA10B/wiki/Models#model-files' target='_blank'>here</Link>.
+              </Typography>
+
               <Dropzone onDrop={this.processUploadedModel}>
                 {({ getRootProps, getInputProps }) => (
                   <Paper {...getRootProps()} className={this.classes.dropPaper}>
@@ -326,10 +358,10 @@ class AddModel extends React.Component {
                   <MenuItem>Stakeable</MenuItem>
                 </Tooltip>
               </Select>
-              {this.state.incentiveMechanism === "Points64" &&
+              {this.state.incentiveMechanism === 'Points64' &&
                 this.renderPointsOptions()
               }
-              {this.state.incentiveMechanism === "Stakeable64" &&
+              {this.state.incentiveMechanism === 'Stakeable64' &&
                 this.renderStakeableOptions()
               }
 
@@ -343,8 +375,12 @@ class AddModel extends React.Component {
           {this.state.networkType === 'main' && <Typography component="p">
             {"⚠ You are currently set up to deploy to a main network. Please consider deploying to a test network before deploying to a main network. "}
           </Typography>}
+
+          {disableReason !== null && <Typography component="p">
+            ⚠ {disableReason}
+          </Typography>}
           <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}
-            disabled={disableSave}
+            disabled={disableReason !== null}
           >
             Save
           </Button>
@@ -386,85 +422,76 @@ class AddModel extends React.Component {
     );
   }
 
-  renderStakeableOptions() {
+  renderCommonImOptions() {
     return <Grid container spacing={2}>
       <Grid item xs={12} sm={6}>
-        <TextField name="refundTimeWaitTimeS" label="Refund wait time (seconds)"
-          inputProps={{ 'aria-label': "Refund wait time in seconds" }}
-          className={this.classes.numberTextField}
-          value={this.state.refundTimeWaitTimeS}
-          type="number"
-          margin="normal"
-          onChange={this.handleInputChange} />
-      </Grid>
-      <Grid item xs={12} sm={6}>
-        {/* TODO Show error if it is too low. */}
-        <TextField name="ownerClaimWaitTimeS" label="Owner claim wait time (seconds)"
-          inputProps={{ 'aria-label': "Owner claim wait time in seconds" }}
-          className={this.classes.numberTextField}
-          value={this.state.ownerClaimWaitTimeS}
-          type="number"
-          margin="normal"
-          onChange={this.handleInputChange} />
-      </Grid>
-      <Grid item xs={12} sm={6}>
-        {/* TODO Show error if it is too low. */}
-        <TextField name="anyAddressClaimWaitTimeS" label="Any address claim wait time (seconds)"
-          inputProps={{ 'aria-label': "Any address claim wait time in seconds" }}
-          className={this.classes.numberTextField}
-          value={this.state.anyAddressClaimWaitTimeS}
-          type="number"
-          margin="normal"
-          onChange={this.handleInputChange} />
-      </Grid>
-      <Grid item xs={12} sm={12}>
         <Tooltip placement="top-start"
-          title={"A multiplicative factor to the required deposit. \
-            Setting this to 0 will mean that no deposit is required but will allow you to stil use the IM to track \"good\" and \"bad\" contributions."}>
-          <TextField name="costWeight" label="Deposit weight (in wei)"
-            inputProps={{ 'aria-label': "Deposit weight in wei" }}
+          title={"The amount of time that anyone must wait after submitting data before requesting a refund and to verify data you claim is correct. \
+            This is also the amount of time that anyone must wait before reporting another account's data as incorrect."}>
+          <TextField name="refundTimeWaitTimeS" label="Refund/reward wait time (seconds)"
+            inputProps={{ 'aria-label': "Refund wait time in seconds" }}
             className={this.classes.numberTextField}
-            value={this.state.costWeight}
+            value={this.state.refundTimeWaitTimeS}
             type="number"
             margin="normal"
             onChange={this.handleInputChange} />
         </Tooltip>
       </Grid>
-    </Grid>;
+      <Grid item xs={12} sm={6}>
+        <Tooltip placement="top-start"
+          title={"The amount of time that the \"owner\" of the smart contracts must wait before taking another account's full deposit given with their data contribution"}>
+          <TextField name="ownerClaimWaitTimeS" label="Full deposit take wait time for owner (seconds)"
+            inputProps={{ 'aria-label': "Owner claim wait time in seconds" }}
+            className={this.classes.numberTextField}
+            value={this.state.ownerClaimWaitTimeS}
+            type="number"
+            margin="normal"
+            onChange={this.handleInputChange} />
+        </Tooltip>
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <Tooltip placement="top-start"
+          title={"The amount of time that anyone must wait before taking another account's full deposit given with their data contribution"}>
+          <TextField name="anyAddressClaimWaitTimeS" label="Full deposit take wait time (seconds)"
+            inputProps={{ 'aria-label': "Any address claim wait time in seconds" }}
+            className={this.classes.numberTextField}
+            value={this.state.anyAddressClaimWaitTimeS}
+            type="number"
+            margin="normal"
+            onChange={this.handleInputChange} />
+        </Tooltip>
+      </Grid>
+    </Grid>
+  }
+
+  renderStakeableOptions() {
+    return <div>
+      {this.renderCommonImOptions()}
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={12}>
+          <Tooltip placement="top-start"
+            title={"A multiplicative factor to the required deposit. \
+            Setting this to 0 will mean that no deposit is required but will allow you to stil use the IM to track \"good\" and \"bad\" contributions."}>
+            <TextField name="costWeight" label="Deposit weight (in wei)"
+              inputProps={{ 'aria-label': "Deposit weight in wei" }}
+              className={this.classes.numberTextField}
+              value={this.state.costWeight}
+              type="number"
+              margin="normal"
+              onChange={this.handleInputChange} />
+          </Tooltip>
+        </Grid>
+      </Grid>
+    </div>
   }
 
   renderPointsOptions() {
-    return <Grid container spacing={2}>
-      <Grid item xs={12} sm={6}>
-        <TextField name="refundTimeWaitTimeS" label="Refund wait time (seconds)"
-          inputProps={{ 'aria-label': "Refund wait time in seconds" }}
-          className={this.classes.numberTextField}
-          value={this.state.refundTimeWaitTimeS}
-          type="number"
-          margin="normal"
-          onChange={this.handleInputChange} />
-      </Grid>
-      <Grid item xs={12} sm={6}>
-        {/* TODO Show error if it is too low. */}
-        <TextField name="ownerClaimWaitTimeS" label="Owner claim wait time (seconds)"
-          inputProps={{ 'aria-label': "Owner claim wait time in seconds" }}
-          className={this.classes.numberTextField}
-          value={this.state.ownerClaimWaitTimeS}
-          type="number"
-          margin="normal"
-          onChange={this.handleInputChange} />
-      </Grid>
-      <Grid item xs={12} sm={6}>
-        {/* TODO Show error if it is too low. */}
-        <TextField name="anyAddressClaimWaitTimeS" label="Any address claim wait time (seconds)"
-          inputProps={{ 'aria-label': "Any address claim wait time in seconds" }}
-          className={this.classes.numberTextField}
-          value={this.state.anyAddressClaimWaitTimeS}
-          type="number"
-          margin="normal"
-          onChange={this.handleInputChange} />
-      </Grid>
-    </Grid>;
+    return <div>
+      <Typography component="p">
+        No deposits will be required.
+      </Typography>
+      {this.renderCommonImOptions()}
+    </div>
   }
 
   async save() {

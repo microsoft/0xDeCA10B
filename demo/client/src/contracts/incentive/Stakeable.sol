@@ -101,7 +101,6 @@ contract Stakeable is Ownable, IncentiveMechanism {
 }
 
 contract Stakeable64 is IncentiveMechanism64, Stakeable {
-
     using SafeMath for uint256;
     using SignedSafeMath for int256;
 

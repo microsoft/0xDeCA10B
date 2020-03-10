@@ -15,7 +15,6 @@ interface DataHandler {
  * Stores information for added training data and corresponding meta-data.
  */
 contract DataHandler64 is Ownable, DataHandler {
-
     using SafeMath for uint256;
 
     struct StoredData {

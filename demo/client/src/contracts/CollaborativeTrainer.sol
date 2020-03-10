@@ -32,7 +32,6 @@ contract CollaborativeTrainer {
 // Those wishing to optimize can change the code to use inheritance and do other optimizations before deploying.
 // We can also make a script that generates the required files based on several parameters.
 contract CollaborativeTrainer64 is CollaborativeTrainer {
-
     using SafeMath for uint256;
 
     /** Data has been added. */
