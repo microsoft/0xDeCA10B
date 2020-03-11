@@ -386,6 +386,9 @@ class AddModel extends React.Component {
           </Button>
         </Paper>
         <Paper className={this.classes.root} elevation={1}>
+          <Typography component="h3">
+              Deployment Status
+          </Typography>
           <Table className={this.classes.table} aria-label="Deployment Information Table">
             <TableHead>
               <TableRow>
