@@ -1182,7 +1182,7 @@ class Model extends React.Component {
             {this.state.tab === this.REWARD_TAB &&
               <TabContainer>
                 <Typography component="p">
-                  You can attempt to report data that other accounts have submitted as incorrect.
+                  You can attempt to report data from other accounts that you believe is incorrect.
                 </Typography>
                 {(this.state.numGood === 0 || this.state.numGood === undefined) &&
                   <Typography component="p">

@@ -27,10 +27,10 @@ export function renderStorageSelector(detailedDescription, currentValue, handleI
     }
     return <div>
         <Tooltip placement="top-start"
-              title={detailedDescription}>
-        <InputLabel htmlFor="storage-selector">
-            {`Storage`}
-        </InputLabel>
+            title={detailedDescription}>
+            <InputLabel htmlFor="storage-selector">
+                {`Storage`}
+            </InputLabel>
         </Tooltip>
         <Select value={currentValue} onChange={handleInputChange} inputProps={{
             name: 'storageType',
