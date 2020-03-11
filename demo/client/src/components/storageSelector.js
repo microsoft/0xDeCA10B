@@ -29,7 +29,7 @@ export function renderStorageSelector(detailedDescription, currentValue, handleI
         <Tooltip placement="top-start"
             title={detailedDescription}>
             <InputLabel htmlFor="storage-selector">
-                {`Storage`}
+                Storage
             </InputLabel>
         </Tooltip>
         <Select value={currentValue} onChange={handleInputChange} inputProps={{

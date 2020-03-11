@@ -1008,8 +1008,10 @@ class Model extends React.Component {
               </Typography>
             </Tooltip>
             <Tooltip placement="top-start"
-              title={"The amount of time that you must wait after submitting data before requesting a refund and to verify data you claim is correct. \
-              This is also the amount of time that you must wait before reporting another account's data as incorrect."}>
+              title={`The amount of time that you must wait after submitting data before requesting \
+              a refund and to verify data you claim is correct. \
+              This is also the amount of time that you must wait before reporting \
+              another account's data as incorrect. (${this.state.refundWaitTimeS} second(s))`}>
               <Typography component="p">
                 <b>Refund/reward wait time: </b>
                 {this.state.refundWaitTimeS !== undefined ?
@@ -1020,7 +1022,8 @@ class Model extends React.Component {
               </Typography>
             </Tooltip>
             <Tooltip placement="top-start"
-              title={"The amount of time that you must wait before taking another account's full deposit given with their data contribution"}>
+              title={`The amount of time that you must wait before taking \
+              another account's full deposit given with their data contribution (${this.state.anyAddressClaimWaitTimeS} second(s))`}>
               <Typography component="p">
                 <b>Full deposit take wait time: </b>
                 {this.state.anyAddressClaimWaitTimeS !== undefined ?
