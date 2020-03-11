@@ -42,6 +42,9 @@ contract NaiveBayesClassifier is Classifier64 {
         mapping(uint32 => uint32) featureCounts;
     }
 
+    /**
+     * Information for each supported classification.
+     */
     ClassInfo[] public classInfos;
 
     /**
@@ -55,6 +58,14 @@ contract NaiveBayesClassifier is Classifier64 {
      */
     uint totalNumFeatures;
 
+    /**
+     * @param _classifications The classifications supported by the model.
+     * @param _classCounts The number of occurrences of each class in the training data.
+     * @param _featureCounts For each class, the number of times each feature occurs within that class.
+     * Each innermost list is a tuple of the feature index and the number of times that feature occurs within the class.
+     * @param totalNumFeatures The total number of features throughout all classes.
+     * @param smoothingFactor The smoothing factor (sometimes called alpha). Use toFloat (1 mapped) for Laplace smoothing.
+     */
     constructor(
         string[] memory _classifications,
         uint64[] memory _classCounts,

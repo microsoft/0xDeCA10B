@@ -1,7 +1,8 @@
 import assert from 'assert'
 import Web3 from 'web3'
 import { convertNum } from '../../float-utils'
-import { CentroidInfo, ModelDeployer, NearestCentroidModel } from '../deploy-model'
+import { ModelDeployer } from '../deploy-model'
+import { CentroidInfo, NaiveBayesModel, NearestCentroidModel, PerceptronModel } from '../model-interfaces'
 
 declare const web3: Web3
 
@@ -44,23 +45,23 @@ describe("ModelDeployer", () => {
 	})
 
 	it("should deploy Naive Bayes", async () => {
-		const model = {
-			classifications: [
+		const model = new NaiveBayesModel(
+			'naive bayes',
+			[
 				"A",
-				"B"
+				"B",
 			],
-			classCounts: [
+			[
 				2,
 				3
 			],
-			featureCounts: [
+			[
 				[[0, 2], [1, 1]],
 				[[1, 3], [2, 2]],
 			],
-			totalNumFeatures: 9,
-			smoothingFactor: 1.0,
-			type: "naive bayes"
-		}
+			9,
+			1.0,
+		)
 		const m = await deployer.deployModel(
 			model,
 			{
@@ -93,7 +94,7 @@ describe("ModelDeployer", () => {
 			})
 
 		let i = -1
-		for (let [classification, centroidInfo] of Object.entries(model.intents)) {
+		for (let [classification, centroidInfo] of Object.entries(model.centroids)) {
 			++i
 			assert.equal(await m.methods.classifications(i).call(), classification)
 			assertEqualNumbers(await m.methods.getNumSamples(i).call(), centroidInfo.dataCount)
@@ -118,7 +119,7 @@ describe("ModelDeployer", () => {
 			})
 
 		let i = -1
-		for (let [classification, centroidInfo] of Object.entries(model.intents)) {
+		for (let [classification, centroidInfo] of Object.entries(model.centroids)) {
 			++i
 			assert.equal(await m.methods.classifications(i).call(), classification)
 			assertEqualNumbers(await m.methods.getNumSamples(i).call(), centroidInfo.dataCount)
@@ -133,12 +134,12 @@ describe("ModelDeployer", () => {
 		const weights = [1, -1]
 		const intercept = 0
 		const m = await deployer.deployModel(
-			{
-				type: 'dense perceptron',
+			new PerceptronModel(
+				'dense perceptron',
 				classifications,
 				weights,
 				intercept,
-			},
+			),
 			{
 				account,
 			})
@@ -157,12 +158,12 @@ describe("ModelDeployer", () => {
 		const weights = [2, -2]
 		const intercept = 3
 		const m = await deployer.deployModel(
-			{
-				type: 'sparse perceptron',
+			new PerceptronModel(
+				'sparse perceptron',
 				classifications,
 				weights,
 				intercept,
-			},
+			),
 			{
 				account,
 			})

@@ -86,10 +86,10 @@ class SciKitClassifier(Classifier):
             if classifications is None:
                 classifications = ["0", "1"]
             model = {
-                'classifications': classifications,
                 'type': model_type or 'sparse perceptron',
+                'classifications': classifications,
                 'weights': self._model.coef_[0].tolist(),
-                'bias': self._model.intercept_[0]
+                'intercept': self._model.intercept_[0],
             }
         elif isinstance(self._model, MultinomialNB):
             if classifications is None:
@@ -103,23 +103,23 @@ class SciKitClassifier(Classifier):
                         class_feature_counts.append((index, int(count)))
                 feature_counts.append(class_feature_counts)
             model = {
+                'type': model_type or 'naive bayes',
                 'classifications': classifications,
                 'classCounts': self._model.class_count_.astype(dtype=np.int64).tolist(),
                 'featureCounts': feature_counts,
                 'totalNumFeatures': self._model.feature_count_.shape[1],
                 'smoothingFactor': self._model.alpha,
-                'type': model_type or 'naive bayes',
             }
         elif isinstance(self._model, NearestCentroidClassifier):
-            intents = dict()
+            centroids = dict()
             if classifications is None:
                 list(map(str, range(len(self.centroids_))))
             for i, classification in enumerate(classifications):
-                intents[classification] = dict(centroid=self._model.centroids_[i].tolist(),
+                centroids[classification] = dict(centroid=self._model.centroids_[i].tolist(),
                                                dataCount=self._model._num_samples_per_centroid[i])
             model = {
-                'intents': intents,
                 'type': model_type or 'nearest centroid classifier',
+                'centroids': centroids,
             }
         else:
             raise Exception("Unrecognized model type.")
