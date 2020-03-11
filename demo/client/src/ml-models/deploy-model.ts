@@ -6,28 +6,7 @@ import NearestCentroidClassifier from '../contracts/compiled/NearestCentroidClas
 import SparseNearestCentroidClassifier from '../contracts/compiled/SparseNearestCentroidClassifier.json'
 import SparsePerceptron from '../contracts/compiled/SparsePerceptron.json'
 import { convertDataToHex, convertToHex } from '../float-utils'
-
-
-class Model {
-	constructor(public type: string) {
-	}
-}
-
-export class CentroidInfo {
-	constructor(
-		public centroid: number[],
-		public dataCount: number) {
-	}
-}
-
-export class NearestCentroidModel extends Model {
-	constructor(
-		type: 'nearest centroid classifier' | 'sparse nearest centroid classifier' | 'dense nearest centroid classifier',
-		public intents: { [key: string]: CentroidInfo },
-	) {
-		super(type)
-	}
-}
+import { Model, NaiveBayesModel, NearestCentroidModel, PerceptronModel} from './model-interfaces'
 
 export class ModelDeployer {
 	/**
@@ -53,7 +32,7 @@ export class ModelDeployer {
 	constructor(private web3: Web3) {
 	}
 
-	async deployNaiveBayes(model: any, options: any): Promise<Contract> {
+	async deployNaiveBayes(model: NaiveBayesModel, options: any): Promise<Contract> {
 		const { account, toFloat,
 			notify, dismissNotification,
 			saveTransactionHash, saveAddress,
@@ -137,7 +116,7 @@ export class ModelDeployer {
 		const centroids: number[][] = []
 		const dataCounts: number[] = []
 		let numDimensions = null
-		for (let [classification, centroidInfo] of Object.entries(model.intents)) {
+		for (let [classification, centroidInfo] of Object.entries(model.centroids)) {
 			classifications.push(classification)
 			centroids.push(convertDataToHex(centroidInfo.centroid, this.web3, toFloat))
 			dataCounts.push(centroidInfo.dataCount)
@@ -210,7 +189,7 @@ export class ModelDeployer {
 		})
 	}
 
-	async deployPerceptron(model: any, options: any): Promise<Contract> {
+	async deployPerceptron(model: PerceptronModel, options: any): Promise<Contract> {
 		const { account, toFloat,
 			notify, dismissNotification,
 			saveTransactionHash, saveAddress,
@@ -219,7 +198,7 @@ export class ModelDeployer {
 		const weightChunkSize = 450
 		const { classifications, featureIndices } = model
 		const weights = convertDataToHex(model.weights, this.web3, toFloat)
-		const intercept = convertToHex(model.bias || model.intercept, this.web3, toFloat)
+		const intercept = convertToHex(model.intercept, this.web3, toFloat)
 		const learningRate = convertToHex(model.learningRate || defaultLearningRate, this.web3, toFloat)
 
 		if (featureIndices !== undefined && featureIndices.length !== weights.length) {
@@ -298,7 +277,7 @@ export class ModelDeployer {
 	 * @returns The contract for the model, an instance of `Classifier64`
 	 * along with the the total amount of gas used to deploy the model.
 	 */
-	async deployModel(model: any, options: any): Promise<Contract> {
+	async deployModel(model: Model, options: any): Promise<Contract> {
 		if (options.toFloat === undefined) {
 			options.toFloat = ModelDeployer.toFloat
 		}
@@ -319,13 +298,13 @@ export class ModelDeployer {
 			case 'dense perceptron':
 			case 'sparse perceptron':
 			case 'perceptron':
-				return this.deployPerceptron(model, options)
+				return this.deployPerceptron(model as PerceptronModel, options)
 			case 'naive bayes':
-				return this.deployNaiveBayes(model, options)
+				return this.deployNaiveBayes(model as NaiveBayesModel, options)
 			case 'dense nearest centroid classifier':
 			case 'sparse nearest centroid classifier':
 			case 'nearest centroid classifier':
-				return this.deployNearestCentroidClassifier(model, options)
+				return this.deployNearestCentroidClassifier(model as NearestCentroidModel, options)
 			default:
 				// Should not happen.
 				throw new Error(`Unrecognized model type: "${model.type}"`)

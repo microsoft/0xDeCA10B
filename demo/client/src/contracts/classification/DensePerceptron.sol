@@ -12,7 +12,7 @@ contract DensePerceptron is Classifier64 {
 
     /**
      * The weights for the model.
-     * Multiplied by `toFloat`.
+     * Each multiplied by `toFloat`.
      */
     int80[] public weights;
 
@@ -28,6 +28,13 @@ contract DensePerceptron is Classifier64 {
      */
     uint32 public learningRate;
 
+    /**
+     * @param _classifications The classifications supported by the model.
+     * @param _weights The weights for the model. Each multiplied by `toFloat`.
+     * @param _intercept The bias to add to the multiplication of the weights and the data. Multiplied by `toFloat`.
+     * @param _learningRate (Optional, defaults to 1). The amount of impact that new training data has to the weights.
+     Multiplied by `toFloat`.
+     */
     constructor(
         string[] memory _classifications,
         int80[] memory _weights,

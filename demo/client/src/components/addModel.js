@@ -13,6 +13,7 @@ import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import TextField from '@material-ui/core/TextField';
+import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
 import update from 'immutability-helper';
 import { withSnackbar } from 'notistack';
@@ -63,7 +64,6 @@ const styles = theme => ({
     paddingBottom: theme.spacing(2),
   },
   table: {
-    minWidth: 650,
     wordBreak: 'break-word',
   },
 });
@@ -71,13 +71,13 @@ const styles = theme => ({
 class AddModel extends React.Component {
 
   constructor(props) {
-    super(props);
-    this.classes = props.classes;
+    super(props)
+    this.classes = props.classes
 
-    this.web3 = null;
+    this.web3 = null
 
     // Default to local storage for storing original data.
-    const storageType = localStorage.getItem('storageType') || 'local';
+    const storageType = localStorage.getItem('storageType') || 'local'
     this.storages = DataStoreFactory.getAll()
 
     this.state = {
@@ -112,7 +112,7 @@ class AddModel extends React.Component {
       },
       storageType,
       permittedStorageTypes: [],
-    };
+    }
 
     this.notify = this.notify.bind(this)
     this.dismissNotification = this.dismissNotification.bind(this)
@@ -129,7 +129,7 @@ class AddModel extends React.Component {
       permittedStorageTypes.push('none')
       this.setState({ permittedStorageTypes })
     })
-    window.ethereum.on('networkChanged', netId => {
+    window.ethereum.on('networkChanged', _ => {
       this.setupWeb3()
     })
     this.setupWeb3()
@@ -163,9 +163,12 @@ class AddModel extends React.Component {
   }
 
   handleInputChange(event) {
-    const target = event.target;
-    const value = target.type === "checkbox" ? target.checked : target.value;
-    const name = target.name;
+    const target = event.target
+    let value = target.type === "checkbox" ? target.checked : target.value
+    if (event.target.type === 'number') {
+      value = parseInt(value)
+    }
+    const name = target.name
 
     let valid = true
     if (['costWeight', 'refundTimeWaitTimeS', 'ownerClaimWaitTimeS', 'anyAddressClaimWaitTimeS'].indexOf(name) >= 0) {
@@ -203,7 +206,10 @@ class AddModel extends React.Component {
           if (!(model.type in ModelDeployer.modelTypes)) {
             this.notify(`The "type" of the model must be one of ${JSON.stringify(Object.keys(ModelDeployer.modelTypes))}`, { variant: 'error' })
           } else {
-            this.setState({ model, modelFileName: file.path })
+            this.setState({
+              model, modelFileName: file.path,
+              encoder: model.encoder || this.state.encoder,
+            })
           }
         } catch (err) {
           console.error(`Error reading "${file.path}".`)
@@ -215,12 +221,27 @@ class AddModel extends React.Component {
     })
   }
 
+  getDisabledReason() {
+    if (this.state.deploymentInfo.main.address !== undefined) {
+      return "Already deployed"
+    }
+    if (this.state.model === undefined) {
+      return "A model file must be uploaded"
+    }
+    if (!(this.state.refundTimeWaitTimeS <= this.state.ownerClaimWaitTimeS)) {
+      return "The refund/reward wait time must be at most the owner wait time"
+    }
+    if (!(this.state.ownerClaimWaitTimeS <= this.state.anyAddressClaimWaitTimeS)) {
+      return "The owner wait time must be at most the full deposit take wait time"
+    }
+    if (this.state.costWeight < 0) {
+      return "The deposit wait must be at least 0"
+    }
+    return null
+  }
+
   render() {
-    const disableSave = this.state.deploymentInfo.main.address !== undefined
-      || !(this.state.refundTimeWaitTimeS <= this.state.ownerClaimWaitTimeS)
-      || !(this.state.ownerClaimWaitTimeS <= this.state.anyAddressClaimWaitTimeS)
-      || this.state.costWeight < 0
-      || this.state.model === undefined
+    let disableReason = this.getDisabledReason()
 
     return (
       <Container>
@@ -229,7 +250,8 @@ class AddModel extends React.Component {
             Add your model
           </Typography>
           <Typography component="p">
-            Add the information for the model you want to deploy.
+            Provide the information for the model and then deploy it to a blockchain.
+            You can hover over (or long press for touch screens) certain items to get more details.
           </Typography>
           <Typography component="p">
             If you want to use a model that is already deployed, then you can add its information <Link href='/addDeployedModel'>here</Link>.
@@ -251,6 +273,9 @@ class AddModel extends React.Component {
                 margin="normal"
                 onChange={this.handleInputChange}
               />
+
+              {/* Model */}
+              {/* Don't need to ask for the model type since there is only one option and in the future, it should be inferred from the provided file.
               <InputLabel className={this.classes.selectorLabel} htmlFor="model-type">Model type</InputLabel>
               <Select className={this.classes.selector}
                 onChange={this.handleInputChange}
@@ -260,7 +285,16 @@ class AddModel extends React.Component {
                 }}
               >
                 <MenuItem value={"Classifier64"}>Classifier64</MenuItem>
-              </Select>
+              </Select> */}
+
+              <Typography variant="h6" component="h6">
+                Model
+              </Typography>
+              <Typography component="p">
+                Provide a file containing the model's information.
+                The syntax for the file can be found <Link href='https://github.com/microsoft/0xDeCA10B/wiki/Models#model-files' target='_blank'>here</Link>.
+              </Typography>
+
               <Dropzone onDrop={this.processUploadedModel}>
                 {({ getRootProps, getInputProps }) => (
                   <Paper {...getRootProps()} className={this.classes.dropPaper}>
@@ -272,7 +306,12 @@ class AddModel extends React.Component {
                   </Paper>
                 )}
               </Dropzone>
-              <InputLabel className={this.classes.selectorLabel} htmlFor="encoder">Encoder</InputLabel>
+
+              {/* Encoder */}
+              <Tooltip placement="top-start"
+                title="The method that will be used to convert the input (text, image, etc.) into a machine readable format">
+                <InputLabel className={this.classes.selectorLabel} htmlFor="encoder">Encoder</InputLabel>
+              </Tooltip>
               <Select className={this.classes.selector}
                 onChange={this.handleInputChange}
                 value={this.state.encoder}
@@ -280,12 +319,29 @@ class AddModel extends React.Component {
                   name: 'encoder',
                 }}
               >
-                <MenuItem value={"none"}>None</MenuItem>
-                <MenuItem value={"IMDB vocab"}>IMDB vocab (for English text)</MenuItem>
-                <MenuItem value={"universal sentence encoder"}>Universal Sentence Encoder (for English text)</MenuItem>
-                <MenuItem value={"MobileNetv2"}>MobileNetv2 (for images)</MenuItem>
+                <Tooltip value="none" placement="top-start"
+                  title="No transformation will be applied">
+                  <MenuItem>None</MenuItem>
+                </Tooltip>
+                <Tooltip value="IMDB vocab" placement="top-start"
+                  title="Convert each word in English text to a number using the 1000 most frequent words in the IMDB review dataset">
+                  <MenuItem>IMDB vocab</MenuItem>
+                </Tooltip>
+                <Tooltip value="universal sentence encoder" placement="top-start"
+                  title="Use Universal Sentence Encoder to convert English text to a vector of numbers">
+                  <MenuItem>Universal Sentence Encoder (for English text)</MenuItem>
+                </Tooltip>
+                <Tooltip value="MobileNetv2" placement="top-start"
+                  title="Use MobileNetv2 to convert images to a vector of numbers">
+                  <MenuItem>MobileNetv2 (for images)</MenuItem>
+                </Tooltip>
               </Select>
-              <InputLabel className={this.classes.selectorLabel} htmlFor="incentiveMechanism">Incentive mechanism</InputLabel>
+
+              {/* Incentive Mechanism */}
+              <Tooltip placement="top-start"
+                title={"The system that will be used to determine rewards for data that is determined to be \"good\"."}>
+                <InputLabel className={this.classes.selectorLabel} htmlFor="incentiveMechanism">Incentive mechanism (IM)</InputLabel>
+              </Tooltip>
               <Select className={this.classes.selector}
                 onChange={this.handleInputChange}
                 value={this.state.incentiveMechanism}
@@ -293,17 +349,25 @@ class AddModel extends React.Component {
                   name: 'incentiveMechanism',
                 }}
               >
-                <MenuItem value={"Points64"}>Points</MenuItem>
-                <MenuItem value={"Stakeable64"}>Stakeable</MenuItem>
+                <Tooltip value="Points64" placement="top-start"
+                  title="Collect and earn points. No deposits required.">
+                  <MenuItem>Points</MenuItem>
+                </Tooltip>
+                <Tooltip value="Stakeable64" placement="top-start"
+                  title="Stake a deposit when giving data. Contributors have the possibility to earn rewards by taking the deposits of others.">
+                  <MenuItem>Stakeable</MenuItem>
+                </Tooltip>
               </Select>
-              {this.state.incentiveMechanism === "Stakeable64" &&
-                this.renderStakeableOptions()
-              }
-              {this.state.incentiveMechanism === "Points64" &&
+              {this.state.incentiveMechanism === 'Points64' &&
                 this.renderPointsOptions()
               }
+              {this.state.incentiveMechanism === 'Stakeable64' &&
+                this.renderStakeableOptions()
+              }
+
+              {/* Storage */}
               <div className={this.classes.selector}>
-                {renderStorageSelector("where to store the supplied meta-data about this model like its address",
+                {renderStorageSelector("Where to store the supplied meta-data about this model like its address",
                   this.state.storageType, this.handleInputChange, this.state.permittedStorageTypes)}
               </div>
             </div>
@@ -311,8 +375,12 @@ class AddModel extends React.Component {
           {this.state.networkType === 'main' && <Typography component="p">
             {"⚠ You are currently set up to deploy to a main network. Please consider deploying to a test network before deploying to a main network. "}
           </Typography>}
+
+          {disableReason !== null && <Typography component="p">
+            ⚠ {disableReason}
+          </Typography>}
           <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}
-            disabled={disableSave}
+            disabled={disableReason !== null}
           >
             Save
           </Button>
@@ -354,88 +422,76 @@ class AddModel extends React.Component {
     );
   }
 
-  renderStakeableOptions() {
+  renderCommonImOptions() {
     return <Grid container spacing={2}>
       <Grid item xs={12} sm={6}>
-        <TextField name="refundTimeWaitTimeS" label="Refund wait time (seconds)"
-          inputProps={{ 'aria-label': "Refund wait time in seconds" }}
-          className={this.classes.numberTextField}
-          value={this.state.refundTimeWaitTimeS}
-          type="number"
-          margin="normal"
-          onChange={this.handleInputChange} />
+        <Tooltip placement="top-start"
+          title={"The amount of time that anyone must wait after submitting data before requesting a refund and to verify data you claim is correct. \
+            This is also the amount of time that anyone must wait before reporting another account's data as incorrect."}>
+          <TextField name="refundTimeWaitTimeS" label="Refund/reward wait time (seconds)"
+            inputProps={{ 'aria-label': "Refund wait time in seconds" }}
+            className={this.classes.numberTextField}
+            value={this.state.refundTimeWaitTimeS}
+            type="number"
+            margin="normal"
+            onChange={this.handleInputChange} />
+        </Tooltip>
       </Grid>
       <Grid item xs={12} sm={6}>
-        {/* TODO Show error if it is too low. */}
-        <TextField name="ownerClaimWaitTimeS" label="Owner claim wait time (seconds)"
-          inputProps={{ 'aria-label': "Owner claim wait time in seconds" }}
-          className={this.classes.numberTextField}
-          value={this.state.ownerClaimWaitTimeS}
-          type="number"
-          margin="normal"
-          onChange={this.handleInputChange} />
+        <Tooltip placement="top-start"
+          title={"The amount of time that the \"owner\" of the smart contracts must wait before taking another account's full deposit given with their data contribution"}>
+          <TextField name="ownerClaimWaitTimeS" label="Full deposit take wait time for owner (seconds)"
+            inputProps={{ 'aria-label': "Owner claim wait time in seconds" }}
+            className={this.classes.numberTextField}
+            value={this.state.ownerClaimWaitTimeS}
+            type="number"
+            margin="normal"
+            onChange={this.handleInputChange} />
+        </Tooltip>
       </Grid>
       <Grid item xs={12} sm={6}>
-        {/* TODO Show error if it is too low. */}
-        <TextField name="anyAddressClaimWaitTimeS" label="Any address claim wait time (seconds)"
-          inputProps={{ 'aria-label': "Any address claim wait time in seconds" }}
-          className={this.classes.numberTextField}
-          value={this.state.anyAddressClaimWaitTimeS}
-          type="number"
-          margin="normal"
-          onChange={this.handleInputChange} />
+        <Tooltip placement="top-start"
+          title={"The amount of time that anyone must wait before taking another account's full deposit given with their data contribution"}>
+          <TextField name="anyAddressClaimWaitTimeS" label="Full deposit take wait time (seconds)"
+            inputProps={{ 'aria-label': "Any address claim wait time in seconds" }}
+            className={this.classes.numberTextField}
+            value={this.state.anyAddressClaimWaitTimeS}
+            type="number"
+            margin="normal"
+            onChange={this.handleInputChange} />
+        </Tooltip>
       </Grid>
-      <Grid item xs={12} sm={12}>
-        <Typography component="h4">
-          Deposit Weight
-        </Typography>
-        <Typography component="p">
-          A multiplicative factor to the required deposit.
-          Setting this to 0 will mean that no deposit is required but will allow you to stil use the IM to track "good" and "bad" contributions.
-        </Typography>
-        <TextField name="costWeight" label="Cost weight (in wei)"
-          inputProps={{ 'aria-label': "Cost weight in wei" }}
-          className={this.classes.numberTextField}
-          value={this.state.costWeight}
-          type="number"
-          margin="normal"
-          onChange={this.handleInputChange} />
+    </Grid>
+  }
+
+  renderStakeableOptions() {
+    return <div>
+      {this.renderCommonImOptions()}
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={12}>
+          <Tooltip placement="top-start"
+            title={"A multiplicative factor to the required deposit. \
+            Setting this to 0 will mean that no deposit is required but will allow you to stil use the IM to track \"good\" and \"bad\" contributions."}>
+            <TextField name="costWeight" label="Deposit weight (in wei)"
+              inputProps={{ 'aria-label': "Deposit weight in wei" }}
+              className={this.classes.numberTextField}
+              value={this.state.costWeight}
+              type="number"
+              margin="normal"
+              onChange={this.handleInputChange} />
+          </Tooltip>
+        </Grid>
       </Grid>
-    </Grid>;
+    </div>
   }
 
   renderPointsOptions() {
-    return <Grid container spacing={2}>
-      <Grid item xs={12} sm={6}>
-        <TextField name="refundTimeWaitTimeS" label="Refund wait time (seconds)"
-          inputProps={{ 'aria-label': "Refund wait time in seconds" }}
-          className={this.classes.numberTextField}
-          value={this.state.refundTimeWaitTimeS}
-          type="number"
-          margin="normal"
-          onChange={this.handleInputChange} />
-      </Grid>
-      <Grid item xs={12} sm={6}>
-        {/* TODO Show error if it is too low. */}
-        <TextField name="ownerClaimWaitTimeS" label="Owner claim wait time (seconds)"
-          inputProps={{ 'aria-label': "Owner claim wait time in seconds" }}
-          className={this.classes.numberTextField}
-          value={this.state.ownerClaimWaitTimeS}
-          type="number"
-          margin="normal"
-          onChange={this.handleInputChange} />
-      </Grid>
-      <Grid item xs={12} sm={6}>
-        {/* TODO Show error if it is too low. */}
-        <TextField name="anyAddressClaimWaitTimeS" label="Any address claim wait time (seconds)"
-          inputProps={{ 'aria-label': "Any address claim wait time in seconds" }}
-          className={this.classes.numberTextField}
-          value={this.state.anyAddressClaimWaitTimeS}
-          type="number"
-          margin="normal"
-          onChange={this.handleInputChange} />
-      </Grid>
-    </Grid>;
+    return <div>
+      <Typography component="p">
+        No deposits will be required.
+      </Typography>
+      {this.renderCommonImOptions()}
+    </div>
   }
 
   async save() {

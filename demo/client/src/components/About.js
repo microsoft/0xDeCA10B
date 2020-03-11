@@ -22,6 +22,9 @@ class About extends React.Component {
       <Typography variant="h4" component="h4">
         {name}
       </Typography>
+      <Typography className={classes.sectionTitle} variant="h5" component="h5">
+        <Link color='inherit' href='#disclaimers' name='disclaimers'>Disclaimers</Link>
+      </Typography>
       <Typography className={classes.section} component="p">
         ⚠ WARNING When you upload a model or data to train a model, that data is most likely added to a version of a third party <Link href='https://ethereum.org/' target='_blank'>Ethereum</Link> blockchain network not controlled by Microsoft.
         Unless explicitly indicated, your data is not stored on Microsoft controlled machines.
@@ -31,6 +34,14 @@ class About extends React.Component {
       <Typography className={classes.section} component="p">
         If you have not changed the default blockchain network in your browser's or extension's settings, then it is likely set to use the public Ethereum mainnet.
         Microsoft does not fully endorse nor support the use of the mainnet or any other third party network because all information in it is public.
+      </Typography>
+      <Typography className={classes.sectionTitle} variant="h5" component="h5">
+        <Link color='inherit' href='#project' name='project'>About This Project</Link>
+      </Typography>
+      <Typography className={classes.section} component="p">
+        The goal of this project is to promote sharing machine learning models at a greater scale.
+        To achieve this, we store model on a blockchain and allow people to update the models by providing their own data to a smart contracts which train the model.
+        An overview of the project can be found in our <Link href='https://aka.ms/0xDeCA10B-blog1' target="_blank">blog post</Link>.
       </Typography>
       <Typography className={classes.sectionTitle} variant="h5" component="h5">
         <Link color='inherit' href='#code-of-conduct' name='code-of-conduct'>Code of Conduct</Link>

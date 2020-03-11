@@ -252,7 +252,7 @@ class AddDeployedModel extends React.Component {
                 onChange={this.handleInputChange}
               />
               <div className={this.classes.selector}>
-                {renderStorageSelector("where to store the supplied meta-data about this model",
+                {renderStorageSelector("Where to store the supplied meta-data about this model",
                   this.state.storageType, this.handleInputChange, this.state.permittedStorageTypes)}
               </div>
               <div className={this.classes.detailsDivider}></div>
