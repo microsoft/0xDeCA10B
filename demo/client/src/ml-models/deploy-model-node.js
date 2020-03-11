@@ -15,8 +15,8 @@ async function deployDensePerceptron(model, web3, toFloat) {
     const weightChunkSize = 450
     const { classifications } = model
     const weights = convertData(model.weights, web3, toFloat)
-    const intercept = convertNum(model.bias, web3, toFloat)
-    const learningRate = convertNum(1, web3, toFloat)
+    const intercept = convertNum(model.intercept || model.bias, web3, toFloat)
+    const learningRate = convertNum(model.learningRate || 1, web3, toFloat)
     console.log(`  Deploying Dense Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights.`)
     const classifierContract = await DensePerceptron.new(classifications, weights.slice(0, weightChunkSize), intercept, learningRate)
     gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
@@ -40,8 +40,8 @@ async function deploySparsePerceptron(model, web3, toFloat) {
     const weightChunkSize = 300
     const { classifications } = model
     const weights = convertData(model.weights, web3, toFloat)
-    const intercept = convertNum(model.bias, web3, toFloat)
-    const learningRate = convertNum(1, web3, toFloat)
+    const intercept = convertNum(model.intercept || model.bias, web3, toFloat)
+    const learningRate = convertNum(model.learningRate || 1, web3, toFloat)
     console.log(`  Deploying Sparse Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights...`)
     const classifierContract = await SparsePerceptron.new(classifications, weights.slice(0, weightChunkSize), intercept, learningRate)
     let gasUsed = (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
@@ -69,7 +69,7 @@ async function deployNearestCentroidClassifier(model, web3, toFloat) {
     const dataCounts = []
     console.log("  Deploying Dense Nearest Centroid Classifier model.")
     let numDimensions = null
-    for (let [classification, centroidInfo] of Object.entries(model.intents)) {
+    for (let [classification, centroidInfo] of Object.entries(model.centroids || model.intents)) {
         classifications.push(classification)
         centroids.push(convertData(centroidInfo.centroid, web3, toFloat))
         dataCounts.push(centroidInfo.dataCount)
@@ -114,7 +114,7 @@ exports.deploySparseNearestCentroidClassifier = async function (model, web3, toF
     const dataCounts = []
     console.log("  Deploying Sparse Nearest Centroid Classifier model.")
     let numDimensions = null
-    for (let [classification, centroidInfo] of Object.entries(model.intents)) {
+    for (let [classification, centroidInfo] of Object.entries(model.centroids || model.intents)) {
         classifications.push(classification)
         centroids.push(convertData(centroidInfo.centroid, web3, toFloat))
         dataCounts.push(centroidInfo.dataCount)
