@@ -2,6 +2,7 @@ import Button from '@material-ui/core/Button';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Container from '@material-ui/core/Container';
 import IconButton from '@material-ui/core/IconButton';
+import Link from '@material-ui/core/Link';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
@@ -10,7 +11,6 @@ import Modal from '@material-ui/core/Modal';
 import Paper from '@material-ui/core/Paper';
 import { withStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
-import AddIcon from '@material-ui/icons/Add';
 import ClearIcon from '@material-ui/icons/Clear';
 import DeleteIcon from '@material-ui/icons/Delete';
 import { withSnackbar } from 'notistack';
@@ -233,16 +233,12 @@ class ModelList extends React.Component {
             </Typography>
             <Typography component="p">
               Here you will find models stored on a blockchain that you can interact with.
-              Models are added to this list if you have recorded them locally in this browser
+              Models are added to this list if you have recorded them on your device in this browser
               {serviceStorageEnabled ? " or if they are listed on a centralized database" : ""}.
             </Typography>
-            <div>
-              <Button className={this.props.classes.button} variant="outlined" color="primary"
-                href='/addDeployedModel'
-              >
-                <AddIcon />&nbsp;Use a deployed model not listed
-              </Button>
-            </div>
+            <Typography component="p">
+              You can deploy your own model <Link href='/addModel'>here</Link> or use an already deployed model by filling in the information <Link href='/addDeployedModel'>here</Link>.
+            </Typography>
           </div>
           {this.state.loadingModels ?
             <div className={this.props.classes.spinnerDiv}>
@@ -277,7 +273,7 @@ class ModelList extends React.Component {
               :
               <div className={this.props.classes.descriptionDiv}>
                 <Typography component="p">
-                  No models found.
+                  You do not have any models listed.
                 </Typography>
               </div>
           }

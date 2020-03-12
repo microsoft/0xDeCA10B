@@ -274,6 +274,38 @@ class AddModel extends React.Component {
                 onChange={this.handleInputChange}
               />
 
+              {/* Encoder */}
+              <Typography variant="h6" component="h6">
+                Encoder
+              </Typography>
+              <Typography component="p">
+                An encoder is the method that is used to convert the input (text, image, etc.) into a machine readable format.
+              </Typography>
+              <Select className={this.classes.selector}
+                onChange={this.handleInputChange}
+                value={this.state.encoder}
+                inputProps={{
+                  name: 'encoder',
+                }}
+              >
+                <Tooltip value="none" placement="top-start"
+                  title="No transformation will be applied">
+                  <MenuItem>None</MenuItem>
+                </Tooltip>
+                <Tooltip value="IMDB vocab" placement="top-start"
+                  title="Convert each word in English text to a number using the 1000 most frequent words in the IMDB review dataset">
+                  <MenuItem>IMDB vocab</MenuItem>
+                </Tooltip>
+                <Tooltip value="universal sentence encoder" placement="top-start"
+                  title="Use Universal Sentence Encoder to convert English text to a vector of numbers">
+                  <MenuItem>Universal Sentence Encoder (for English text)</MenuItem>
+                </Tooltip>
+                <Tooltip value="MobileNetv2" placement="top-start"
+                  title="Use MobileNetv2 to convert images to a vector of numbers">
+                  <MenuItem>MobileNetv2 (for images)</MenuItem>
+                </Tooltip>
+              </Select>
+
               {/* Model */}
               {/* Don't need to ask for the model type since there is only one option and in the future, it should be inferred from the provided file.
               <InputLabel className={this.classes.selectorLabel} htmlFor="model-type">Model type</InputLabel>
@@ -306,36 +338,6 @@ class AddModel extends React.Component {
                   </Paper>
                 )}
               </Dropzone>
-
-              {/* Encoder */}
-              <Tooltip placement="top-start"
-                title="The method that will be used to convert the input (text, image, etc.) into a machine readable format">
-                <InputLabel className={this.classes.selectorLabel} htmlFor="encoder">Encoder</InputLabel>
-              </Tooltip>
-              <Select className={this.classes.selector}
-                onChange={this.handleInputChange}
-                value={this.state.encoder}
-                inputProps={{
-                  name: 'encoder',
-                }}
-              >
-                <Tooltip value="none" placement="top-start"
-                  title="No transformation will be applied">
-                  <MenuItem>None</MenuItem>
-                </Tooltip>
-                <Tooltip value="IMDB vocab" placement="top-start"
-                  title="Convert each word in English text to a number using the 1000 most frequent words in the IMDB review dataset">
-                  <MenuItem>IMDB vocab</MenuItem>
-                </Tooltip>
-                <Tooltip value="universal sentence encoder" placement="top-start"
-                  title="Use Universal Sentence Encoder to convert English text to a vector of numbers">
-                  <MenuItem>Universal Sentence Encoder (for English text)</MenuItem>
-                </Tooltip>
-                <Tooltip value="MobileNetv2" placement="top-start"
-                  title="Use MobileNetv2 to convert images to a vector of numbers">
-                  <MenuItem>MobileNetv2 (for images)</MenuItem>
-                </Tooltip>
-              </Select>
 
               {/* Incentive Mechanism */}
               <Tooltip placement="top-start"
@@ -387,7 +389,7 @@ class AddModel extends React.Component {
         </Paper>
         <Paper className={this.classes.root} elevation={1}>
           <Typography component="h3">
-              Deployment Status
+            Deployment Status
           </Typography>
           <Table className={this.classes.table} aria-label="Deployment Information Table">
             <TableHead>
