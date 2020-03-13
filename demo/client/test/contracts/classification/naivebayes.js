@@ -21,7 +21,7 @@ contract('NaiveBayesClassifier', function (accounts) {
   }
 
   function mapFeatures(query) {
-    return query.split(" ").map(w => {
+    return query.toLocaleLowerCase('en').split(/\s+/).map(w => {
       let result = vocab[w];
       if (result === undefined) {
         vocab[w] = result = vocabLength++;
@@ -35,7 +35,7 @@ contract('NaiveBayesClassifier', function (accounts) {
       // ALARM
       "alarm for 11 am tomorrow",
       // WEATHER
-      "will i need a jacket for tomorrow"];
+      "will I need a jacket for tomorrow"];
     const featureMappedQueries = queries.map(mapFeatures);
     const featureCounts = featureMappedQueries.map(fv => {
       const result = {};

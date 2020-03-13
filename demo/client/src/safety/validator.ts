@@ -2,7 +2,7 @@ import config from './config'
 
 export class OnlineSafetyValidator {
 	private enabled: boolean = process.env.REACT_APP_ENABLE_ONLINE_SAFETY !== undefined
-		&& process.env.REACT_APP_ENABLE_ONLINE_SAFETY.toLowerCase() === 'true'
+		&& process.env.REACT_APP_ENABLE_ONLINE_SAFETY.toLocaleLowerCase('en') === 'true'
 	private verified: Set<string>
 
 	constructor() {
@@ -11,7 +11,7 @@ export class OnlineSafetyValidator {
 
 	private normalize(networkType: string, address: string): string {
 		// Assume addresses are valid and do not have any '-'s.
-		return `${networkType}-${address.toLowerCase()}`
+		return `${networkType}-${address.toLocaleLowerCase('en')}`
 	}
 
 	isEnabled(): boolean {

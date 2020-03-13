@@ -23,6 +23,7 @@ import * as tf from '@tensorflow/tfjs';
 import loadImage from 'blueimp-load-image';
 import update from 'immutability-helper';
 import moment from 'moment';
+import { murmur3 } from 'murmurhash-js';
 import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
 import React from 'react';
@@ -316,7 +317,11 @@ class Model extends React.Component {
   }
 
   async setTransformInputMethod() {
-    if (this.state.contractInfo.encoder === 'universal sentence encoder') {
+    let { encoder }= this.state.contractInfo
+    if (encoder) {
+      encoder = encoder.toLocaleLowerCase('en')
+    }
+    if (encoder === 'universal sentence encoder') {
       this.setState({ inputType: INPUT_TYPE_TEXT });
       UniversalSentenceEncoder.load().then(use => {
         this.transformInput = async (query) => {
@@ -335,7 +340,7 @@ class Model extends React.Component {
         };
         this.transformInput = this.transformInput.bind(this);
       });
-    } else if (this.state.contractInfo.encoder === 'MobileNetv2') {
+    } else if (encoder === 'MobileNetv2'.toLocaleLowerCase('en')) {
       this.setState({ inputType: INPUT_TYPE_IMAGE });
       // https://github.com/tensorflow/tfjs-models/tree/master/mobilenet
       mobilenet.load({
@@ -362,14 +367,14 @@ class Model extends React.Component {
         }
         this.transformInput = this.transformInput.bind(this);
       });
-    } else if (this.state.contractInfo.encoder === 'IMDB vocab') {
+    } else if (encoder === 'IMDB vocab'.toLocaleLowerCase('en')) {
       this.setState({ inputType: INPUT_TYPE_TEXT });
       this.vocab = [];
       Object.entries(ImdbVocab).forEach(([key, value]) => {
         this.vocab[value] = key;
       });
       this.transformInput = async (query) => {
-        const tokens = query.toLowerCase().split(" ");
+        const tokens = query.toLocaleLowerCase('en').split(/\s+/)
         return tokens.map(t => {
           let idx = ImdbVocab[t];
           if (idx === undefined) {
@@ -378,6 +383,13 @@ class Model extends React.Component {
           }
           return idx;
         }).map(v => this.web3.utils.toHex(v));
+      };
+      this.transformInput = this.transformInput.bind(this);
+    } else if (encoder === 'MurmurHash3'.toLocaleLowerCase('en')) {
+      this.setState({ inputType: INPUT_TYPE_TEXT })
+      this.transformInput = async (query) => {
+        const tokens = query.toLocaleLowerCase('en').split(/\s+/)
+        return tokens.map(murmur3).map(v => this.web3.utils.toHex(v));
       };
       this.transformInput = this.transformInput.bind(this);
     } else {
