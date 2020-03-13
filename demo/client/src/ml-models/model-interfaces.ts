@@ -47,8 +47,8 @@ export class NearestCentroidModel extends Model {
 	 * @param centroids A mapping of the classification name to the centroid for that classification.
 	 */
 	constructor(
-		type: 'nearest centroid classifier' | 'sparse nearest centroid classifier' | 'dense nearest centroid classifier',
-		public centroids: { [key: string]: CentroidInfo },
+		type: 'nearest centroid classifier' | 'dense nearest centroid classifier',
+		public centroids: { [classification: string]: CentroidInfo },
 	) {
 		super(type)
 	}
@@ -58,8 +58,40 @@ export class NearestCentroidModel extends Model {
  * Information for each centroid in a `{@link NearestCentroidModel}`.
  */
 export class CentroidInfo {
+	/**
+	 * @param centroid The average of all data points in the class.
+	 * @param dataCount The number of samples in the class. 
+	 */
 	constructor(
 		public centroid: number[],
+		public dataCount: number,
+	) {
+	}
+}
+
+export class SparseNearestCentroidModel extends Model {
+	/**
+	 * @param type The type of model.
+	 * @param centroids A mapping of the classification name to the centroid for that classification.
+	 */
+	constructor(
+		type: 'sparse nearest centroid classifier',
+		public centroids: { [classification: string]: SparseCentroidInfo },
+	) {
+		super(type)
+	}
+}
+
+/**
+ * Information for each centroid in a `{@link NearestCentroidModel}`.
+ */
+export class SparseCentroidInfo {
+	/**
+	 * @param centroid The average of all data points in the class.
+	 * @param dataCount The number of samples in the class. 
+	 */
+	constructor(
+		public centroid: { [featureIndex: number]: number },
 		public dataCount: number,
 	) {
 	}
@@ -73,6 +105,7 @@ export class PerceptronModel extends Model {
 	 * @param type The type of model.
 	 * @param classifications The classifications supported by the model.
 	 * @param weights The weights for the model.
+	 * Use an array for dense models and a sparse feature map for sparse models.
 	 * @param intercept The bias to add to the multiplication of the weights and the data.
 	 * @param learningRate (Optional, defaults to 1). The amount of impact that new training data has to the weights.
 	 * @param featureIndices (Optional, default means to use all features)
@@ -81,7 +114,7 @@ export class PerceptronModel extends Model {
 	constructor(
 		type: 'perceptron' | 'dense perceptron' | 'sparse perceptron',
 		public classifications: string[],
-		public weights: number[],
+		public weights: number[] | { [featureIndex: number]: number },
 		public intercept: number,
 		public learningRate?: number,
 		public featureIndices?: number[],

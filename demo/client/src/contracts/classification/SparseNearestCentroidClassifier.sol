@@ -6,7 +6,7 @@ import "../../../lib/Math.sol";
 import {Classifier64} from "./Classifier.sol";
 
 /**
- * A nearest centroid classifier that uses Euclidean distance to predict the closest centroid based on sparse data sample.
+ * A nearest centroid classifier that uses Euclidean distance to predict the closest centroid based on a sparse data sample.
  * Data must be sorted indices of features with each feature occurring at most once.
  *
  * https://en.wikipedia.org/wiki/Nearest_centroid_classifier
@@ -33,16 +33,23 @@ contract SparseNearestCentroidClassifier is Classifier64 {
          */
         uint64 numSamples;
 
+        /**
+         * The average of all data points in the class. Values are each multiplied by `toFloat`.
+         */
         uint64[] centroid;
 
         /**
-         * The squared 2-norm of the centroid. Multiplied by (toFloat * toFloat).
+         * The squared 2-norm of the centroid. Multiplied by `(toFloat * toFloat)`.
          */
         uint squaredMagnitude;
     }
 
+    /**
+     * Information for each supported classification.
+     */
     ClassInfo[] public classInfos;
 
+    // TODO Handle sparse centroids.
     constructor(
         string[] memory _classifications,
         uint64[][] memory centroids,

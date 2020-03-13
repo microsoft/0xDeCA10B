@@ -6,7 +6,11 @@ import NearestCentroidClassifier from '../contracts/compiled/NearestCentroidClas
 import SparseNearestCentroidClassifier from '../contracts/compiled/SparseNearestCentroidClassifier.json'
 import SparsePerceptron from '../contracts/compiled/SparsePerceptron.json'
 import { convertDataToHex, convertToHex } from '../float-utils'
-import { Model, NaiveBayesModel, NearestCentroidModel, PerceptronModel} from './model-interfaces'
+import {
+	Model, NaiveBayesModel,
+	NearestCentroidModel, SparseNearestCentroidModel,
+	PerceptronModel,
+} from './model-interfaces'
 
 export class ModelDeployer {
 	/**
@@ -105,7 +109,7 @@ export class ModelDeployer {
 		})
 	}
 
-	async deployNearestCentroidClassifier(model: NearestCentroidModel, options: any): Promise<Contract> {
+	async deployNearestCentroidClassifier(model: NearestCentroidModel | SparseNearestCentroidModel, options: any): Promise<Contract> {
 		const { account, toFloat,
 			notify, dismissNotification,
 			saveTransactionHash, saveAddress,
@@ -118,6 +122,10 @@ export class ModelDeployer {
 		let numDimensions = null
 		for (let [classification, centroidInfo] of Object.entries(model.centroids)) {
 			classifications.push(classification)
+			// FIXME handle sparse case.
+			if (Array.isArray(centroidInfo.centroid)) {
+				
+			}
 			centroids.push(convertDataToHex(centroidInfo.centroid, this.web3, toFloat))
 			dataCounts.push(centroidInfo.dataCount)
 			if (numDimensions === null) {
@@ -197,6 +205,7 @@ export class ModelDeployer {
 		const defaultLearningRate = 0.5
 		const weightChunkSize = 450
 		const { classifications, featureIndices } = model
+		// FIXME handle sparse case.
 		const weights = convertDataToHex(model.weights, this.web3, toFloat)
 		const intercept = convertToHex(model.intercept, this.web3, toFloat)
 		const learningRate = convertToHex(model.learningRate || defaultLearningRate, this.web3, toFloat)
@@ -302,9 +311,10 @@ export class ModelDeployer {
 			case 'naive bayes':
 				return this.deployNaiveBayes(model as NaiveBayesModel, options)
 			case 'dense nearest centroid classifier':
-			case 'sparse nearest centroid classifier':
 			case 'nearest centroid classifier':
 				return this.deployNearestCentroidClassifier(model as NearestCentroidModel, options)
+			case 'sparse nearest centroid classifier':
+				return this.deployNearestCentroidClassifier(model as SparseNearestCentroidModel, options)
 			default:
 				// Should not happen.
 				throw new Error(`Unrecognized model type: "${model.type}"`)
