@@ -100,21 +100,47 @@ export class SparseCentroidInfo {
 /**
  * A Perceptron where the data given for updating and predicting is dense.
  */
-export class PerceptronModel extends Model {
+export class DensePerceptronModel extends Model {
 	/**
-	 * @param type The type of model.
+	 * @param type The type of model. 'perceptron' defaults to a dense model.
 	 * @param classifications The classifications supported by the model.
-	 * @param weights The weights for the model.
-	 * Use an array for dense models and a sparse feature map for sparse models.
+	 * @param weights The weights for the model. Can be used for dense or sparse models.
 	 * @param intercept The bias to add to the multiplication of the weights and the data.
 	 * @param learningRate (Optional, defaults to 1). The amount of impact that new training data has to the weights.
 	 * @param featureIndices (Optional, default means to use all features)
 	 * The indices of the features to use from some well-known shared encoder.
 	 */
 	constructor(
-		type: 'perceptron' | 'dense perceptron' | 'sparse perceptron',
+		type: 'perceptron' | 'dense perceptron',
 		public classifications: string[],
-		public weights: number[] | { [featureIndex: number]: number },
+		public weights: number[],
+		public intercept: number,
+		public learningRate?: number,
+		public featureIndices?: number[],
+	) {
+		super(type)
+	}
+}
+
+/**
+ * A Perceptron where the data given for updating and predicting is dense.
+ */
+export class SparsePerceptronModel extends Model {
+	/**
+	 * @param type The type of model. 'perceptron' defaults to a dense model.
+	 * @param classifications The classifications supported by the model.
+	 * @param weights The weights for the model. Can be used for dense or sparse models.
+	 * @param sparseWeights Additional weights indexed for a sparse model.
+	 * @param intercept The bias to add to the multiplication of the weights and the data.
+	 * @param learningRate (Optional, defaults to 1). The amount of impact that new training data has to the weights.
+	 * @param featureIndices (Optional, default means to use all features)
+	 * The indices of the features to use from some well-known shared encoder.
+	 */
+	constructor(
+		type: 'sparse perceptron',
+		public classifications: string[],
+		public weights: number[],
+		public sparseWeights: { [featureIndex: number]: number },
 		public intercept: number,
 		public learningRate?: number,
 		public featureIndices?: number[],

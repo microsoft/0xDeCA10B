@@ -2,7 +2,7 @@ import assert from 'assert'
 import Web3 from 'web3'
 import { convertNum } from '../../float-utils'
 import { ModelDeployer } from '../deploy-model'
-import { CentroidInfo, NaiveBayesModel, NearestCentroidModel, PerceptronModel } from '../model-interfaces'
+import { CentroidInfo, NaiveBayesModel, NearestCentroidModel, DensePerceptronModel, SparsePerceptronModel } from '../model-interfaces'
 
 declare const web3: Web3
 
@@ -134,7 +134,7 @@ describe("ModelDeployer", () => {
 		const weights = [1, -1]
 		const intercept = 0
 		const m = await deployer.deployModel(
-			new PerceptronModel(
+			new DensePerceptronModel(
 				'dense perceptron',
 				classifications,
 				weights,
@@ -156,12 +156,13 @@ describe("ModelDeployer", () => {
 	it("should deploy sparse Perceptron", async () => {
 		const classifications = ["AA", "BB"]
 		const weights = [2, -2]
+		const sparseWeights = { 4: 7, 11: 8, }
 		const intercept = 3
 		const m = await deployer.deployModel(
-			new PerceptronModel(
+			new SparsePerceptronModel(
 				'sparse perceptron',
 				classifications,
-				weights,
+				weights, sparseWeights,
 				intercept,
 			),
 			{
@@ -173,6 +174,9 @@ describe("ModelDeployer", () => {
 		}
 		for (let i = 0; i < weights.length; ++i) {
 			assertEqualNumbers(await m.methods.weights(i).call(), convertNum(weights[i], web3))
+		}
+		for (const [featureIndex, weight] of Object.entries(sparseWeights)) {
+			assertEqualNumbers(await m.methods.weights(featureIndex).call(), convertNum(weight, web3))
 		}
 		assertEqualNumbers(await m.methods.intercept().call(), convertNum(intercept, web3))
 	})

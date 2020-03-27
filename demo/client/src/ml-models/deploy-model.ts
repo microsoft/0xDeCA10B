@@ -9,7 +9,7 @@ import { convertDataToHex, convertToHex } from '../float-utils'
 import {
 	Model, NaiveBayesModel,
 	NearestCentroidModel, SparseNearestCentroidModel,
-	PerceptronModel,
+	DensePerceptronModel, SparsePerceptronModel,
 } from './model-interfaces'
 
 export class ModelDeployer {
@@ -124,7 +124,7 @@ export class ModelDeployer {
 			classifications.push(classification)
 			// FIXME handle sparse case.
 			if (Array.isArray(centroidInfo.centroid)) {
-				
+
 			}
 			centroids.push(convertDataToHex(centroidInfo.centroid, this.web3, toFloat))
 			dataCounts.push(centroidInfo.dataCount)
@@ -197,7 +197,7 @@ export class ModelDeployer {
 		})
 	}
 
-	async deployPerceptron(model: PerceptronModel, options: any): Promise<Contract> {
+	async deployPerceptron(model: DensePerceptronModel | SparsePerceptronModel, options: any): Promise<Contract> {
 		const { account, toFloat,
 			notify, dismissNotification,
 			saveTransactionHash, saveAddress,
@@ -205,21 +205,35 @@ export class ModelDeployer {
 		const defaultLearningRate = 0.5
 		const weightChunkSize = 450
 		const { classifications, featureIndices } = model
-		// FIXME handle sparse case.
-		const weights = convertDataToHex(model.weights, this.web3, toFloat)
+		let weightsArray: any[] = []
+		let sparseWeights: any[][] = []
+
+		if (model.hasOwnProperty('sparseWeights')) {
+			const sparseModel = model as SparsePerceptronModel
+			if (typeof sparseModel.sparseWeights === 'object' && sparseModel.sparseWeights !== null) {
+				for (let [featureIndexKey, weight] of Object.entries(sparseModel.sparseWeights)) {
+					const featureIndex = parseInt(featureIndexKey)
+					sparseWeights.push([this.web3.utils.toHex(featureIndex), convertToHex(weight, this.web3, toFloat)])
+				}
+			}
+		}
+
+		if (model.weights !== undefined && model.weights !== null && Array.isArray(model.weights)) {
+			weightsArray = convertDataToHex(model.weights, this.web3, toFloat)
+		}
 		const intercept = convertToHex(model.intercept, this.web3, toFloat)
 		const learningRate = convertToHex(model.learningRate || defaultLearningRate, this.web3, toFloat)
 
-		if (featureIndices !== undefined && featureIndices.length !== weights.length) {
+		if (featureIndices !== undefined && featureIndices.length !== weightsArray.length + sparseWeights.length) {
 			return Promise.reject("The number of features must match the number of weights.")
 		}
 
 		const ContractInfo = ModelDeployer.modelTypes[model.type]
 		const contract = new this.web3.eth.Contract(ContractInfo.abi, undefined, { from: account })
-		const pleaseAcceptKey = notify(`Please accept the prompt to deploy the Perceptron classifier with the first ${Math.min(weights.length, weightChunkSize)} weights`)
+		const pleaseAcceptKey = notify(`Please accept the prompt to deploy the Perceptron classifier with the first ${Math.min(weightsArray.length, weightChunkSize)} weights`)
 		return contract.deploy({
 			data: ContractInfo.bytecode,
-			arguments: [classifications, weights.slice(0, weightChunkSize), intercept, learningRate],
+			arguments: [classifications, weightsArray.slice(0, weightChunkSize), intercept, learningRate],
 		}).send({
 			from: account,
 			gas: this.gasLimit,
@@ -235,19 +249,19 @@ export class ModelDeployer {
 			// Could create a batch but I was getting various errors when trying to do and could not find docs on what `execute` returns.
 			const transactions = []
 			// Add remaining weights.
-			for (let i = weightChunkSize; i < weights.length; i += weightChunkSize) {
+			for (let i = weightChunkSize; i < weightsArray.length; i += weightChunkSize) {
 				let transaction: any
-				if (model.type === 'dense perceptron') {
-					transaction = newContractInstance.methods.initializeWeights(weights.slice(i, i + weightChunkSize))
+				if (model.type === 'dense perceptron' || model.type === 'perceptron') {
+					transaction = newContractInstance.methods.initializeWeights(weightsArray.slice(i, i + weightChunkSize))
 				} else if (model.type === 'sparse perceptron') {
-					transaction = newContractInstance.methods.initializeWeights(i, weights.slice(i, i + weightChunkSize))
+					transaction = newContractInstance.methods.initializeWeights(i, weightsArray.slice(i, i + weightChunkSize))
 				} else {
 					throw new Error(`Unrecognized model type: "${model.type}"`)
 				}
 				transactions.push(new Promise((resolve, reject) => {
 					// Subtract 1 from the count because the first chunk has already been uploaded.
 					const notification = notify(`Please accept the prompt to upload classifier 
-					weights [${i},${i + weightChunkSize}) (${i / weightChunkSize}/${Math.ceil(weights.length / weightChunkSize) - 1})`)
+					weights [${i},${i + weightChunkSize}) (${i / weightChunkSize}/${Math.ceil(weightsArray.length / weightChunkSize) - 1})`)
 					transaction.send().on('transactionHash', () => {
 						dismissNotification(notification)
 					}).on('error', (err: any) => {
@@ -274,11 +288,23 @@ export class ModelDeployer {
 				}
 			}
 
-			return Promise.all(transactions).then(_ => {
-				notify(`The model contract has been deployed to ${newContractInstance.options.address}`, { variant: 'success' })
-				saveAddress('model', newContractInstance.options.address)
-				return newContractInstance
-			})
+			await Promise.all(transactions)
+
+			for (let i = 0; i < sparseWeights.length; i += Math.round(weightChunkSize / 2)) {
+				const notification = notify(`Please accept the prompt to upload sparse classifier weights [${i},${i + Math.round(weightChunkSize / 2)}) out of ${sparseWeights.length}`)
+				await newContractInstance.methods.initializeSparseWeights(
+					sparseWeights.slice(i, i + Math.round(weightChunkSize / 2))).send().on('transactionHash', () => {
+						dismissNotification(notification)
+					}).on('error', (err: any) => {
+						dismissNotification(notification)
+						notify(`Error setting sparse classifier weights [${i},${i + Math.round(weightChunkSize / 2)}) out of ${sparseWeights.length}`, { variant: 'error' })
+						throw err
+					})
+			}
+
+			notify(`The model contract has been deployed to ${newContractInstance.options.address}`, { variant: 'success' })
+			saveAddress('model', newContractInstance.options.address)
+			return newContractInstance
 		})
 	}
 
@@ -307,7 +333,11 @@ export class ModelDeployer {
 			case 'dense perceptron':
 			case 'sparse perceptron':
 			case 'perceptron':
-				return this.deployPerceptron(model as PerceptronModel, options)
+				if (model.hasOwnProperty('sparseWeights')) {
+					return this.deployPerceptron(model as SparsePerceptronModel, options)
+				} else {
+					return this.deployPerceptron(model as DensePerceptronModel, options)
+				}
 			case 'naive bayes':
 				return this.deployNaiveBayes(model as NaiveBayesModel, options)
 			case 'dense nearest centroid classifier':
