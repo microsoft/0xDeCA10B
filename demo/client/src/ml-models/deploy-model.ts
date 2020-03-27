@@ -6,11 +6,7 @@ import NearestCentroidClassifier from '../contracts/compiled/NearestCentroidClas
 import SparseNearestCentroidClassifier from '../contracts/compiled/SparseNearestCentroidClassifier.json'
 import SparsePerceptron from '../contracts/compiled/SparsePerceptron.json'
 import { convertDataToHex, convertToHex } from '../float-utils'
-import {
-	Model, NaiveBayesModel,
-	NearestCentroidModel, SparseNearestCentroidModel,
-	DensePerceptronModel, SparsePerceptronModel,
-} from './model-interfaces'
+import { DensePerceptronModel, Model, NaiveBayesModel, NearestCentroidModel, SparseNearestCentroidModel, SparsePerceptronModel } from './model-interfaces'
 
 export class ModelDeployer {
 	/**
@@ -118,21 +114,27 @@ export class ModelDeployer {
 		const chunkSize = 500
 		const classifications: string[] = []
 		const centroids: number[][] = []
+		const sparseCentroids: number[][][] = []
 		const dataCounts: number[] = []
 		let numDimensions = null
 		for (let [classification, centroidInfo] of Object.entries(model.centroids)) {
 			classifications.push(classification)
-			// FIXME handle sparse case.
-			if (Array.isArray(centroidInfo.centroid)) {
-
-			}
-			centroids.push(convertDataToHex(centroidInfo.centroid, this.web3, toFloat))
 			dataCounts.push(centroidInfo.dataCount)
-			if (numDimensions === null) {
-				numDimensions = centroidInfo.centroid.length
+			const sparseCentroid: number[][] = []
+			if (Array.isArray(centroidInfo.centroid)) {
+				centroids.push(convertDataToHex(centroidInfo.centroid, this.web3, toFloat))
+				if (numDimensions === null) {
+					numDimensions = centroidInfo.centroid.length
+				} else {
+					if (centroidInfo.centroid.length !== numDimensions) {
+						throw new Error(`Found a centroid with ${centroidInfo.centroid.length} dimensions. Expected: ${numDimensions}.`)
+					}
+				}
 			} else {
-				if (centroidInfo.centroid.length !== numDimensions) {
-					throw new Error(`Found a centroid with ${centroidInfo.centroid.length} dimensions. Expected: ${numDimensions}.`)
+				sparseCentroids.push(sparseCentroid)
+				for (let [featureIndexKey, value] of Object.entries(centroidInfo.centroid)) {
+					const featureIndex = parseInt(featureIndexKey)
+					sparseCentroid.push([this.web3.utils.toHex(featureIndex), convertToHex(value, this.web3, toFloat)])
 				}
 			}
 		}
@@ -174,26 +176,28 @@ export class ModelDeployer {
 					}).then(resolve)
 				}))
 			}
-			return Promise.all(addClassPromises).then(async _ => {
-				// Extend each class.
-				// Tried with promises but got weird unhelpful errors from Truffle (some were like network timeout errors).
-				for (let classification = 0; classification < classifications.length; ++classification) {
-					for (let j = initialChunkSize; j < centroids[classification].length; j += chunkSize) {
-						const notification = notify(`Please accept the prompt to upload the values for dimensions [${j},${j + chunkSize}) for the "${classifications[classification]}" class`)
-						await newContractInstance.methods.extendCentroid(
-							centroids[classification].slice(j, j + chunkSize), classification).send().on('transactionHash', () => {
-								dismissNotification(notification)
-							}).on('error', (err: any) => {
-								dismissNotification(notification)
-								notify(`Error setting feature indices for [${j},${j + chunkSize}) for the "${classifications[classification]}" class`, { variant: 'error' })
-								throw err
-							})
-					}
+			await Promise.all(addClassPromises)
+			// Extend each class.
+			// Tried with promises but got weird unhelpful errors from Truffle (some were like network timeout errors).
+			for (let classification = 0; classification < classifications.length; ++classification) {
+				for (let j = initialChunkSize; j < centroids[classification].length; j += chunkSize) {
+					const notification = notify(`Please accept the prompt to upload the values for dimensions [${j},${j + chunkSize}) for the "${classifications[classification]}" class`)
+					await newContractInstance.methods.extendCentroid(
+						centroids[classification].slice(j, j + chunkSize), classification).send().on('transactionHash', () => {
+							dismissNotification(notification)
+						}).on('error', (err: any) => {
+							dismissNotification(notification)
+							notify(`Error setting feature indices for [${j},${j + chunkSize}) for the "${classifications[classification]}" class`, { variant: 'error' })
+							throw err
+						})
 				}
-				notify(`The model contract has been deployed to ${newContractInstance.options.address}`, { variant: 'success' })
-				saveAddress('model', newContractInstance.options.address)
-				return newContractInstance
-			})
+			}
+
+			// TODO Add sparseCentroids.
+
+			notify(`The model contract has been deployed to ${newContractInstance.options.address}`, { variant: 'success' })
+			saveAddress('model', newContractInstance.options.address)
+			return newContractInstance
 		})
 	}
 

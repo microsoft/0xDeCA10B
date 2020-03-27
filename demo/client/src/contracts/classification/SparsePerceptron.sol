@@ -33,7 +33,6 @@ contract SparsePerceptron is Classifier64 {
      * @param _learningRate (Optional, defaults to 1). The amount of impact that new training data has to the weights.
      Multiplied by `toFloat`.
      */
-    // TODO Handle sparse weights.
     constructor(
         string[] memory _classifications,
         int80[] memory _weights,

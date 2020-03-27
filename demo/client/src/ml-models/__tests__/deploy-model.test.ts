@@ -2,7 +2,7 @@ import assert from 'assert'
 import Web3 from 'web3'
 import { convertNum } from '../../float-utils'
 import { ModelDeployer } from '../deploy-model'
-import { CentroidInfo, NaiveBayesModel, NearestCentroidModel, DensePerceptronModel, SparsePerceptronModel } from '../model-interfaces'
+import { CentroidInfo, DensePerceptronModel, NaiveBayesModel, NearestCentroidModel, SparseNearestCentroidModel, SparsePerceptronModel } from '../model-interfaces'
 
 declare const web3: Web3
 
@@ -105,7 +105,7 @@ describe("ModelDeployer", () => {
 	})
 
 	it("should deploy sparse Nearest Centroid", async () => {
-		const model = new NearestCentroidModel(
+		const model = new SparseNearestCentroidModel(
 			'sparse nearest centroid classifier',
 			{
 				"AA": new CentroidInfo([0, +1], 2),
@@ -123,8 +123,8 @@ describe("ModelDeployer", () => {
 			++i
 			assert.equal(await m.methods.classifications(i).call(), classification)
 			assertEqualNumbers(await m.methods.getNumSamples(i).call(), centroidInfo.dataCount)
-			for (let j = 0; j < centroidInfo.centroid.length; ++j) {
-				assertEqualNumbers(await m.methods.getCentroidValue(i, j).call(), convertNum(centroidInfo.centroid[j], web3))
+			for (const [featureIndex, value] of Object.entries(centroidInfo.centroid)) {
+				assertEqualNumbers(await m.methods.getCentroidValue(i, featureIndex).call(), convertNum(value, web3))
 			}
 		}
 	})
