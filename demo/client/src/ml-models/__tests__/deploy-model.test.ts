@@ -105,11 +105,12 @@ describe("ModelDeployer", () => {
 	})
 
 	it("should deploy sparse Nearest Centroid", async () => {
+		// Values should all be positive since the representation is sparse.
 		const model = new SparseNearestCentroidModel(
 			'sparse nearest centroid classifier',
 			{
-				"AA": new SparseCentroidInfo({0: 0, 1: +1, 7: -1}, 2),
-				"BB": new SparseCentroidInfo({0: +1, 1: 0, 5: 0.5}, 2),
+				"AA": new SparseCentroidInfo({ 0: 0, 1: +1, 7: 1 }, 2),
+				"BB": new SparseCentroidInfo({ 0: +1, 1: 0, 5: 0.5 }, 2),
 			}
 		)
 		const m = await deployer.deployModel(
