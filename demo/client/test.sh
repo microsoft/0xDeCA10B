@@ -23,10 +23,9 @@ CI=true truffle migrate || cleanup exit
 CI=true truffle test test/contracts/*.js test/contracts/**/*.js || cleanup exit
 
 # Set `CI=true` to avoid watching for changes.
-CI=true react-scripts test --env='./test/custom-test-env.js' --testPathIgnorePatterns='src/.*/__tests__/[^/]*-node.test.js' || exit 1
+CI=true react-scripts test --env='./test/custom-test-env.js' --testPathIgnorePatterns='src/.*/__tests__/[^/]*-node.test.js' || cleanup exit
 
 cleanup
 
 # Add CI=true before to remove colors.
 mocha --recursive './src/**/__tests__/*-node.test.js' || exit 1
-

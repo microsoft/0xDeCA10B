@@ -1,4 +1,4 @@
-const { convertData } = require('../../../src/float-utils-node')
+const { convertNum } = require('../../../src/float-utils-node')
 const { deploySparseNearestCentroidClassifier } = require('../../../src/ml-models/deploy-model-node')
 
 contract('SparseNearestCentroidClassifier', function (accounts) {
@@ -17,18 +17,23 @@ contract('SparseNearestCentroidClassifier', function (accounts) {
 	function parseFloatBN(bn) {
 		assert(web3.utils.isBN(bn), `${bn} is not a BN`)
 		// Can't divide first since a BN can only be an integer.
-		return bn.toNumber() / toFloat
+		try {
+			return bn.toNumber() / toFloat
+		} catch(err) {
+			console.error("Error converting %s", bn)
+			throw err
+		}
 	}
 
 	before("deploy classifier", async function () {
 		const model = {
 			intents: {
 				ALARM: {
-					centroid: [+1, 0, 0],
+					centroid: { 0: +1, 1: 0, 2: 0 },
 					dataCount: 2,
 				},
 				WEATHER: {
-					centroid: [0, +1, 0],
+					centroid: { 0: 0, 1: +1, 2: 0 },
 					dataCount: 2
 				}
 			}
@@ -96,12 +101,12 @@ contract('SparseNearestCentroidClassifier', function (accounts) {
 	})
 
 	it("...should add class", async function () {
-		const centroid = [0, 0, +1]
+		const centroid = [[0, 0], [1, 0], [2, +1]]
 		const newClassificationName = "NEW"
 		const dataCount = 2
 
 		const originalNumClassifications = await classifier.getNumClassifications().then(parseBN)
-		const info = await classifier.addClass(convertData(centroid, web3, toFloat), newClassificationName, dataCount)
+		const info = await classifier.addClass(centroid.map(f=> [f[0], convertNum(f[1], web3, toFloat)]), newClassificationName, dataCount)
 		const events = info.logs.filter(l => l.event == 'AddClass')
 		assert.lengthOf(events, 1)
 		const event = events[0]
@@ -116,14 +121,14 @@ contract('SparseNearestCentroidClassifier', function (accounts) {
 		assert.equal(foundDataCount, dataCount)
 	})
 
-	it("...should extend centroids", async function () {
+	it("...should extend centroid", async function () {
 		const classification = 0
-		const extension = [2, 2]
+		const extension = [[5, 1.5], [7, 2.5]]
 		const originalCentroidValues = await Promise.all([...Array(3).keys()].map(dimension => {
 			return classifier.getCentroidValue(classification, dimension).then(parseFloatBN)
 		}))
-		const expectedCentroidValues = Array.prototype.concat(originalCentroidValues, extension)
-		await classifier.extendCentroid(convertData(extension, web3, toFloat), classification)
+		const expectedCentroidValues = Array.prototype.concat(originalCentroidValues, [0, 0, 1.5, 0, 2.5])
+		await classifier.extendCentroid(extension.map(f=> [f[0], convertNum(f[1], web3, toFloat)]), classification)
 
 		for (let dimension = 0; dimension < expectedCentroidValues.length; ++dimension) {
 			const v = await classifier.getCentroidValue(classification, dimension).then(parseFloatBN)

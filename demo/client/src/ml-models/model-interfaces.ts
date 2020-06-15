@@ -88,6 +88,7 @@ export class SparseNearestCentroidModel extends Model {
 export class SparseCentroidInfo {
 	/**
 	 * @param centroid The average of all data points in the class.
+	 * The feature indices should be integers but they are strings for convenience when loading from JSON.	 
 	 * @param dataCount The number of samples in the class. 
 	 */
 	constructor(

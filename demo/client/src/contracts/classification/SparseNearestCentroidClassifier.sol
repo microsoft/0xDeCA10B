@@ -34,14 +34,14 @@ contract SparseNearestCentroidClassifier is Classifier64 {
         uint64 numSamples;
 
         /**
-         * The average of all data points in the class. Values are each multiplied by `toFloat`.
-         */
-        uint64[] centroid;
-
-        /**
          * The squared 2-norm of the centroid. Multiplied by `(toFloat * toFloat)`.
          */
         uint squaredMagnitude;
+
+        /**
+         * The average of all data points in the class. Values are each multiplied by `toFloat`.
+         */
+        mapping(uint32 => uint64) centroid;
     }
 
     /**
@@ -49,29 +49,24 @@ contract SparseNearestCentroidClassifier is Classifier64 {
      */
     ClassInfo[] public classInfos;
 
-    // TODO Handle sparse centroids.
     constructor(
         string[] memory _classifications,
-        uint64[][] memory centroids,
+        uint64[][][] memory _centroids,
         uint64[] memory dataCounts)
         Classifier64(_classifications) public {
-        require(centroids.length == _classifications.length, "The number of centroids and classifications must be the same.");
+        require(_centroids.length == _classifications.length, "The number of centroids and classifications must be the same.");
         require(_classifications.length > 0, "At least one class is required.");
         require(_classifications.length < 2 ** 64, "Too many classes given.");
-        uint dimensions = centroids[0].length;
-        require(dimensions < 2 ** 63, "First centroid is too long.");
-        for (uint i = 0; i < centroids.length; ++i) {
-            uint64[] memory centroid = centroids[i];
-            require(centroid.length == dimensions, "Inconsistent number of dimensions.");
-            classInfos.push(ClassInfo(dataCounts[i], centroid, _getSquaredMagnitude(centroid)));
-        }
-    }
-
-    function _getSquaredMagnitude(uint64[] memory vector) internal pure returns (uint squaredMagnitude) {
-        squaredMagnitude = 0;
-        for (uint i = 0; i < vector.length; ++i) {
-            // Should be safe multiplication and addition because vector entries should be small.
-            squaredMagnitude += vector[i] * vector[i];
+        for (uint i = 0; i < _centroids.length; ++i) {
+            uint squaredMagnitude = 0;
+            classInfos.push(ClassInfo(dataCounts[i], squaredMagnitude));
+            ClassInfo storage storedInfo = classInfos[i];
+            for (uint j = 0; j < _centroids[i].length; ++j) {
+                storedInfo.centroid[uint32(_centroids[i][j][0])] = _centroids[i][j][1];
+                // Should be safe multiplication and addition because vector entries should be small.
+                squaredMagnitude += uint(_centroids[i][j][1]) * _centroids[i][j][1];
+            }
+            storedInfo.squaredMagnitude = squaredMagnitude;
         }
     }
 
@@ -81,26 +76,33 @@ contract SparseNearestCentroidClassifier is Classifier64 {
      * @param extension The values to append to a centroid vector.
      * @param classification The class to add the extension to.
      */
-    function extendCentroid(uint64[] memory extension, uint64 classification) public onlyOwner {
+    function extendCentroid(uint64[][] memory extension, uint64 classification) public onlyOwner {
         require(classification < classInfos.length, "This classification has not been added yet.");
         ClassInfo storage classInfo = classInfos[classification];
-        uint64[] storage centroid = classInfo.centroid;
-        require(centroid.length + extension.length < 2 ** 63, "Centroid would be too long.");
+        mapping(uint32 => uint64) storage centroid = classInfo.centroid;
         uint squaredMagnitude = classInfo.squaredMagnitude;
         for (uint i = 0; i < extension.length; ++i) {
-            centroid.push(extension[i]);
+            centroid[uint32(extension[i][0])] = extension[i][1];
             // Should be safe multiplication and addition because vector entries should be small.
-            squaredMagnitude += extension[i] * extension[i];
+            squaredMagnitude += uint(extension[i][1]) * extension[i][1];
         }
         classInfo.squaredMagnitude = squaredMagnitude;
     }
 
-    function addClass(uint64[] memory centroid, string memory classification, uint64 dataCount) public onlyOwner {
+    function addClass(uint64[][] memory centroid, string memory classification, uint64 dataCount) public onlyOwner {
         require(classifications.length + 1 < 2 ** 64, "There are too many classes already.");
-        require(centroid.length == classInfos[0].centroid.length, "Data doesn't have the correct number of dimensions.");
         require(dataCount < dataCountLimit, "Data count is too large.");
+        uint squaredMagnitude = 0;
+        classInfos.push(ClassInfo(dataCount, squaredMagnitude));
+        ClassInfo storage storedInfo = classInfos[classInfos.length - 1];
         classifications.push(classification);
-        classInfos.push(ClassInfo(dataCount, centroid, _getSquaredMagnitude(centroid)));
+        for (uint i = 0; i < centroid.length; ++i) {
+            storedInfo.centroid[uint32(centroid[i][0])] = centroid[i][1];
+            // Should be safe multiplication and addition because vector entries should be small.
+            squaredMagnitude += uint(centroid[i][1]) * centroid[i][1];
+        }
+        storedInfo.squaredMagnitude = squaredMagnitude;
+
         emit AddClass(classification, classifications.length - 1);
     }
 
@@ -115,20 +117,20 @@ contract SparseNearestCentroidClassifier is Classifier64 {
         uint minDistance = UINT256_MAX;
         bestClass = 0;
         for (uint64 currentClass = 0; currentClass < classInfos.length; ++currentClass) {
-            uint64[] storage centroid = classInfos[currentClass].centroid;
-            // Default distance for empty data is `squaredMagnitudes[currentClass]`.
+            mapping(uint32 => uint64) storage centroid = classInfos[currentClass].centroid;
+            // Default distance for empty data is `classInfos[currentClass].squaredMagnitude`.
             // Well use that as a base and update it.
-            // distance = squaredMagnitudes[currentClass]
+            // distance = classInfos[currentClass].squaredMagnitude
             // For each j:
-            // distance = distance - centroids[currentClass][j]^2 + (centroids[currentClass][j] - toFloat)^2
-            // = distance - centroids[currentClass][j]^2 + centroids[currentClass][j]^2 - 2 * centroids[currentClass][j] * toFloat + toFloat^2
-            // = distance - 2 * centroids[currentClass][j] * toFloat + toFloat^2
-            // = distance + toFloat * (-2 * centroids[currentClass][j] + toFloat)
+            // distance = distance - centroid[j]^2 + (centroid[j] - toFloat)^2
+            // = distance - centroid[j]^2 + centroid[j]^2 - 2 * centroid[j] * toFloat + toFloat^2
+            // = distance - 2 * centroid[j] * toFloat + toFloat^2
+            // = distance + toFloat * (-2 * centroid[j] + toFloat)
             int distanceUpdate = 0;
 
             for (uint dataIndex = 0; dataIndex < data.length; ++dataIndex) {
                 // Should be safe since data is not very long.
-                distanceUpdate += int(toFloat) - 2 * centroid[uint(data[dataIndex])];
+                distanceUpdate += int(toFloat) - 2 * centroid[uint32(data[dataIndex])];
             }
 
             uint distance = uint(int(classInfos[currentClass].squaredMagnitude) + distanceUpdate * toFloat);
@@ -143,7 +145,7 @@ contract SparseNearestCentroidClassifier is Classifier64 {
     function update(int64[] memory data, uint64 classification) public override onlyOwner {
         require(classification < classInfos.length, "This classification has not been added yet.");
         ClassInfo storage classInfo = classInfos[classification];
-        uint64[] memory centroid = classInfo.centroid;
+        mapping(uint32 => uint64) storage centroid = classInfo.centroid;
         uint n = classInfos[classification].numSamples;
         uint64 newN;
         // Keep n small enough for multiplication.
@@ -154,27 +156,17 @@ contract SparseNearestCentroidClassifier is Classifier64 {
             classInfo.numSamples = newN;
         }
 
-        // Could try to optimize further by not updating zero entries in the centroid that are not in the data.
-        // This wouldn't help much for our current examples (IMDB + Fake News) since most features occur in all classes.
+        uint squaredMagnitude = classInfo.squaredMagnitude;
 
         // Update centroid using moving average calculation.
-        uint squaredMagnitude = 0;
-        uint dataIndex = 0;
-        for (uint64 featureIndex = 0; featureIndex < centroid.length; ++featureIndex) {
-            if (dataIndex < data.length && data[dataIndex] == int64(featureIndex)) {
-                // Feature is present.
-                uint64 v = uint64((n * centroid[featureIndex] + toFloat) / newN);
-                centroid[featureIndex] = v;
-                squaredMagnitude = squaredMagnitude.add(uint(v) * v);
-                ++dataIndex;
-            } else {
-                // Feature is not present.
-                uint64 v = uint64((n * centroid[featureIndex]) / newN);
-                centroid[featureIndex] = v;
-                squaredMagnitude = squaredMagnitude.add(uint(v) * v);
-            }
+        for (uint dataIndex = 0; dataIndex < data.length; ++dataIndex) {
+            uint32 featureIndex = uint32(data[dataIndex]);
+            squaredMagnitude = squaredMagnitude.sub(uint(centroid[featureIndex]) * centroid[featureIndex]);
+            uint64 v = uint64((n * centroid[featureIndex] + toFloat) / newN);
+            centroid[featureIndex] = v;
+            squaredMagnitude = squaredMagnitude.add(uint(v) * v);
         }
-        classInfo.centroid = centroid;
+
         classInfo.squaredMagnitude = squaredMagnitude;
     }
 
@@ -183,7 +175,7 @@ contract SparseNearestCentroidClassifier is Classifier64 {
         return classInfos[classIndex].numSamples;
     }
 
-    function getCentroidValue(uint classIndex, uint featureIndex) public view returns (uint64) {
+    function getCentroidValue(uint classIndex, uint32 featureIndex) public view returns (uint64) {
         return classInfos[classIndex].centroid[featureIndex];
     }
 

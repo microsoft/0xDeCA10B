@@ -23,7 +23,7 @@ class IncentiveMechanism(ABC, SmartContract):
 
         self.any_address_claim_wait_time_s = any_address_claim_wait_time_s
         """
-        Amount of time after which anyone can take someone's entire remaining refund.
+        Amount of time after which anyone can take someone's entire remaining deposit.
         The purpose of this is to help ensure that value does not get "stuck" in a contract.
         This must be greater than the required amount of time to wait for attempting a refund.
         Contracts may want to enforce that this is much greater than the amount of time to wait for attempting a refund

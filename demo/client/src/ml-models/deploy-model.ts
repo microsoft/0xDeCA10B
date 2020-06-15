@@ -113,14 +113,12 @@ export class ModelDeployer {
 		const initialChunkSize = 500
 		const chunkSize = 500
 		const classifications: string[] = []
-		const centroids: number[][] = []
-		const sparseCentroids: number[][][] = []
+		const centroids: number[][] | number[][][] = []
 		const dataCounts: number[] = []
 		let numDimensions = null
 		for (let [classification, centroidInfo] of Object.entries(model.centroids)) {
 			classifications.push(classification)
 			dataCounts.push(centroidInfo.dataCount)
-			const sparseCentroid: number[][] = []
 			if (Array.isArray(centroidInfo.centroid)) {
 				centroids.push(convertDataToHex(centroidInfo.centroid, this.web3, toFloat))
 				if (numDimensions === null) {
@@ -131,11 +129,12 @@ export class ModelDeployer {
 					}
 				}
 			} else {
-				sparseCentroids.push(sparseCentroid)
+				const sparseCentroid: number[][] = []
 				for (let [featureIndexKey, value] of Object.entries(centroidInfo.centroid)) {
 					const featureIndex = parseInt(featureIndexKey)
 					sparseCentroid.push([this.web3.utils.toHex(featureIndex), convertToHex(value, this.web3, toFloat)])
 				}
+				centroids.push(sparseCentroid)
 			}
 		}
 
@@ -192,8 +191,6 @@ export class ModelDeployer {
 						})
 				}
 			}
-
-			// TODO Add sparseCentroids.
 
 			notify(`The model contract has been deployed to ${newContractInstance.options.address}`, { variant: 'success' })
 			saveAddress('model', newContractInstance.options.address)

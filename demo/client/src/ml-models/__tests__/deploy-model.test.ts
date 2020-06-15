@@ -2,7 +2,7 @@ import assert from 'assert'
 import Web3 from 'web3'
 import { convertNum } from '../../float-utils'
 import { ModelDeployer } from '../deploy-model'
-import { CentroidInfo, DensePerceptronModel, NaiveBayesModel, NearestCentroidModel, SparseNearestCentroidModel, SparsePerceptronModel } from '../model-interfaces'
+import { CentroidInfo, DensePerceptronModel, NaiveBayesModel, NearestCentroidModel, SparseCentroidInfo, SparseNearestCentroidModel, SparsePerceptronModel } from '../model-interfaces'
 
 declare const web3: Web3
 
@@ -108,8 +108,8 @@ describe("ModelDeployer", () => {
 		const model = new SparseNearestCentroidModel(
 			'sparse nearest centroid classifier',
 			{
-				"AA": new CentroidInfo([0, +1], 2),
-				"BB": new CentroidInfo([+1, 0], 2),
+				"AA": new SparseCentroidInfo({0: 0, 1: +1, 7: -1}, 2),
+				"BB": new SparseCentroidInfo({0: +1, 1: 0, 5: 0.5}, 2),
 			}
 		)
 		const m = await deployer.deployModel(
