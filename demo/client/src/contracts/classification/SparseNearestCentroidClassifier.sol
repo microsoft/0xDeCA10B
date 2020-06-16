@@ -166,6 +166,7 @@ contract SparseNearestCentroidClassifier is Classifier64 {
             centroid[featureIndex] = v;
             squaredMagnitude = squaredMagnitude.add(uint(v) * v);
         }
+        // FIXME Update other indices.
 
         classInfo.squaredMagnitude = squaredMagnitude;
     }

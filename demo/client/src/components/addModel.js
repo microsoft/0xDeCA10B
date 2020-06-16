@@ -292,6 +292,10 @@ class AddModel extends React.Component {
                   title="No transformation will be applied">
                   <MenuItem>None</MenuItem>
                 </Tooltip>
+                <Tooltip value="MurmurHash3" placement="top-start"
+                  title="Convert each word to a 32-bit number using MurmurHash3">
+                  <MenuItem>MurmurHash3</MenuItem>
+                </Tooltip>
                 <Tooltip value="IMDB vocab" placement="top-start"
                   title="Convert each word in English text to a number using the 1000 most frequent words in the IMDB review dataset">
                   <MenuItem>IMDB vocab</MenuItem>
