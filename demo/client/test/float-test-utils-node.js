@@ -1,6 +1,6 @@
 exports.assertCloseToNumbers = function (actual, expected, delta,
-    web3, 
-    messagePrefix) {
+	web3,
+	messagePrefix) {
 	messagePrefix = messagePrefix ? messagePrefix + ": " : ""
 	if (web3.utils.isBN(actual)) {
 		if (web3.utils.isBN(expected)) {
@@ -24,8 +24,8 @@ exports.assertCloseToNumbers = function (actual, expected, delta,
 }
 
 exports.assertEqualNumbers = function (actual, expected,
-    web3, 
-    messagePrefix) {
+	web3,
+	messagePrefix) {
 	messagePrefix = messagePrefix ? messagePrefix + ": " : ""
 	if (web3.utils.isBN(actual)) {
 		if (web3.utils.isBN(expected)) {

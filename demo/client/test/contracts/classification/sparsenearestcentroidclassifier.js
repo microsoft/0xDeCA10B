@@ -1,6 +1,6 @@
 const { convertNum } = require('../../../src/float-utils-node')
 const { deploySparseNearestCentroidClassifier } = require('../../../src/ml-models/deploy-model-node')
-const { assertCloseToNumbers, assertEqualNumbers } = require('../../../src/__tests__/float-test-utils-node')
+const { assertCloseToNumbers, assertEqualNumbers } = require('../../float-test-utils-node')
 
 contract('SparseNearestCentroidClassifier', function (accounts) {
 	const toFloat = 1E9
