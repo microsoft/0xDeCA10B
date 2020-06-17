@@ -317,7 +317,7 @@ class Model extends React.Component {
   }
 
   async setTransformInputMethod() {
-    let { encoder }= this.state.contractInfo
+    let { encoder } = this.state.contractInfo
     if (encoder) {
       encoder = encoder.toLocaleLowerCase('en')
     }

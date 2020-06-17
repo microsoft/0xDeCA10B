@@ -132,7 +132,7 @@ contract SparseNearestCentroidClassifier is Classifier64 {
             // Default distance for empty data is `classInfos[currentClass].squaredMagnitude`.
             // Well use that as a base and update it.
             // distance = classInfos[currentClass].squaredMagnitude
-            // For each j:
+            // For each feature j that is present in `data`:
             // distance = distance - centroid[j]^2 + (centroid[j] - toFloat)^2
             // = distance - centroid[j]^2 + centroid[j]^2 - 2 * centroid[j] * toFloat + toFloat^2
             // = distance - 2 * centroid[j] * toFloat + toFloat^2
@@ -140,13 +140,13 @@ contract SparseNearestCentroidClassifier is Classifier64 {
             int distanceUpdate = 0;
 
             for (uint dataIndex = 0; dataIndex < data.length; ++dataIndex) {
-                // Should be safe since data is not very long.
-                // FIXME Scale value.
                 CentroidValue memory centroidValue = centroid[uint32(data[dataIndex])];
                 uint value = centroidValue.value;
                 if (centroidValue.numSamples != classInfos[currentClass].numSamples) {
+                    // The value has not been updated yet so it needs to be scaled for the correct number of samples.
                     value = value * centroidValue.numSamples / classInfos[currentClass].numSamples;
                 }
+                // Should be safe since data is not very long.
                 distanceUpdate += int(toFloat) - 2 * int(value);
             }
 
@@ -163,7 +163,7 @@ contract SparseNearestCentroidClassifier is Classifier64 {
         require(classification < classInfos.length, "This classification has not been added yet.");
         ClassInfo storage classInfo = classInfos[classification];
         mapping(uint32 => CentroidValue) storage centroid = classInfo.centroid;
-        uint n = classInfos[classification].numSamples;
+        uint n = classInfo.numSamples;
         uint64 newN;
         uint squaredMagnitude = classInfo.squaredMagnitude;
         // Keep n small enough for multiplication.
@@ -182,9 +182,11 @@ contract SparseNearestCentroidClassifier is Classifier64 {
             uint64 prevNumSamples = centroid[featureIndex].numSamples;
             // The value at the centroid might not be correct so it needs to be scaled.
             uint prevValue = centroid[featureIndex].value * prevNumSamples / n;
+            // Now prevValue is correct up to before this update.
             // Update `squaredMagnitude`.
             // First, remove the incorrect value that was there.
             squaredMagnitude = squaredMagnitude.sub(prevValue * prevValue);
+            // Compute the new value using the moving average calculation.
             uint64 v = uint64((n * prevValue + toFloat) / newN);
             centroid[featureIndex].value = v;
             centroid[featureIndex].numSamples = newN;
@@ -214,7 +216,13 @@ contract SparseNearestCentroidClassifier is Classifier64 {
     }
 
     function getCentroidValue(uint classIndex, uint32 featureIndex) public view returns (uint64) {
-        return uint64(uint(classInfos[classIndex].centroid[featureIndex].value) * classInfos[classIndex].centroid[featureIndex].numSamples / classInfos[classIndex].numSamples);
+        uint64 valueNumSamples = classInfos[classIndex].centroid[featureIndex].numSamples;
+        uint64 correctNumSamples = classInfos[classIndex].numSamples;
+        if (valueNumSamples == correctNumSamples) {
+            return classInfos[classIndex].centroid[featureIndex].value;
+        } else {
+            return uint64(uint(classInfos[classIndex].centroid[featureIndex].value) * valueNumSamples / correctNumSamples);
+        }
     }
 
     function getSquaredMagnitude(uint classIndex) public view returns (uint) {
