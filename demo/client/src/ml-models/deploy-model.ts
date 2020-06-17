@@ -213,7 +213,7 @@ export class ModelDeployer {
 			const sparseModel = model as SparsePerceptronModel
 			if (typeof sparseModel.sparseWeights === 'object' && sparseModel.sparseWeights !== null) {
 				for (let [featureIndexKey, weight] of Object.entries(sparseModel.sparseWeights)) {
-					const featureIndex = parseInt(featureIndexKey)
+					const featureIndex = parseInt(featureIndexKey, 10)
 					sparseWeights.push([this.web3.utils.toHex(featureIndex), convertToHex(weight, this.web3, toFloat)])
 				}
 			}

@@ -92,7 +92,7 @@ export class SparseCentroidInfo {
 	 * @param dataCount The number of samples in the class. 
 	 */
 	constructor(
-		public centroid: { [featureIndex: number]: number },
+		public centroid: { [featureIndex: string]: number },
 		public dataCount: number,
 	) {
 	}
@@ -132,6 +132,7 @@ export class SparsePerceptronModel extends Model {
 	 * @param classifications The classifications supported by the model.
 	 * @param weights The weights for the model. Can be used for dense or sparse models.
 	 * @param sparseWeights Additional weights indexed for a sparse model.
+	 * The feature indices should be integers but they are strings for convenience when loading from JSON.
 	 * @param intercept The bias to add to the multiplication of the weights and the data.
 	 * @param learningRate (Optional, defaults to 1). The amount of impact that new training data has to the weights.
 	 * @param featureIndices (Optional, default means to use all features)
@@ -141,7 +142,7 @@ export class SparsePerceptronModel extends Model {
 		type: 'sparse perceptron',
 		public classifications: string[],
 		public weights: number[],
-		public sparseWeights: { [featureIndex: number]: number },
+		public sparseWeights: { [featureIndex: string]: number },
 		public intercept: number,
 		public learningRate?: number,
 		public featureIndices?: number[],

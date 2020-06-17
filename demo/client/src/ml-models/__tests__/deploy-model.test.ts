@@ -109,8 +109,8 @@ describe("ModelDeployer", () => {
 		const model = new SparseNearestCentroidModel(
 			'sparse nearest centroid classifier',
 			{
-				"AA": new SparseCentroidInfo({ 0: 0, 1: +1, 7: 1 }, 2),
-				"BB": new SparseCentroidInfo({ 0: +1, 1: 0, 5: 0.5 }, 2),
+				"AA": new SparseCentroidInfo({ '0': 0, '1': +1, '7': 1 }, 2),
+				"BB": new SparseCentroidInfo({ '0': +1, '1': 0, '5': 0.5 }, 2),
 			}
 		)
 		const m = await deployer.deployModel(
@@ -157,7 +157,7 @@ describe("ModelDeployer", () => {
 	it("should deploy sparse Perceptron", async () => {
 		const classifications = ["AA", "BB"]
 		const weights = [2, -2]
-		const sparseWeights = { 4: 7, 11: 8, }
+		const sparseWeights = { '4': 7, '11': 8, }
 		const intercept = 3
 		const m = await deployer.deployModel(
 			new SparsePerceptronModel(
