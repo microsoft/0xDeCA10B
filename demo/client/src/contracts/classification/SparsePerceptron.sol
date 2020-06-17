@@ -60,6 +60,20 @@ contract SparsePerceptron is Classifier64 {
         }
     }
 
+    /**
+     * Initialize sparse weights for the model.
+     * Made to be called just after the contract is created and never again.
+     * @param _weights A sparse representation of the weights.
+     * Each innermost array is a tuple of the feature index and the weight for that feature.
+     */
+    function initializeSparseWeights(int80[][] memory _weights) public onlyOwner {
+        for (uint i = 0; i < _weights.length; ++i) {
+            int80 featureIndex = _weights[i][0];
+            require(featureIndex < 2 ** 64, "A feature index is too large.");
+            weights[uint64(featureIndex)] = _weights[i][1];
+        }
+    }
+
     function norm(int64[] memory /* data */) public override pure returns (uint) {
         revert("Normalization is not required.");
     }

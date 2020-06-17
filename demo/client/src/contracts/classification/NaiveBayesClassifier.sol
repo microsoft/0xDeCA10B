@@ -62,7 +62,7 @@ contract NaiveBayesClassifier is Classifier64 {
      * @param _classifications The classifications supported by the model.
      * @param _classCounts The number of occurrences of each class in the training data.
      * @param _featureCounts For each class, the number of times each feature occurs within that class.
-     * Each innermost list is a tuple of the feature index and the number of times that feature occurs within the class.
+     * Each innermost array is a tuple of the feature index and the number of times that feature occurs within the class.
      * @param _totalNumFeatures The total number of features throughout all classes.
      * @param _smoothingFactor The smoothing factor (sometimes called alpha). Use toFloat (1 mapped) for Laplace smoothing.
      */
@@ -97,7 +97,8 @@ contract NaiveBayesClassifier is Classifier64 {
      * Set feature counts for an existing classification.
      * For efficiency, features are overriden them if they have already been set.
      * Made to be called just after the contract is created and never again.
-     * @param _featureCounts The index to start placing `_weights` into the model's weights.
+     * @param _featureCounts The number of times each feature occurs.
+     * Each innermost array is a tuple of the feature index and the number of times that feature occurs within the class.
      * @param classification The class to add counts to.
      */
     function initializeCounts(uint32[][] memory _featureCounts, uint64 classification) public onlyOwner {

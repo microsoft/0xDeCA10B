@@ -108,23 +108,16 @@ async function deployNearestCentroidClassifier(model, web3, toFloat) {
 exports.deploySparseNearestCentroidClassifier = async function (model, web3, toFloat) {
     let gasUsed = 0
     const initialChunkSize = 500
-    const chunkSize = 500
+    const chunkSize = 250
     const classifications = []
     const centroids = []
     const dataCounts = []
     console.log("  Deploying Sparse Nearest Centroid Classifier model.")
-    let numDimensions = null
     for (let [classification, centroidInfo] of Object.entries(model.centroids || model.intents)) {
         classifications.push(classification)
-        centroids.push(convertData(centroidInfo.centroid, web3, toFloat))
+        const centroid = Object.entries(centroidInfo.centroid).map(([featureIndex, value]) => [parseInt(featureIndex, 10), convertNum(value, web3, toFloat)])
+        centroids.push(centroid)
         dataCounts.push(centroidInfo.dataCount)
-        if (numDimensions === null) {
-            numDimensions = centroidInfo.centroid.length
-        } else {
-            if (centroidInfo.centroid.length !== numDimensions) {
-                throw new Error(`Found a centroid with ${centroidInfo.centroid.length} dimensions. Expected: ${numDimensions}.`)
-            }
-        }
     }
 
     const classifierContract = await SparseNearestCentroidClassifier.new(

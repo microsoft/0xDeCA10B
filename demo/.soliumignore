@@ -1,3 +1,5 @@
+# This file is in the root folder for VS Code.
+
 # Abstract contracts do not work yet: https://github.com/duaraghav8/Ethlint/issues/281
 # grep -R --files-with-matches '^abstract contract' client/src/contracts/
 client/src/contracts/classification/Classifier.sol

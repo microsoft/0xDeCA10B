@@ -1,5 +1,6 @@
-const { convertData } = require('../../../src/float-utils-node')
+const { convertNum } = require('../../../src/float-utils-node')
 const { deploySparseNearestCentroidClassifier } = require('../../../src/ml-models/deploy-model-node')
+const { assertCloseToNumbers, assertEqualNumbers } = require('../../float-test-utils-node')
 
 contract('SparseNearestCentroidClassifier', function (accounts) {
 	const toFloat = 1E9
@@ -17,18 +18,23 @@ contract('SparseNearestCentroidClassifier', function (accounts) {
 	function parseFloatBN(bn) {
 		assert(web3.utils.isBN(bn), `${bn} is not a BN`)
 		// Can't divide first since a BN can only be an integer.
-		return bn.toNumber() / toFloat
+		try {
+			return bn.toNumber() / toFloat
+		} catch (err) {
+			console.error("Error converting %s", bn)
+			throw err
+		}
 	}
 
 	before("deploy classifier", async function () {
 		const model = {
 			intents: {
 				ALARM: {
-					centroid: [+1, 0, 0],
+					centroid: { 0: +1 },
 					dataCount: 2,
 				},
 				WEATHER: {
-					centroid: [0, +1, 0],
+					centroid: { 1: +1 },
 					dataCount: 2
 				}
 			}
@@ -75,33 +81,104 @@ contract('SparseNearestCentroidClassifier', function (accounts) {
 		const data = [1, 2]
 		const classification = 1
 
+		const numDimensions = 3
 		const promises = []
-		for (let dimension = 0; dimension < 3; ++dimension) {
+		for (let dimension = 0; dimension < numDimensions; ++dimension) {
 			promises.push(classifier.getCentroidValue(classification, dimension).then(parseFloatBN))
 		}
 		const originalCentroidValues = await Promise.all(promises)
-		return classifier.getNumSamples(classification).then(parseBN).then(originalDataCount => {
-			return classifier.update(data, classification).then(() => {
-				return classifier.getNumSamples(classification).then(parseBN).then(async dataCount => {
-					assert.equal(dataCount, originalDataCount + 1, "Wrong data count.")
-					for (let dimension = 0; dimension < 3; ++dimension) {
-						const v = await classifier.getCentroidValue(classification, dimension).then(parseFloatBN)
-						const update = data.indexOf(dimension) >= 0 ? 1 : 0
-						assert.closeTo(v, (originalCentroidValues[dimension] * originalDataCount + update) / dataCount, 1 / toFloat,
-							`value for centroid[${dimension}]`)
-					}
-				})
-			})
+		const originalSquaredMagnitude = originalCentroidValues.reduce((prev, current) => {
+			return prev + current * current
+		}, 0)
+		assertEqualNumbers(await classifier.getSquaredMagnitude(classification), web3.utils.toBN(originalSquaredMagnitude).mul(web3.utils.toBN(toFloat)).mul(web3.utils.toBN(toFloat)), web3, "original squared magnitude")
+
+		let expectedUpdatedSquaredMagnitude = 0
+		const originalDataCount = await classifier.getNumSamples(classification).then(parseBN)
+		await classifier.update(data, classification)
+		return classifier.getNumSamples(classification).then(parseBN).then(async dataCount => {
+			assert.equal(dataCount, originalDataCount + 1, "Wrong data count.")
+			for (let dimension = 0; dimension < numDimensions; ++dimension) {
+				const v = await classifier.getCentroidValue(classification, dimension).then(parseFloatBN)
+				expectedUpdatedSquaredMagnitude += v * v
+				const update = data.indexOf(dimension) >= 0 ? 1 : 0
+				assert.closeTo(v, (originalCentroidValues[dimension] * originalDataCount + update) / dataCount, 1 / toFloat,
+					`value for centroid[${dimension}]`)
+			}
+			const updatedSquaredMagnitude = await classifier.getSquaredMagnitude(classification)
+			assertCloseToNumbers(updatedSquaredMagnitude, expectedUpdatedSquaredMagnitude * toFloat * toFloat, toFloat, web3, "updated squared magnitude")
+		})
+	})
+
+	it("...should train with updating non-zero centroid value", async function () {
+		const data = [1, 2]
+		const classification = 0
+		const numDimensions = 3
+
+		const promises = []
+		for (let dimension = 0; dimension < numDimensions; ++dimension) {
+			promises.push(classifier.getCentroidValue(classification, dimension).then(parseFloatBN))
+		}
+		const originalCentroidValues = await Promise.all(promises)
+		const originalSquaredMagnitude = originalCentroidValues.reduce((prev, current) => {
+			return prev + current * current
+		}, 0)
+		assertEqualNumbers(await classifier.getSquaredMagnitude(classification), web3.utils.toBN(originalSquaredMagnitude).mul(web3.utils.toBN(toFloat)).mul(web3.utils.toBN(toFloat)), web3, "original squared magnitude")
+
+		const originalDataCount = await classifier.getNumSamples(classification).then(parseBN)
+		await classifier.update(data, classification)
+		let expectedUpdatedSquaredMagnitude = 0
+		return classifier.getNumSamples(classification).then(parseBN).then(async dataCount => {
+			assert.equal(dataCount, originalDataCount + 1, "Wrong data count.")
+			for (let dimension = 0; dimension < numDimensions; ++dimension) {
+				const v = await classifier.getCentroidValue(classification, dimension).then(parseFloatBN)
+				expectedUpdatedSquaredMagnitude += v * v
+				const update = data.indexOf(dimension) >= 0 ? 1 : 0
+				assert.closeTo(v, (originalCentroidValues[dimension] * originalDataCount + update) / dataCount, 1 / toFloat,
+					`value for centroid[${dimension}]`)
+			}
+			assertCloseToNumbers(await classifier.getSquaredMagnitude(classification), expectedUpdatedSquaredMagnitude * toFloat * toFloat, toFloat, web3, "updated squared magnitude")
+		})
+	})
+
+	it("...should train with new feature", async function () {
+		const data = [4]
+		const classification = 1
+		const numDimensions = 5
+
+		const promises = []
+		for (let dimension = 0; dimension < numDimensions; ++dimension) {
+			promises.push(classifier.getCentroidValue(classification, dimension).then(parseFloatBN))
+		}
+		const originalCentroidValues = await Promise.all(promises)
+		const originalSquaredMagnitude = originalCentroidValues.reduce((prev, current) => {
+			return prev + current * current
+		}, 0)
+		assertCloseToNumbers(await classifier.getSquaredMagnitude(classification), web3.utils.toBN(originalSquaredMagnitude * toFloat * toFloat),
+			toFloat, web3, "original squared magnitude")
+
+		const originalDataCount = await classifier.getNumSamples(classification).then(parseBN)
+		await classifier.update(data, classification)
+		let expectedUpdatedSquaredMagnitude = 0
+		return classifier.getNumSamples(classification).then(parseBN).then(async dataCount => {
+			assert.equal(dataCount, originalDataCount + 1, "Wrong data count.")
+			for (let dimension = 0; dimension < numDimensions; ++dimension) {
+				const v = await classifier.getCentroidValue(classification, dimension).then(parseFloatBN)
+				expectedUpdatedSquaredMagnitude += v * v
+				const update = data.indexOf(dimension) >= 0 ? 1 : 0
+				assert.closeTo(v, (originalCentroidValues[dimension] * originalDataCount + update) / dataCount, 1 / toFloat,
+					`value for centroid[${dimension}]`)
+			}
+			assertCloseToNumbers(await classifier.getSquaredMagnitude(classification), expectedUpdatedSquaredMagnitude * toFloat * toFloat, toFloat, web3, "updated squared magnitude")
 		})
 	})
 
 	it("...should add class", async function () {
-		const centroid = [0, 0, +1]
+		const centroid = [[0, 0], [1, 0], [2, +1]]
 		const newClassificationName = "NEW"
 		const dataCount = 2
 
 		const originalNumClassifications = await classifier.getNumClassifications().then(parseBN)
-		const info = await classifier.addClass(convertData(centroid, web3, toFloat), newClassificationName, dataCount)
+		const info = await classifier.addClass(centroid.map(f => [f[0], convertNum(f[1], web3, toFloat)]), newClassificationName, dataCount)
 		const events = info.logs.filter(l => l.event == 'AddClass')
 		assert.lengthOf(events, 1)
 		const event = events[0]
@@ -116,14 +193,14 @@ contract('SparseNearestCentroidClassifier', function (accounts) {
 		assert.equal(foundDataCount, dataCount)
 	})
 
-	it("...should extend centroids", async function () {
+	it("...should extend centroid", async function () {
 		const classification = 0
-		const extension = [2, 2]
+		const extension = [[5, 1.5], [7, 2.5]]
 		const originalCentroidValues = await Promise.all([...Array(3).keys()].map(dimension => {
 			return classifier.getCentroidValue(classification, dimension).then(parseFloatBN)
 		}))
-		const expectedCentroidValues = Array.prototype.concat(originalCentroidValues, extension)
-		await classifier.extendCentroid(convertData(extension, web3, toFloat), classification)
+		const expectedCentroidValues = Array.prototype.concat(originalCentroidValues, [0, 0, 1.5, 0, 2.5])
+		await classifier.extendCentroid(extension.map(f => [f[0], convertNum(f[1], web3, toFloat)]), classification)
 
 		for (let dimension = 0; dimension < expectedCentroidValues.length; ++dimension) {
 			const v = await classifier.getCentroidValue(classification, dimension).then(parseFloatBN)
