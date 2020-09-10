@@ -21,7 +21,14 @@ Run
 ```
 
 ## Docker Setup
-You can use a Docker image by running:
+1. Clone this repo.
+
+2. Navigate into the folder containing this README.md file:
+```bash
+cd 0xDeCA10B/demo
+```
+
+3. You can use a Docker image by running:
 ```bash
 docker run --rm -it -p 3000:3000 -p 5387:5387 -p 7545:7545 -v ${PWD}:/root/workspace/demo -v /root/workspace/demo/node_modules -v /root/workspace/demo/client/node_modules --name decai-demo mcr.microsoft.com/samples/blockchain-ai/0xdeca10b-demo bash
 
