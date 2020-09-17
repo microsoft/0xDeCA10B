@@ -20,6 +20,12 @@ class TestTicTacToeDataLoader(unittest.TestCase):
         assert isinstance(cls.ttt, TicTacToeDataLoader)
         cls.ttt = cast(TicTacToeDataLoader, cls.ttt)
 
+    def test_classifications(self):
+        classifications = self.ttt.classifications()
+        assert classifications == ["(0, 0)", "(0, 1)", "(0, 2)",
+                                   "(1, 0)", "(1, 1)", "(1, 2)",
+                                   "(2, 0)", "(2, 1)", "(2, 2)"]
+
     def test_boards(self):
         (x_train, y_train), (x_test, y_test) = self.ttt.load_data()
         assert x_train.shape[1] == self.ttt.width * self.ttt.length

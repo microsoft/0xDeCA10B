@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from logging import Logger
+from typing import List
 
 from injector import inject, Module
 from keras.datasets import boston_housing
@@ -17,6 +18,9 @@ class BhpDataLoader(DataLoader):
     """
 
     _logger: Logger
+
+    def classifications(self) -> List[str]:
+        raise NotImplementedError
 
     def load_data(self, train_size: int = None, test_size: int = None) -> (tuple, tuple):
         self._logger.info("Loading Boston housing prices data.")

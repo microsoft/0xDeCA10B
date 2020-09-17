@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from logging import Logger
+from typing import List
 
 import numpy as np
 from injector import inject, Module
@@ -26,6 +27,9 @@ class TicTacToeDataLoader(DataLoader):
 
     width: int = field(default=3, init=False)
     length: int = field(default=3, init=False)
+
+    def classifications(self) -> List[str]:
+        return list(map(str, map(self.map_pos, range(self.width * self.length))))
 
     def get_winner(self, board):
         def get_single_winner(line: set):
