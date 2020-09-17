@@ -48,6 +48,9 @@ class _SignalMediaDataLoader(DataLoader):
     _logger: Logger
     _media_types = {'News'}
 
+    def classifications(self) -> List[str]:
+        raise NotImplementedError
+
     def find_source_site(self, source_name: str, sources: Collection[str]) -> Optional[str]:
         """
         :param source_name: The name of the source.

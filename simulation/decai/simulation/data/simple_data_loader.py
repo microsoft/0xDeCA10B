@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from logging import Logger
+from typing import List
 
 import numpy as np
 from injector import Binder, inject, Module
@@ -15,6 +16,9 @@ class SimpleDataLoader(DataLoader):
     """
 
     _logger: Logger
+
+    def classifications(self) -> List[str]:
+        return ["0", "1"]
 
     def load_data(self, train_size: int = None, test_size: int = None) -> (tuple, tuple):
         def _ground_truth(data):

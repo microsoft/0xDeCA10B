@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass, field
 from logging import Logger
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -24,13 +25,16 @@ class TitanicDataLoader(DataLoader):
     _seed: int = field(default=231, init=False)
     _train_split: float = field(default=0.7, init=False)
 
+    def classifications(self) -> List[str]:
+        return ["DIED", "SURVIVED"]
+
     def _get_features(self, data: pd.DataFrame):
         """
         Map the data to numbers.
         Also uses some ideas from https://triangleinequality.wordpress.com/2013/09/08/basic-feature-engineering-with-the-titanic-data/
 
         :param data: The data without labels.
-        :return: The data mapped to numers.
+        :return: The data mapped to numbers.
         """
         data.drop(columns=['PassengerId', 'Ticket'], inplace=True)
         # , 'Name', 'Ticket', 'Cabin', 'Embarked'
