@@ -73,6 +73,13 @@ Profit depends on the incentive mechanism (IM).
 Yes, in Deposit, Refund, and Take: Self-Assessment, the contributors will not profit and should be able to claim back their own deposits.
 In the Prediction Market based mechanism, contributors can still get rewarded by the original provider of the bounty and test set.
 
+# Learn More
+
+## Papers
+More details can be found in our initial paper, [Decentralized & Collaborative AI on Blockchain][overview-paper], which describes the framework, accepted to Blockchain-2019, The IEEE International Conference on Blockchain.
+
+An analysis of several machine learning models with the self-assessment incentive mechanism can be found in our second paper, [Analysis of Models for Decentralized and Collaborative AI on Blockchain][self-assessment-analysis-paper], which was accepted to [The 2020 International Conference on Blockchain](http://blockchain1000.org/2020/).
+
 # Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
@@ -93,3 +100,4 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 [demo]: https://aka.ms/0xDeCA10B-demo
 [blog1]: https://aka.ms/0xDeCA10B-blog1
 [overview-paper]: https://aka.ms/0xDeCA10B-paper
+[self-assessment-analysis-paper]: https://arxiv.org/abs/2009.06756
