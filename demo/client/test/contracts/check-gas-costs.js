@@ -79,7 +79,7 @@ contract('CheckGasUsage', function (accounts) {
   }
 
   it("...should log gasUsed", async () => {
-    const usdPerEth = 266
+    const usdPerEth = 373
     const gasPrice = 4E-9
     const usdPerGas = usdPerEth * gasPrice
     const models = [

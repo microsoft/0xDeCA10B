@@ -107,7 +107,7 @@ async function deployNearestCentroidClassifier(model, web3, toFloat) {
 
 exports.deploySparseNearestCentroidClassifier = async function (model, web3, toFloat) {
     let gasUsed = 0
-    const initialChunkSize = 500
+    const initialChunkSize = 200
     const chunkSize = 250
     const classifications = []
     const centroids = []
