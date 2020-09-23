@@ -134,7 +134,7 @@ export class ModelDeployer {
 					const featureIndex = parseInt(featureIndexKey)
 					sparseCentroid.push([this.web3.utils.toHex(featureIndex), convertToHex(value, this.web3, toFloat)])
 				}
-				centroids.push(sparseCentroid)
+				centroids.push(sparseCentroid as any)
 			}
 		}
 
