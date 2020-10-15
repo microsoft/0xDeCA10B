@@ -169,6 +169,7 @@ class Model extends React.Component {
       // Default to restricting content for safety.
       checkedContentRestriction: false,
       restrictContent: true,
+      numDataRowsLimit: 20,
     }
 
     this.addDataCost = this.addDataCost.bind(this);
@@ -295,8 +296,7 @@ class Model extends React.Component {
         })
       })
     }).catch(err => {
-      // TODO Display persistent error message.
-      this.notify(`There was an error loading the contract at ${contractAddress}. Try using a different network.`, { variant: 'error' })
+      this.notify(`There was an error loading the contract at ${contractAddress}. Try using a different network.`, { variant: 'error', persist: true, })
       console.error(err)
     })
   }
@@ -553,14 +553,19 @@ class Model extends React.Component {
     }
   }
 
-  handleAddedData(account = null, cb) {
+  handleAddedData(cb) {
     // Doesn't actually work well when passing an account and filtering on it.
     // It might have something to do with MetaMask (according to some posts online).
     // It could also be because of casing in addresses.
-    return this.state.contractInstance.getPastEvents('AddData', { filter: { sender: account }, fromBlock: 0, toBlock: 'latest' }).then(results => {
-      results.forEach(r => {
-        if (account === null || account === r.returnValues.sender) {
-          cb(r);
+    let count = 0
+    const fromBlock = this.state.lastFromBlock || 0
+    return this.state.contractInstance.getPastEvents('AddData', { filter: { sender: account }, fromBlock, toBlock: 'latest' }).then(results => {
+      results.forEach(async r => {
+        const cbResult = await cb(r);
+        if (cbResult.added) {
+          if (++count >= this.state.numDataRowsLimit) {
+            // TODO break
+          }
         }
       });
     });
@@ -703,9 +708,9 @@ class Model extends React.Component {
   updateRefundData() {
     this.setState({ addedData: [] });
     const contributor = this.state.accounts[0];
-    // Manually filter since it doesn't work well when specifying sender.
-    return this.handleAddedData(null, d => {
+    return this.handleAddedData(d => {
       const sender = d.returnValues.sender;
+      // Manually filter since it doesn't work well when specifying sender.
       if (sender.toUpperCase() !== contributor.toUpperCase()) {
         return;
       }
@@ -715,14 +720,13 @@ class Model extends React.Component {
       const time = parseInt(d.returnValues.t);
       const initialDeposit = parseInt(d.returnValues.cost);
 
-      this.getOriginalData(d.transactionHash).then(async originalData => {
+      return this.getOriginalData(d.transactionHash).then(async originalData => {
         const info = {
           data, classification, initialDeposit, sender, time,
           originalData: this.getDisplayableOriginalData(originalData),
         };
         if (originalData !== undefined) {
-          // If transforming the input takes a long time then it's possible that flag does not get added to the actual page.
-          this.transformInput(originalData).then(encodedData => {
+          await this.transformInput(originalData).then(encodedData => {
             info.dataMatches = areDataEqual(data, encodedData);
           });
         }
@@ -731,7 +735,7 @@ class Model extends React.Component {
         // TODO Don't explicitly set hasEnoughTimePassed on the info in case the timing is off on the info
         // in case the user wants to send the request anyway and hope that by the time the transaction is processed
         // that the request will be valid. In general these checks should just be done as warnings.
-        this.canAttemptRefund(info, false).then(refundInfo => {
+        return this.canAttemptRefund(info, false).then(refundInfo => {
           const {
             canAttemptRefund = false,
             claimableAmount = null,
@@ -748,6 +752,7 @@ class Model extends React.Component {
           this.setState(prevState => ({
             addedData: prevState.addedData.concat([info])
           }));
+          return { added: true }
         });
       }).catch(err => {
         console.error(`Error getting original data for transactionHash: ${d.transactionHash}`);
@@ -760,7 +765,7 @@ class Model extends React.Component {
     const isForTaking = true
     this.setState({ rewardData: [] });
     const account = this.state.accounts[0];
-    this.handleAddedData(null, d => {
+    this.handleAddedData(d => {
       const sender = d.returnValues.sender;
       if (sender.toUpperCase() === account.toUpperCase()) {
         // Can't claim a reward for your own data.
@@ -771,20 +776,19 @@ class Model extends React.Component {
       const classification = parseInt(d.returnValues.c);
       const time = parseInt(d.returnValues.t);
       const initialDeposit = parseInt(d.returnValues.cost);
-      this.getOriginalData(d.transactionHash).then(originalData => {
+      return this.getOriginalData(d.transactionHash).then(originalData => {
         const info = {
           data, classification, initialDeposit, sender, time,
           originalData: this.getDisplayableOriginalData(originalData, isForTaking),
         };
         if (originalData !== undefined) {
-          // If transforming the input takes a long time then it's possible that flag does not get added to the actual page.
-          this.transformInput(originalData).then(encodedData => {
+          await this.transformInput(originalData).then(encodedData => {
             info.dataMatches = areDataEqual(data, encodedData);
           });
         }
 
         info.hasEnoughTimePassed = this.hasEnoughTimePassed(info, this.state.refundWaitTimeS);
-        this.canAttemptRefund(info, isForTaking).then(refundInfo => {
+        return this.canAttemptRefund(info, isForTaking).then(refundInfo => {
           const {
             canAttemptRefund = false,
             claimableAmount = null,
@@ -801,6 +805,7 @@ class Model extends React.Component {
           this.setState(prevState => ({
             rewardData: prevState.rewardData.concat([info])
           }));
+          return { added: true }
         });
       }).catch(err => {
         console.error(`Error getting original data for transactionHash: ${d.transactionHash}`);
