@@ -78,10 +78,9 @@ const styles = theme => ({
     marginTop: '30px'
   },
   previousButtonContainer: {
-    textAlign: 'start',
   },
   nextButtonContainer: {
-    textAlign: 'end',
+    float: 'right',
   },
 });
 
@@ -241,7 +240,7 @@ class Model extends React.Component {
                 })
               })
             })
-            window.ethereum.on('networkChanged', netId => {
+            window.ethereum.on('chainChanged', chainId => {
               this.setContractInstance()
             })
           }
@@ -581,22 +580,25 @@ class Model extends React.Component {
       let numAdded = 0
       while (results.length > 0 && numAdded < this.state.numDataRowsLimit) {
         const infos = await Promise.all(results.splice(0, this.state.numDataRowsLimit - numAdded).map(cb))
-        const addedInfos = infos.filter(info => info.added)
-        numAdded += addedInfo.length
+        const addedInfos = infos.filter(info => info?.added)
+        numAdded += addedInfos.length
         console.debug("numAdded:", numAdded)
 
         // Keep data from the same block number together to help with searching later.
         if (addedInfos.length > 0) {
           const lastBlockNumber = addedInfos[addedInfos.length - 1]
+          let numExtraAdded = 0
           for (const r of results) {
             if (r.blockNumber === lastBlockNumber) {
-              if ((await cb(r)).added) {
+              if ((await cb(r))?.added) {
                 ++numAdded
+                ++numExtraAdded
               }
             } else {
               break
             }
           }
+          results.splice(0, numExtraAdded)
         }
       }
 
@@ -746,14 +748,10 @@ class Model extends React.Component {
     });
   }
 
-  updateRefundData(fromBlock) {
-    // FIXME Use refundFromBlock in state.
-    if (fromBlock === undefined && this.rewardData.length > 0) {
-      fromBlock = this.rewardData[0].blockNumber;
-    }
+  updateRefundData() {
     this.setState({ addedData: [] });
     const contributor = this.state.accounts[0];
-    return this.handleAddedData(fromBlock || 0, 'refund', d => {
+    return this.handleAddedData(this.state.refundFromBlock, 'refund', d => {
       const sender = d.returnValues.sender;
       // Manually filter since getPastEvents doesn't work well when specifying sender.
       if (sender.toUpperCase() !== contributor.toUpperCase()) {
@@ -807,12 +805,13 @@ class Model extends React.Component {
   }
 
   nextRefundData() {
-    let fromBlock = undefined
-    if (this.addedData.length > 0) {
-      fromBlock = this.addedData[this.addedData.length - 1] + 1
-      this.updateUrl('refundFromBlock', fromBlock)
+    if (this.state.addedData.length === 0) {
+      // Should not happen.
+      return
     }
-    this.updateRefundData(fromBlock)
+    const refundFromBlock = this.state.addedData[this.state.addedData.length - 1] + 1
+    this.updateUrl('refundFromBlock', refundFromBlock)
+    this.setState({ refundFromBlock }, this.updateRefundData)
   }
 
   previousRefundData() {
@@ -820,15 +819,11 @@ class Model extends React.Component {
     this.updateRefundData()
   }
 
-  updateRewardData(fromBlock) {
-    // FIXME Use rewardFromBlock in state.
-    if (fromBlock === undefined && this.rewardData.length > 0) {
-      fromBlock = this.rewardData[0].blockNumber;
-    }
+  updateRewardData() {
     const isForTaking = true
     this.setState({ rewardData: [] });
     const account = this.state.accounts[0];
-    return this.handleAddedData(fromBlock || 0, 'reward', d => {
+    return this.handleAddedData(this.state.rewardFromBlock, 'reward', d => {
       const sender = d.returnValues.sender;
       if (sender.toUpperCase() === account.toUpperCase()) {
         // Can't claim a reward for your own data.
@@ -839,7 +834,7 @@ class Model extends React.Component {
       const classification = parseInt(d.returnValues.c);
       const time = parseInt(d.returnValues.t);
       const initialDeposit = parseInt(d.returnValues.cost);
-      return this.getOriginalData(d.transactionHash).then(originalData => {
+      return this.getOriginalData(d.transactionHash).then(async originalData => {
         const info = {
           data, classification, initialDeposit, sender, time, blockNumber: d.blockNumber,
           originalData: this.getDisplayableOriginalData(originalData, isForTaking),
@@ -878,12 +873,13 @@ class Model extends React.Component {
   }
 
   nextRewardData() {
-    let fromBlock = undefined
-    if (this.rewardData.length > 0) {
-      fromBlock = this.rewardData[this.rewardData.length - 1] + 1
-      this.updateUrl('rewardFromBlock', fromBlock)
+    if (this.state.rewardData.length === 0) {
+      // Should not happen.
+      return
     }
-    this.updateRewardData(fromBlock)
+    const rewardFromBlock = this.state.rewardData[this.state.rewardData.length - 1] + 1
+    this.updateUrl('rewardFromBlock', rewardFromBlock)
+    this.setState({ rewardFromBlock }, this.updateRewardData)
   }
 
   previousRewardData() {
@@ -1228,22 +1224,22 @@ class Model extends React.Component {
                   The main idea is that if your label was wrong, then others should submit data to correct the model before you can validate your contribution.
                   Some incorrect data might get submitted but it would be expensive to submit a lot of incorrect data so overall the model should be mostly okay as long as it is being monitored.
                 </Typography>
-                <div className={this.props.classes.previousButtonContainer}>
-                  <Button className={this.props.classes.button} variant="outlined" color="primary" onClick={this.previousRefundData} disabled={!this.state.hasPreviousRefundData}
-                  >
-                    Previous
-                  </Button>
+                <div>
+                  {this.state.hasPreviousRefundData &&
+                    <Button className={`${this.props.classes.button} ${this.props.classes.previousButtonContainer}`} variant="outlined" color="primary" onClick={this.previousRefundData}
+                    >
+                      Previous
+                    </Button>}
+                  {this.state.hasMoreRefundData &&
+                    <Button className={`${this.props.classes.button} ${this.props.classes.nextButtonContainer}`} variant="outlined" color="primary" onClick={this.nextRefundData}
+                    >
+                      Next
+                    </Button>}
                 </div>
-                {this.state.addedData.length > 0 ?
+                {this.state.addedData.length > 0 &&
                   <Typography component="p">
                     No data submitted by you was found.
                   </Typography>
-                  : <div className={this.props.classes.nextButtonContainer}>
-                    <Button className={this.props.classes.button} variant="outlined" color="primary" onClick={this.nextRefundData} disabled={!this.state.hasMoreRefundData}
-                    >
-                      Next
-                    </Button>
-                  </div>
                 }
                 {this.state.addedData.length > 0 && <Table>
                   <TableHead>
@@ -1302,6 +1298,7 @@ class Model extends React.Component {
                   <Typography component="p">
                     You must have some data submitted and collected refunds for it before trying to take another's deposits.
                 </Typography>}
+                {/* TODO Add Previous and next buttons. */}
                 {this.state.rewardData.length === 0 &&
                   <Typography component="p">
                     No data has been submitted by other accounts yet.
