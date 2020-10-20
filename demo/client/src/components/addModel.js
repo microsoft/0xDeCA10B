@@ -129,7 +129,7 @@ class AddModel extends React.Component {
       permittedStorageTypes.push('none')
       this.setState({ permittedStorageTypes })
     })
-    window.ethereum.on('networkChanged', _ => {
+    window.ethereum.on('chainChanged', _ => {
       this.setupWeb3()
     })
     this.setupWeb3()

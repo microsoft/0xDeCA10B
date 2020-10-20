@@ -2,7 +2,7 @@ import * as _getWeb3 from '@drizzle-utils/get-web3'
 import Web3 from 'web3' // Only required for custom/fallback provider option.
 
 export async function getWeb3() {
-    if (window.ethereum) {
+    if (typeof window !== "undefined" && window.ethereum) {
         // Get rid of a warning about network refreshing.
         window.ethereum.autoRefreshOnNetworkChange = false
     }
@@ -14,6 +14,10 @@ export async function getWeb3() {
 }
 
 export async function getNetworkType() {
+    if (typeof window !== "undefined" && window.ethereum) {
+        // Get rid of a warning about network refreshing.
+        window.ethereum.autoRefreshOnNetworkChange = false
+    }
     return _getWeb3().then(web3 => {
         return web3.eth.net.getNetworkType()
     }).catch(err => {

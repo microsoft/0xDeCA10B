@@ -78,16 +78,16 @@ class ModelList extends React.Component {
   componentDidMount = async () => {
     checkStorages(this.storages).then(permittedStorageTypes => {
       permittedStorageTypes = permittedStorageTypes.filter(storageType => storageType !== undefined)
-      this.setState({ permittedStorageTypes }, this.updateModels)
-    })
-    if (typeof window !== "undefined" && window.ethereum) {
-      window.ethereum.on('accountsChanged', _ => {
-        window.location.reload()
-      });
-      window.ethereum.on('networkChanged', _ => {
-        window.location.reload()
+      this.setState({ permittedStorageTypes }, () => {
+        this.updateModels().then(() => {
+          // These checks are done after `updateModels`, otherwise a cycle of refreshes is triggered somehow.
+          if (typeof window !== "undefined" && window.ethereum) {
+            window.ethereum.on('accountsChanged', _accounts => { window.location.reload() });
+            window.ethereum.on('chainChanged', _chainId => { window.location.reload() })
+          }
+        })
       })
-    }
+    })
   }
 
   notify(...args) {
@@ -111,7 +111,7 @@ class ModelList extends React.Component {
     // TODO Filter out models that are not on this network.
     const networkType = await getNetworkType()
     const limit = 6
-    Promise.all(this.state.permittedStorageTypes.map(storageType => {
+    return Promise.all(this.state.permittedStorageTypes.map(storageType => {
       const afterId = this.storageAfterAddress[storageType]
       return this.storages[storageType].getModels(afterId, limit).then(response => {
         const newModels = response.models
