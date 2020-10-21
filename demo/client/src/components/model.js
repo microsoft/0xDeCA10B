@@ -177,12 +177,12 @@ class Model extends React.Component {
       numDataRowsLimit: 20,
 
       refundFromBlock: currentUrlParams.get('refundFromBlock') || 0,
+      refundPreviousFromBlocks: [],
       hasMoreRefundData: false,
-      hasPreviousRefundData: false,
 
       rewardFromBlock: currentUrlParams.get('rewardFromBlock') || 0,
+      rewardPreviousFromBlocks: [],
       hasMoreRewardData: false,
-      hasPreviousRewardData: false,
     }
 
     this.addDataCost = this.addDataCost.bind(this);
@@ -809,14 +809,24 @@ class Model extends React.Component {
       // Should not happen.
       return
     }
-    const refundFromBlock = this.state.addedData[this.state.addedData.length - 1] + 1
+    const refundFromBlock = this.state.addedData[this.state.addedData.length - 1].fromBlock + 1
     this.updateUrl('refundFromBlock', refundFromBlock)
-    this.setState({ refundFromBlock }, this.updateRefundData)
+    this.setState({
+      refundFromBlock,
+      refundPreviousFromBlocks: update(this.state.refundPreviousFromBlocks, { $push: [this.state.addedData[0].fromBlock] }),
+    }, this.updateRefundData)
   }
 
   previousRefundData() {
-    // TODO Change fromBlock.
-    this.updateRefundData()
+    if (this.state.refundPreviousFromBlocks.length === 0) {
+      // Should not happen
+      return
+    }
+    this.setState({
+      refundFromBlock: this.state.refundPreviousFromBlocks[this.state.refundPreviousFromBlocks.length - 1],
+      // Pop the last one off.
+      refundPreviousFromBlocks: update(this.state.refundPreviousFromBlocks, { $splice: [[-1, 1]] }),
+    }, this.updateRefundData)
   }
 
   updateRewardData() {
@@ -877,13 +887,24 @@ class Model extends React.Component {
       // Should not happen.
       return
     }
-    const rewardFromBlock = this.state.rewardData[this.state.rewardData.length - 1] + 1
+    const rewardFromBlock = this.state.rewardData[this.state.rewardData.length - 1].fromBlock + 1
     this.updateUrl('rewardFromBlock', rewardFromBlock)
-    this.setState({ rewardFromBlock }, this.updateRewardData)
+    this.setState({
+      rewardFromBlock,
+      rewardPreviousFromBlocks: update(this.state.rewardPreviousFromBlocks, { $push: [this.state.rewardData[0].fromBlock] }),
+    }, this.updateRewardData)
   }
 
   previousRewardData() {
-    // TODO
+    if (this.state.rewardPreviousFromBlocks.length === 0) {
+      // Should not happen
+      return
+    }
+    this.setState({
+      rewardFromBlock: this.state.rewardPreviousFromBlocks[this.state.rewardPreviousFromBlocks.length - 1],
+      // Pop the last one off.
+      rewardPreviousFromBlocks: update(this.state.rewardPreviousFromBlocks, { $splice: [[-1, 1]] }),
+    }, this.updateRewardData)
   }
 
   processUploadedImageInput(acceptedFiles) {
@@ -1225,7 +1246,7 @@ class Model extends React.Component {
                   Some incorrect data might get submitted but it would be expensive to submit a lot of incorrect data so overall the model should be mostly okay as long as it is being monitored.
                 </Typography>
                 <div>
-                  {this.state.hasPreviousRefundData &&
+                  {this.state.refundPreviousFromBlocks.length > 0 &&
                     <Button className={`${this.props.classes.button} ${this.props.classes.previousButtonContainer}`} variant="outlined" color="primary" onClick={this.previousRefundData}
                     >
                       Previous
@@ -1298,7 +1319,18 @@ class Model extends React.Component {
                   <Typography component="p">
                     You must have some data submitted and collected refunds for it before trying to take another's deposits.
                 </Typography>}
-                {/* TODO Add Previous and next buttons. */}
+                <div>
+                  {this.state.rewardPreviousFromBlocks.length > 0 &&
+                    <Button className={`${this.props.classes.button} ${this.props.classes.previousButtonContainer}`} variant="outlined" color="primary" onClick={this.previousRewardData}
+                    >
+                      Previous
+                    </Button>}
+                  {this.state.hasMoreRewardData &&
+                    <Button className={`${this.props.classes.button} ${this.props.classes.nextButtonContainer}`} variant="outlined" color="primary" onClick={this.nextRewardData}
+                    >
+                      Next
+                    </Button>}
+                </div>
                 {this.state.rewardData.length === 0 &&
                   <Typography component="p">
                     No data has been submitted by other accounts yet.
