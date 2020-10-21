@@ -150,8 +150,8 @@ class Model extends React.Component {
       contractAddress: currentUrlParams.get('address'),
       classifications: [],
       tab: tabIndex,
-      addedData: [],
-      rewardData: [],
+      addedData: null,
+      rewardData: null,
       contractInstance: undefined,
       depositCost: undefined,
       featureIndices: undefined,
@@ -174,11 +174,11 @@ class Model extends React.Component {
       restrictContent: true,
       numDataRowsLimit: 20,
 
-      refundFromBlock: currentUrlParams.get('refundFromBlock') || 0,
+      refundFromBlock: 0,
       refundPreviousFromBlocks: [],
       hasMoreRefundData: false,
 
-      rewardFromBlock: currentUrlParams.get('rewardFromBlock') || 0,
+      rewardFromBlock: 0,
       rewardPreviousFromBlocks: [],
       hasMoreRewardData: false,
     }
@@ -232,13 +232,13 @@ class Model extends React.Component {
           await this.setContractInstance()
           if (typeof window !== "undefined" && window.ethereum) {
             window.ethereum.on('accountsChanged', accounts => {
-              this.setState({ accounts, addedData: [], rewardData: [] }, _ => {
+              this.setState({ accounts, addedData: null, rewardData: null }, _ => {
                 this.updateDynamicAccountInfo().then(() => {
                   this.handleTabChange(null, this.state.tab)
                 })
               })
             })
-            window.ethereum.on('chainChanged', chainId => {
+            window.ethereum.on('chainChanged', _chainId => {
               this.setContractInstance()
             })
           }
@@ -568,16 +568,26 @@ class Model extends React.Component {
     }
   }
 
-  handleAddedData(fromBlock, dataType, cb) {
-    const account = null
+  /**
+   * Iterates over events for added data.
+   *
+   * @param {number} fromBlock The block to start looking from.
+   * @param {string} dataType The type of data we're looking for: 'refund' or 'reward'.
+   * @param {(event: any) => bool} customFilter A custom filter to run on each event to determine if it should be used.
+   * @param {(event: any) => Promise<any>} cb A callback to run on each event.
+   */
+  handleAddedData(fromBlock, dataType, customFilter, cb) {
     const toBlock = 'latest'
     // Doesn't actually work well when passing an account and filtering on it.
     // It might have something to do with MetaMask (according to some posts online).
     // It could also be because of casing in addresses.
-    return this.state.contractInstance.getPastEvents('AddData', { filter: { sender: account }, fromBlock, toBlock }).then(async results => {
+
+    // Since we start at `fromBlock`, we will not find data before that and there will no way in the UI to see the previous data.
+    // The user with have to start from the beginning to find the previous data.
+    return this.state.contractInstance.getPastEvents('AddData', { fromBlock, toBlock }).then(async results => {
       let numAdded = 0
       while (results.length > 0 && numAdded < this.state.numDataRowsLimit) {
-        const infos = await Promise.all(results.splice(0, this.state.numDataRowsLimit - numAdded).map(cb))
+        const infos = await Promise.all(results.splice(0, this.state.numDataRowsLimit - numAdded).filter(customFilter).map(cb))
         const addedInfos = infos.filter(info => info?.added)
         numAdded += addedInfos.length
 
@@ -586,7 +596,7 @@ class Model extends React.Component {
           const lastBlockNumber = addedInfos[addedInfos.length - 1]
           let numExtraAdded = 0
           for (const r of results) {
-            if (r.blockNumber === lastBlockNumber) {
+            if (r.blockNumber === lastBlockNumber && customFilter(r)) {
               if ((await cb(r))?.added) {
                 ++numAdded
                 ++numExtraAdded
@@ -601,10 +611,10 @@ class Model extends React.Component {
 
       switch (dataType) {
         case 'refund':
-          this.setState({ hasMoreRefundData: results.length > 0 })
+          this.setState({ hasMoreRefundData: results.some(customFilter) })
           break
         case 'reward':
-          this.setState({ hasMoreRewardData: results.length > 0 })
+          this.setState({ hasMoreRewardData: results.some(customFilter) })
           break
         default:
           console.error(`Unrecognized dataType: "${dataType}".`)
@@ -643,11 +653,11 @@ class Model extends React.Component {
         this.loadImageToElement(this.state.acceptedFiles[0]);
       }
     } else if (this.REFUND_TAB === value) {
-      if (this.state.addedData.length === 0) {
+      if (!this.state.addedData?.length) {
         this.updateRefundData();
       }
     } else if (this.REWARD_TAB === value) {
-      if (this.state.rewardData.length === 0) {
+      if (!this.state.rewardData?.length) {
         this.updateRewardData();
       }
     }
@@ -746,15 +756,13 @@ class Model extends React.Component {
   }
 
   updateRefundData() {
-    this.setState({ addedData: [] });
-    const contributor = this.state.accounts[0];
-    return this.handleAddedData(this.state.refundFromBlock, 'refund', d => {
-      const sender = d.returnValues.sender;
+    this.setState({ addedData: null })
+    const contributor = this.state.accounts[0]
       // Manually filter since getPastEvents doesn't work well when specifying sender.
-      if (sender.toUpperCase() !== contributor.toUpperCase()) {
-        return;
-      }
-
+    const customFilter = (d) =>
+      d.returnValues.sender.toUpperCase() === contributor.toUpperCase()
+    return this.handleAddedData(this.state.refundFromBlock, 'refund', customFilter, d => {
+      const sender = d.returnValues.sender;
       const data = d.returnValues.d.map(v => this.web3.utils.toHex(v));
       const classification = parseInt(d.returnValues.c);
       const time = parseInt(d.returnValues.t);
@@ -790,7 +798,7 @@ class Model extends React.Component {
             info.prediction = prediction;
           }
           this.setState(prevState => ({
-            addedData: prevState.addedData.concat([info])
+            addedData: (prevState.addedData || []).concat([info])
           }));
           return { added: true, blockNumber: info.blockNumber, }
         });
@@ -798,16 +806,19 @@ class Model extends React.Component {
         console.error(`Error getting original data for transactionHash: ${d.transactionHash}`);
         console.error(err);
       });
-    });
+    }).then(() => {
+      if (this.state.addedData === null) {
+        this.setState({ addedData: [] })
+  }
+    })
   }
 
   nextRefundData() {
-    if (this.state.addedData.length === 0) {
+    if (!this.state.addedData?.length) {
       // Should not happen.
       return
     }
     const refundFromBlock = this.state.addedData[this.state.addedData.length - 1].blockNumber + 1
-    this.updateUrl('refundFromBlock', refundFromBlock)
     this.setState({
       refundFromBlock,
       refundPreviousFromBlocks: update(this.state.refundPreviousFromBlocks, { $push: [this.state.addedData[0].blockNumber] }),
@@ -815,7 +826,7 @@ class Model extends React.Component {
   }
 
   previousRefundData() {
-    if (this.state.refundPreviousFromBlocks.length === 0) {
+    if (!this.state.refundPreviousFromBlocks?.length) {
       // Should not happen
       return
     }
@@ -828,15 +839,15 @@ class Model extends React.Component {
 
   updateRewardData() {
     const isForTaking = true
-    this.setState({ rewardData: [] });
+    this.setState({ rewardData: null });
     const account = this.state.accounts[0];
-    return this.handleAddedData(this.state.rewardFromBlock, 'reward', d => {
-      const sender = d.returnValues.sender;
-      if (sender.toUpperCase() === account.toUpperCase()) {
+    
         // Can't claim a reward for your own data.
-        return;
-      }
+    const customFilter = (d) =>
+      d.returnValues.sender.toUpperCase() !== account.toUpperCase()
 
+      return this.handleAddedData(this.state.rewardFromBlock, 'reward', customFilter, d => {
+      const sender = d.returnValues.sender;
       const data = d.returnValues.d.map(v => this.web3.utils.toHex(v));
       const classification = parseInt(d.returnValues.c);
       const time = parseInt(d.returnValues.t);
@@ -868,7 +879,7 @@ class Model extends React.Component {
             info.prediction = prediction;
           }
           this.setState(prevState => ({
-            rewardData: prevState.rewardData.concat([info])
+            rewardData: (prevState.rewardData || []).concat([info])
           }));
           return { added: true, blockNumber: info.blockNumber, }
         });
@@ -876,16 +887,19 @@ class Model extends React.Component {
         console.error(`Error getting original data for transactionHash: ${d.transactionHash}`);
         console.error(err);
       });
-    });
+    }).then(() => {
+      if (this.state.rewardData === null) {
+        this.setState({ rewardData: [] })
+      }
+    })
   }
 
   nextRewardData() {
-    if (this.state.rewardData.length === 0) {
+    if (!this.state.rewardData?.length) {
       // Should not happen.
       return
     }
     const rewardFromBlock = this.state.rewardData[this.state.rewardData.length - 1].blockNumber + 1
-    this.updateUrl('rewardFromBlock', rewardFromBlock)
     this.setState({
       rewardFromBlock,
       rewardPreviousFromBlocks: update(this.state.rewardPreviousFromBlocks, { $push: [this.state.rewardData[0].blockNumber] }),
@@ -973,10 +987,10 @@ class Model extends React.Component {
 
   refund(time) {
     // There should just be one match but we might as well try to refund all.
-    return this.state.addedData.filter(d => d.time === time).forEach(d => {
+    return this.state.addedData?.filter(d => d.time === time)?.forEach(d => {
       return this.state.contractInstance.methods.refund(d.data, d.classification, d.time)
         .send({ from: this.state.accounts[0] })
-        .on('transactionHash', (hash) => {
+        .on('transactionHash', (_hash) => {
           // TODO Just Update row.
           this.updateRefundData();
           this.updateDynamicInfo();
@@ -987,10 +1001,10 @@ class Model extends React.Component {
 
   takeDeposit(time) {
     // There should just be one match but we might as well try to do all.
-    this.state.rewardData.filter(d => d.time === time).forEach(d => {
-      this.state.contractInstance.methods.report(d.data, d.classification, d.time, d.sender)
+    return this.state.rewardData?.filter(d => d.time === time)?.forEach(d => {
+      return this.state.contractInstance.methods.report(d.data, d.classification, d.time, d.sender)
         .send({ from: this.state.accounts[0] })
-        .on('transactionHash', (hash) => {
+        .on('transactionHash', (_hash) => {
           // TODO Just Update row.
           this.updateRewardData();
         })
@@ -1254,13 +1268,17 @@ class Model extends React.Component {
                       Next
                     </Button>}
                 </div>
-                {/* TODO Delay showing if looking for data. */}
-                {this.state.addedData.length === 0 &&
+                {this.state.addedData === null &&
+                  <div>
+                    <ClipLoader loading={this.state.addedData === null} size="16" color="#2196f3" /> Looking for data added by you.
+                  </div>
+                }
+                {this.state.addedData?.length === 0 &&
                   <Typography component="p">
                     No data submitted by you was found.
                   </Typography>
                 }
-                {this.state.addedData.length > 0 && <Table>
+                {this.state.addedData?.length > 0 && <Table>
                   <TableHead>
                     <TableRow>
                       <TableCell>Original Data</TableCell>
@@ -1329,12 +1347,17 @@ class Model extends React.Component {
                       Next
                     </Button>}
                 </div>
-                {this.state.rewardData.length === 0 &&
+                {this.state.rewardData === null &&
+                  <div>
+                    <ClipLoader loading={this.state.rewardData === null} size="16" color="#2196f3" /> Looking for data added by others.
+                  </div>
+                }
+                {this.state.rewardData?.length === 0 &&
                   <Typography component="p">
                     No data has been submitted by other accounts yet.
                   </Typography>
                 }
-                {this.state.rewardData.length > 0 && <Table>
+                {this.state.rewardData?.length > 0 && <Table>
                   <TableHead>
                     <TableRow>
                       <TableCell>Data</TableCell>
