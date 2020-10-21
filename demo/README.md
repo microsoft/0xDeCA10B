@@ -39,9 +39,10 @@ docker run --rm -it -p 3000:3000 -p 5387:5387 -p 7545:7545 -v ${PWD}:/root/works
 byobu
 ```
 
-4. You have completed the setup steps. Refer to the Deploy steps lower down on this page.
+4. You have completed the setup steps.
+Next, refer to the Deploy steps lower down on this page.
 
-You can find the available tags for the Docker image [here](https://mcr.microsoft.com/v2/samples/blockchain-ai/0xdeca10b-demo/tags/list) and check the details for the latest tag [here](https://mcr.microsoft.com/v2/samples/blockchain-ai/0xdeca10b-demo/manifests/latest).
+If you want to use a different version of the Docker image, then you can find the available tags for the Docker image [here](https://mcr.microsoft.com/v2/samples/blockchain-ai/0xdeca10b-demo/tags/list) and check the details for the latest tag [here](https://mcr.microsoft.com/v2/samples/blockchain-ai/0xdeca10b-demo/manifests/latest).
 
 ### Building the Docker Image
 (Optional)

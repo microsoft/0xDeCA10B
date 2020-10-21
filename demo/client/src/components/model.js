@@ -77,8 +77,6 @@ const styles = theme => ({
   tabs: {
     marginTop: '30px'
   },
-  previousButtonContainer: {
-  },
   nextButtonContainer: {
     float: 'right',
   },
@@ -1246,7 +1244,7 @@ class Model extends React.Component {
                 </Typography>
                 <div>
                   {this.state.refundPreviousFromBlocks.length > 0 &&
-                    <Button className={`${this.props.classes.button} ${this.props.classes.previousButtonContainer}`} variant="outlined" color="primary" onClick={this.previousRefundData}
+                    <Button className={this.props.classes.button} variant="outlined" color="primary" onClick={this.previousRefundData}
                     >
                       Previous
                     </Button>}
@@ -1321,7 +1319,7 @@ class Model extends React.Component {
                 </Typography>}
                 <div>
                   {this.state.rewardPreviousFromBlocks.length > 0 &&
-                    <Button className={`${this.props.classes.button} ${this.props.classes.previousButtonContainer}`} variant="outlined" color="primary" onClick={this.previousRewardData}
+                    <Button className={this.props.classes.button} variant="outlined" color="primary" onClick={this.previousRewardData}
                     >
                       Previous
                     </Button>}
