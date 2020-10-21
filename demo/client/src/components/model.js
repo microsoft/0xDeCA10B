@@ -621,7 +621,7 @@ class Model extends React.Component {
       }
     })
   }
-  
+
   handleInputChange(event) {
     const target = event.target;
     const value = target.type === "checkbox" ? target.checked : target.value;
@@ -758,7 +758,7 @@ class Model extends React.Component {
   updateRefundData() {
     this.setState({ addedData: null })
     const contributor = this.state.accounts[0]
-      // Manually filter since getPastEvents doesn't work well when specifying sender.
+    // Manually filter since getPastEvents doesn't work well when specifying sender.
     const customFilter = (d) =>
       d.returnValues.sender.toUpperCase() === contributor.toUpperCase()
     return this.handleAddedData(this.state.refundFromBlock, 'refund', customFilter, d => {
@@ -809,7 +809,7 @@ class Model extends React.Component {
     }).then(() => {
       if (this.state.addedData === null) {
         this.setState({ addedData: [] })
-  }
+      }
     })
   }
 
@@ -841,12 +841,12 @@ class Model extends React.Component {
     const isForTaking = true
     this.setState({ rewardData: null });
     const account = this.state.accounts[0];
-    
-        // Can't claim a reward for your own data.
+
+    // Can't claim a reward for your own data.
     const customFilter = (d) =>
       d.returnValues.sender.toUpperCase() !== account.toUpperCase()
 
-      return this.handleAddedData(this.state.rewardFromBlock, 'reward', customFilter, d => {
+    return this.handleAddedData(this.state.rewardFromBlock, 'reward', customFilter, d => {
       const sender = d.returnValues.sender;
       const data = d.returnValues.d.map(v => this.web3.utils.toHex(v));
       const classification = parseInt(d.returnValues.c);
