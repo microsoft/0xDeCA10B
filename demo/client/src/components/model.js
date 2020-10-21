@@ -582,7 +582,6 @@ class Model extends React.Component {
         const infos = await Promise.all(results.splice(0, this.state.numDataRowsLimit - numAdded).map(cb))
         const addedInfos = infos.filter(info => info?.added)
         numAdded += addedInfos.length
-        console.debug("numAdded:", numAdded)
 
         // Keep data from the same block number together to help with searching later.
         if (addedInfos.length > 0) {
@@ -612,9 +611,9 @@ class Model extends React.Component {
         default:
           console.error(`Unrecognized dataType: "${dataType}".`)
       }
-    });
+    })
   }
-
+  
   handleInputChange(event) {
     const target = event.target;
     const value = target.type === "checkbox" ? target.checked : target.value;
@@ -809,11 +808,11 @@ class Model extends React.Component {
       // Should not happen.
       return
     }
-    const refundFromBlock = this.state.addedData[this.state.addedData.length - 1].fromBlock + 1
+    const refundFromBlock = this.state.addedData[this.state.addedData.length - 1].blockNumber + 1
     this.updateUrl('refundFromBlock', refundFromBlock)
     this.setState({
       refundFromBlock,
-      refundPreviousFromBlocks: update(this.state.refundPreviousFromBlocks, { $push: [this.state.addedData[0].fromBlock] }),
+      refundPreviousFromBlocks: update(this.state.refundPreviousFromBlocks, { $push: [this.state.addedData[0].blockNumber] }),
     }, this.updateRefundData)
   }
 
@@ -887,11 +886,11 @@ class Model extends React.Component {
       // Should not happen.
       return
     }
-    const rewardFromBlock = this.state.rewardData[this.state.rewardData.length - 1].fromBlock + 1
+    const rewardFromBlock = this.state.rewardData[this.state.rewardData.length - 1].blockNumber + 1
     this.updateUrl('rewardFromBlock', rewardFromBlock)
     this.setState({
       rewardFromBlock,
-      rewardPreviousFromBlocks: update(this.state.rewardPreviousFromBlocks, { $push: [this.state.rewardData[0].fromBlock] }),
+      rewardPreviousFromBlocks: update(this.state.rewardPreviousFromBlocks, { $push: [this.state.rewardData[0].blockNumber] }),
     }, this.updateRewardData)
   }
 
@@ -1257,7 +1256,8 @@ class Model extends React.Component {
                       Next
                     </Button>}
                 </div>
-                {this.state.addedData.length > 0 &&
+                {/* TODO Delay showing if looking for data. */}
+                {this.state.addedData.length === 0 &&
                   <Typography component="p">
                     No data submitted by you was found.
                   </Typography>
