@@ -336,6 +336,7 @@ class Model extends React.Component {
     if (encoder) {
       encoder = encoder.toLocaleLowerCase('en')
     }
+    // FIXME Handle none.    
     if (encoder === 'universal sentence encoder') {
       this.setState({ inputType: INPUT_TYPE_TEXT });
       UniversalSentenceEncoder.load().then(use => {
