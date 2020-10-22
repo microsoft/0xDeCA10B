@@ -64,6 +64,8 @@ docker push 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca
 docker push 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-demo:latest
 ```
 
+(Microsoft Devs) To update the production website, see the instructions at the top of [service.Dockerfile](./service.Dockerfile).
+
 ## Troubleshooting Setup
 If you have problems running the setup steps related to node-gyp, then you might need to set Python 2.7 to be your default. Recommendation: Set up a Python 2.7 Conda environment and activate it.
 

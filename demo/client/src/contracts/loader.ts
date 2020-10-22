@@ -3,7 +3,7 @@ import { Contract } from 'web3-eth-contract'
 import Classifier from './compiled/Classifier64.json'
 import CollaborativeTrainer64 from './compiled/CollaborativeTrainer64.json'
 import DataHandler from './compiled/DataHandler64.json'
-import IncentiveMechanism from './compiled/IncentiveMechanism.json'
+import IncentiveMechanism from './compiled/IncentiveMechanism64.json'
 
 /**
  * An already deployed instance of a CollaborativeTrainer contract.
@@ -63,15 +63,15 @@ export class ContractLoader {
 	}
 
 	/**
-	 * 
+	 * Loads and validates the contracts.
 	 * @param address The address of the main entry point contract.
+	 * @returns An interface to help you use the contracts.
 	 */
 	async load(address: string): Promise<CollaborativeTrainer> {
 		if (!address || address.length === 0) {
 			return Promise.reject("A blank address was given")
 		}
 
-		// It is a valid address, so check the other interfaces.
 		const mainEntryPoint = this.getContractInstance({
 			abi: CollaborativeTrainer64.abi,
 			address,
@@ -95,11 +95,20 @@ export class ContractLoader {
 					address: incentiveMechanismAddress
 				})
 			})
-		]).then(([
+		]).then(async ([
 			classifier,
 			dataHandler,
 			incentiveMechanism,
 		]) => {
+			const [classifierOwner, dataHandlerOwner, incentiveMechanismOwner] = await Promise.all([
+				classifier.methods.owner().call(),
+				dataHandler.methods.owner().call(),
+				incentiveMechanism.methods.owner().call(),
+			])
+			if (classifierOwner !== address || dataHandlerOwner !== address || incentiveMechanismOwner !== address) {
+				throw new Error(`The classifer, data handler, and incentive mechanism must be owned by the main interface.\n  Main interface address: ${address}\n  Classifier owner: ${classifierOwner}\n  Data handler owner: ${dataHandlerOwner}\n  IM owner: ${incentiveMechanismOwner}.`)
+			}
+
 			return new CollaborativeTrainer(mainEntryPoint,
 				classifier, dataHandler, incentiveMechanism)
 		})
