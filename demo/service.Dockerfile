@@ -6,7 +6,7 @@
 # The deployment is set up to happen automatically in Azure.
 
 # When NODE_ENV='production'
-# Set BACK_END_URL to the address for the back end.
+# Set BACK_END_URL in your environment to the address for the back end service.
 
 FROM appsvc/node:10-lts
 
