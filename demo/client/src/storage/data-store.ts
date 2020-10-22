@@ -50,10 +50,7 @@ export class RemoveResponse {
 }
 
 export class OriginalData {
-	text?: string
-
-	constructor(text?: string) {
-		this.text = text
+	constructor(public text: string) {		
 	}
 }
 
