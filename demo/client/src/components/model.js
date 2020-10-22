@@ -95,7 +95,7 @@ function areDataEqual(data1, data2) {
   if (data1 === data2) {
     return true;
   }
-  if (typeof data1 !== typeof data2) {
+  if (typeof data1 !== typeof data2 || !Array.isArray(data1) || !Array.isArray(data2)) {
     return false;
   }
   if (data1.length !== data2.length) {
@@ -364,7 +364,7 @@ class Model extends React.Component {
       }).then(model => {
         this.transformInput = async (imgElement) => {
           if (Array.isArray(imgElement)) {
-            // Assume this is from given data and this method is being called from data already in the database.
+            // Assume this is for data already in the database.
             return imgElement;
           }
           const imgEmbedding = await model.infer(imgElement, { embedding: true });
@@ -506,10 +506,13 @@ class Model extends React.Component {
 
   getDisplayableOriginalData(data, isForTaking = false) {
     if (data === undefined) {
-      return "(not found)"
+      return "(original data was not found)"
     }
     if (isForTaking && this.state.restrictContent) {
       return "(hidden)"
+    }
+    if (this.state.inputType === INPUT_TYPE_IMAGE) {
+      return "(image)"
     }
     if (typeof data === 'string') {
       return `"${data}"`;
@@ -774,6 +777,7 @@ class Model extends React.Component {
           originalData: this.getDisplayableOriginalData(originalData),
         };
         if (originalData !== undefined) {
+          // Compare that the encoded original data matches the encoded data on the blockchain is mainly only important if the data was stored on a centralized server.
           await this.transformInput(originalData).then(encodedData => {
             info.dataMatches = areDataEqual(data, encodedData);
           });
@@ -858,6 +862,7 @@ class Model extends React.Component {
           originalData: this.getDisplayableOriginalData(originalData, isForTaking),
         };
         if (originalData !== undefined) {
+          // Compare that the encoded original data matches the encoded data on the blockchain is mainly only important if the data was stored on a centralized server.
           await this.transformInput(originalData).then(encodedData => {
             info.dataMatches = areDataEqual(data, encodedData);
           });
@@ -1031,15 +1036,14 @@ class Model extends React.Component {
 
             // Save original training data.
             // We don't really need to save it to the blockchain
-            // because there would be no way to enforce that it matches the data.
+            // because it would be difficult and expensive to enforce that it matches the data.
             // A malicious person could submit different data and encoded data
             // or just save funds by submitting no unencoded data.
-
-            if (this.state.inputType === INPUT_TYPE_IMAGE) {
-              // Just store the encoding.
-              originalData = JSON.stringify(trainData);
-            }
             if (this.state.storageType !== 'none') {
+              if (this.state.inputType === INPUT_TYPE_IMAGE) {
+                // Just store the encoding.
+              originalData = JSON.stringify(trainData);
+              }
               const storage = this.storages[this.state.storageType];
               return storage.saveOriginalData(transactionHash, new OriginalData(originalData)).then(() => {
                 this.notify("Saved info to database", { variant: 'success' })
