@@ -16,6 +16,7 @@ import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
 import React from 'react';
 import { ContractLoader } from '../contracts/loader';
+import { Encoder } from '../encoding/encoder';
 import { getNetworkType, getWeb3 } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
 import { ModelInformation } from '../storage/data-store';
@@ -287,7 +288,7 @@ class AddDeployedModel extends React.Component {
                 <MenuItem value={"Classifier64"}>Classifier64</MenuItem>
               </Select>
 
-              {this.state.restrictContent === false && <div>
+              {(this.state.restrictContent === false || Object.values(Encoder).indexOf(this.state.encoder) > -1) && <div>
                 <Typography variant="h6" component="h6">
                   Encoder: {this.state.encoder}
                 </Typography>

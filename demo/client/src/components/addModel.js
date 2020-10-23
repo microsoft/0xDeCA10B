@@ -294,8 +294,8 @@ class AddModel extends React.Component {
                   <MenuItem>None (for raw integer data)</MenuItem>
                 </Tooltip>
                 <Tooltip value={Encoder.Mult1E9Round} placement="top-start"
-                  title="Each number will be multiplied by 10<sup>9</sup> and then rounded since smart contracts use integers instead of decimal numbers">
-                  <MenuItem>Multiply by 10<sup>9</sup>, then round (for raw decimal numbers)</MenuItem>
+                  title="Each number will be multiplied by 10^9 and then rounded since smart contracts use integers instead of decimal numbers">
+                  <MenuItem>Multiply by 10^9, then round (for raw decimal numbers)</MenuItem>
                 </Tooltip>
                 <Tooltip value={Encoder.MurmurHash3} placement="top-start"
                   title="Convert each word to a 32-bit number using MurmurHash3">
@@ -377,6 +377,13 @@ class AddModel extends React.Component {
               }
 
               {/* Storage */}
+              <Typography variant="h6" component="h6">
+                Model Meta-data Storage
+              </Typography>
+              <Typography component="p">
+                When you click the save button below, you will be prompted to store your model on a blockchain.
+                In the next selection field, you can choose if you want to store meta-data for this model so that you can easily find it using this demo website.
+              </Typography>
               <div className={this.classes.selector}>
                 {renderStorageSelector("Where to store the supplied meta-data about this model like its address",
                   this.state.storageType, this.handleInputChange, this.state.permittedStorageTypes)}

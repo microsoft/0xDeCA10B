@@ -1473,6 +1473,9 @@ class Model extends React.Component {
             value={this.state.input}
           />
         </div>
+      default:
+        console.warn(`No input rendered for inputType: ${this.state.inputType}`)
+        return <div></div>
     }
   }
 }
