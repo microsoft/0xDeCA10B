@@ -4,7 +4,8 @@ pragma experimental ABIEncoderV2;
 import {Classifier64} from "./Classifier.sol";
 
 /**
- * A Perceptron where the data given for updating and predicting is sparse and binarized (each feature is present or not).
+ * A Perceptron where the data given for updating and predicting is sparse.
+ * `update` and `predict` methods take `data` that holds the indices of the features that are present.
  */
 contract SparsePerceptron is Classifier64 {
 
@@ -93,7 +94,7 @@ contract SparsePerceptron is Classifier64 {
     }
 
     function update(int64[] memory data, uint64 classification) public override onlyOwner {
-        // Data is binarized (data holds the indices of the features that are present).
+        // `data` holds the indices of the features that are present.
         uint64 prediction = predict(data);
         if (prediction != classification) {
             // Update model.

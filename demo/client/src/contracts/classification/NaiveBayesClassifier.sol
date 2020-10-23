@@ -7,6 +7,7 @@ import {Classifier64} from "./Classifier.sol";
 
 /**
  * A Multinomial Naive Bayes classifier.
+ * `update` and `predict` methods take `data` that holds the indices of the features that are present.
  * Works like in https://scikit-learn.org/stable/modules/naive_bayes.html#multinomial-naive-bayes.
  *
  * The prediction function is not optimized with typical things like working with log-probabilities because:
@@ -138,6 +139,7 @@ contract NaiveBayesClassifier is Classifier64 {
     }
 
     function predict(int64[] memory data) public override view returns (uint64 bestClass) {
+        // Sparse representation: each number in data is a feature index.
         // Implementation: simple calculation (no log-probabilities optimization, see contract docs for the reasons)
         bestClass = 0;
         uint maxProb = 0;
@@ -159,7 +161,7 @@ contract NaiveBayesClassifier is Classifier64 {
     }
 
     function update(int64[] memory data, uint64 classification) public override onlyOwner {
-        // Data is binarized (data holds the indices of the features that are present).
+        // `data` holds the indices of the features that are present.
         // We could also change this to hold the feature index and counts without changing the interface:
         // each int64 would be split into featureIndex|count and decomposed using bit shift operations.
 

@@ -33,6 +33,7 @@ import GridLoader from 'react-spinners/GridLoader';
 import CollaborativeTrainer from '../contracts/compiled/CollaborativeTrainer64.json';
 import { ContractLoader } from '../contracts/loader';
 import ImdbVocab from '../data/imdb.json';
+import { Encoder, normalizeEncoderName } from '../encoding/encoder';
 import { getNetworkType, getWeb3 } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
 import { OriginalData } from '../storage/data-store';
@@ -42,6 +43,7 @@ import { checkStorages, renderStorageSelector } from './storageSelector';
 moment.relativeTimeThreshold('ss', 4);
 
 const INPUT_TYPE_IMAGE = 'image';
+const INPUT_TYPE_RAW = 'raw';
 const INPUT_TYPE_TEXT = 'text';
 
 const styles = theme => ({
@@ -288,10 +290,10 @@ class Model extends React.Component {
       const { classifier, dataHandler, incentiveMechanism } = collabTrainer
 
       const { contractInfo } = this.state
+      contractInfo.encoder = await collabTrainer.encoder()
       if (this.state.foundModelInStorage === false) {
         contractInfo.name = await collabTrainer.name()
         contractInfo.description = await collabTrainer.description()
-        contractInfo.encoder = await collabTrainer.encoder()
       }
 
       this.setState({
@@ -334,10 +336,22 @@ class Model extends React.Component {
   async setTransformInputMethod() {
     let { encoder } = this.state.contractInfo
     if (encoder) {
-      encoder = encoder.toLocaleLowerCase('en')
+      encoder = normalizeEncoderName(encoder)
     }
-    // FIXME Handle none.    
-    if (encoder === 'universal sentence encoder') {
+    if (encoder === normalizeEncoderName(Encoder.None)) {
+      this.setState({ inputType: INPUT_TYPE_RAW });
+      this.transformInput = async (input) => {
+        return input.map(v => this.web3.utils.toHex(v));
+      }
+      this.transformInput = this.transformInput.bind(this);
+    } else if (encoder === normalizeEncoderName(Encoder.Mult1E9Round)) {
+      this.setState({ inputType: INPUT_TYPE_RAW });
+      this.transformInput = async (input) => {
+        // FIXME
+        return input.map(v => this.web3.utils.toHex(v));
+      }
+      this.transformInput = this.transformInput.bind(this);
+    } else if (encoder === normalizeEncoderName(Encoder.USE)) {
       this.setState({ inputType: INPUT_TYPE_TEXT });
       UniversalSentenceEncoder.load().then(use => {
         this.transformInput = async (query) => {
@@ -356,7 +370,7 @@ class Model extends React.Component {
         };
         this.transformInput = this.transformInput.bind(this);
       });
-    } else if (encoder === 'MobileNetv2'.toLocaleLowerCase('en')) {
+    } else if (encoder === Encoder.MobileNetV2.toLocaleLowerCase('en')) {
       this.setState({ inputType: INPUT_TYPE_IMAGE });
       // https://github.com/tensorflow/tfjs-models/tree/master/mobilenet
       mobilenet.load({
@@ -493,8 +507,9 @@ class Model extends React.Component {
 
   getDisplayableEncodedData(data) {
     let d = data.map(v => this.web3.utils.toBN(v).toNumber());
-    const divideFloatList = ['MobileNetv2', 'universal sentence encoder'];
-    if (divideFloatList.indexOf(this.state.contractInfo.encoder) > -1) {
+    const divideFloatList = [Encoder.MobileNetV2, Encoder.USE,].map(normalizeEncoderName);
+    const { encoder } = this.state.contractInfo
+    if (divideFloatList.indexOf(normalizeEncoderName(encoder)) > -1) {
       const _toFloat = this.state.toFloat;
       d = d.map(v => v / _toFloat);
     }
@@ -1043,7 +1058,7 @@ class Model extends React.Component {
             if (this.state.storageType !== 'none') {
               if (this.state.inputType === INPUT_TYPE_IMAGE) {
                 // Just store the encoding.
-              originalData = JSON.stringify(trainData);
+                originalData = JSON.stringify(trainData);
               }
               const storage = this.storages[this.state.storageType];
               return storage.saveOriginalData(transactionHash, new OriginalData(originalData)).then(() => {
@@ -1417,13 +1432,12 @@ class Model extends React.Component {
   }
 
   renderInputBox() {
-    return this.state.inputType === undefined ?
-      <div></div>
-      : this.state.inputType === INPUT_TYPE_TEXT ?
-        <TextField inputProps={{ 'aria-label': "Input to the model" }} name="input" label="Input" onChange={this.handleInputChange} margin="normal"
-          value={this.state.input}
-        />
-        : <Dropzone onDrop={this.processUploadedImageInput}>
+    if (this.state.inputType === undefined) {
+      return <div></div>
+    }
+    switch (this.state.inputType) {
+      case INPUT_TYPE_IMAGE:
+        return <Dropzone onDrop={this.processUploadedImageInput}>
           {({ getRootProps, getInputProps }) => (<section>
             <div {...getRootProps()}>
               <input {...getInputProps()} />
@@ -1434,7 +1448,25 @@ class Model extends React.Component {
                 src={this.state.acceptedFiles ? undefined : this.state.inputImageUrl} />
             </div>
           </section>)}
-        </Dropzone>;
+        </Dropzone>
+      case INPUT_TYPE_TEXT:
+        return <TextField inputProps={{ 'aria-label': "Input to the model" }} name="input" label="Input" onChange={this.handleInputChange} margin="normal"
+          value={this.state.input}
+        />
+      case INPUT_TYPE_RAW:
+        return <div>
+          {/* FIXME TODO */}
+          <Typography component="p">
+            Provide data as JSON that should be given directly to the model.
+            This data will be converted to hexadecimal before being given to the smart contract.
+            If the model expects floating point (decimal) numbers then you should give already converted integers.
+            This conversion is usually done by
+          </Typography>
+          <TextField inputProps={{ 'aria-label': "Input to the model" }} name="input" label="Input" onChange={this.handleInputChange} margin="normal"
+            value={this.state.input}
+          />
+        </div>
+    }
   }
 }
 

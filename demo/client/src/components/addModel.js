@@ -24,6 +24,7 @@ import CollaborativeTrainer64 from '../contracts/compiled/CollaborativeTrainer64
 import DataHandler64 from '../contracts/compiled/DataHandler64.json';
 import Points64 from '../contracts/compiled/Points64.json';
 import Stakeable64 from '../contracts/compiled/Stakeable64.json';
+import { Encoder } from '../encoding/encoder';
 import { getNetworkType, getWeb3 } from '../getWeb3';
 import { ModelDeployer } from '../ml-models/deploy-model';
 import { ModelInformation } from '../storage/data-store';
@@ -86,7 +87,7 @@ class AddModel extends React.Component {
       toFloat: 1E9,
       modelType: 'Classifier64',
       modelFileName: undefined,
-      encoder: 'none',
+      encoder: Encoder.None,
       incentiveMechanism: 'Points64',
       refundTimeWaitTimeS: 0,
       ownerClaimWaitTimeS: 0,
@@ -288,25 +289,29 @@ class AddModel extends React.Component {
                   name: 'encoder',
                 }}
               >
-                <Tooltip value="none" placement="top-start"
-                  title="No transformation will be applied">
-                  <MenuItem>None</MenuItem>
+                <Tooltip value={Encoder.None} placement="top-start"
+                  title="No transformation will be applied (except for whatever is required to send the data to the contract such as converting to hexadecimal)">
+                  <MenuItem>None (for raw integer data)</MenuItem>
                 </Tooltip>
-                <Tooltip value="MurmurHash3" placement="top-start"
+                <Tooltip value={Encoder.Mult1E9Round} placement="top-start"
+                  title="Each number will be multiplied by 10<sup>9</sup> and then rounded since smart contracts use integers instead of decimal numbers">
+                  <MenuItem>Multiply by 10<sup>9</sup>, then round (for raw decimal numbers)</MenuItem>
+                </Tooltip>
+                <Tooltip value={Encoder.MurmurHash3} placement="top-start"
                   title="Convert each word to a 32-bit number using MurmurHash3">
                   <MenuItem>MurmurHash3</MenuItem>
                 </Tooltip>
-                <Tooltip value="IMDB vocab" placement="top-start"
+                <Tooltip value={Encoder.ImdbVocab} placement="top-start"
                   title="Convert each word in English text to a number using the 1000 most frequent words in the IMDB review dataset">
                   <MenuItem>IMDB vocab</MenuItem>
                 </Tooltip>
-                <Tooltip value="universal sentence encoder" placement="top-start"
-                  title="Use Universal Sentence Encoder to convert English text to a vector of numbers">
+                <Tooltip value={Encoder.USE} placement="top-start"
+                  title="Use the Universal Sentence Encoder to convert English text to a vector of numbers">
                   <MenuItem>Universal Sentence Encoder (for English text)</MenuItem>
                 </Tooltip>
-                <Tooltip value="MobileNetv2" placement="top-start"
-                  title="Use MobileNetv2 to convert images to a vector of numbers">
-                  <MenuItem>MobileNetv2 (for images)</MenuItem>
+                <Tooltip value={Encoder.MobileNetV2} placement="top-start"
+                  title="Use MobileNetV2 to convert images to a vector of numbers">
+                  <MenuItem>MobileNetV2 (for images)</MenuItem>
                 </Tooltip>
               </Select>
 
