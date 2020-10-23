@@ -308,7 +308,7 @@ class AddDeployedModel extends React.Component {
   }
 
   async save() {
-    const { address, name, description, modelType, encoder } = this.state;
+    const { address, name, description, modelType } = this.state;
 
     // Validate
     if (!name) {

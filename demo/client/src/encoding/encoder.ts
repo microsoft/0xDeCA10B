@@ -18,5 +18,8 @@ export enum Encoder {
 }
 
 export function normalizeEncoderName(encoderName: string) {
+	if (!encoderName) {
+		return encoderName
+	}
 	return encoderName.toLocaleLowerCase('en')
 }

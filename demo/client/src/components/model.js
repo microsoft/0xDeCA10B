@@ -34,6 +34,7 @@ import CollaborativeTrainer from '../contracts/compiled/CollaborativeTrainer64.j
 import { ContractLoader } from '../contracts/loader';
 import ImdbVocab from '../data/imdb.json';
 import { Encoder, normalizeEncoderName } from '../encoding/encoder';
+import { convertDataToHex } from '../float-utils';
 import { getNetworkType, getWeb3 } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
 import { OriginalData } from '../storage/data-store';
@@ -341,14 +342,21 @@ class Model extends React.Component {
     if (encoder === normalizeEncoderName(Encoder.None)) {
       this.setState({ inputType: INPUT_TYPE_RAW });
       this.transformInput = async (input) => {
+        input = JSON.parse(input)
+        if (!Array.isArray(input)) {
+          throw new Error("The input data must be an array.")
+        }
         return input.map(v => this.web3.utils.toHex(v));
       }
       this.transformInput = this.transformInput.bind(this);
     } else if (encoder === normalizeEncoderName(Encoder.Mult1E9Round)) {
       this.setState({ inputType: INPUT_TYPE_RAW });
       this.transformInput = async (input) => {
-        // FIXME
-        return input.map(v => this.web3.utils.toHex(v));
+        input = JSON.parse(input)
+        if (!Array.isArray(input)) {
+          throw new Error("The input data must be an array.")
+        }
+        return convertDataToHex(input, this.web3, this.state.toFloat);
       }
       this.transformInput = this.transformInput.bind(this);
     } else if (encoder === normalizeEncoderName(Encoder.USE)) {
@@ -1455,12 +1463,11 @@ class Model extends React.Component {
         />
       case INPUT_TYPE_RAW:
         return <div>
-          {/* FIXME TODO */}
           <Typography component="p">
-            Provide data as JSON that should be given directly to the model.
-            This data will be converted to hexadecimal before being given to the smart contract.
-            If the model expects floating point (decimal) numbers then you should give already converted integers.
-            This conversion is usually done by
+            Provide data as JSON.
+            {normalizeEncoderName(this.state.encoder) === normalizeEncoderName(Encoder.Mult1E9Round) &&
+              `You can give decimal numbers since the numbers will be multiplied by ${this.state.toFloat} and rounded so that they can be processed by the smart contract.`}
+            The data will be converted to hexadecimal before being given to the smart contract.
           </Typography>
           <TextField inputProps={{ 'aria-label': "Input to the model" }} name="input" label="Input" onChange={this.handleInputChange} margin="normal"
             value={this.state.input}
