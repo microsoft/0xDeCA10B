@@ -23,6 +23,7 @@ async function deployDensePerceptron(model, web3, toFloat) {
 
     // Add remaining weights.
     for (let i = weightChunkSize; i < weights.length; i += weightChunkSize) {
+        // Do not parallelize so that weights are set in order.
         const r = await classifierContract.initializeWeights(weights.slice(i, i + weightChunkSize))
         console.debug(`    Added classifier weights [${i}, ${Math.min(i + weightChunkSize, weights.length)}). gasUsed: ${r.receipt.gasUsed}`)
         gasUsed += r.receipt.gasUsed
@@ -67,6 +68,7 @@ async function deployNearestCentroidClassifier(model, web3, toFloat) {
     const classifications = []
     const centroids = []
     const dataCounts = []
+    // TODO Allow chunking centroids.
     console.log("  Deploying Dense Nearest Centroid Classifier model.")
     let numDimensions = null
     for (let [classification, centroidInfo] of Object.entries(model.centroids || model.intents)) {

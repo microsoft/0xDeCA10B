@@ -61,7 +61,7 @@ export class ModelDeployer {
 		}).on('error', err => {
 			dismissNotification(pleaseAcceptKey)
 			notify("Error deploying the model", { variant: 'error' })
-			throw err
+			console.error(err)
 		}).then(async newContractInstance => {
 			const addClassPromises = []
 			for (let i = 1; i < classifications.length; ++i) {
@@ -110,8 +110,8 @@ export class ModelDeployer {
 			notify, dismissNotification,
 			saveTransactionHash, saveAddress,
 		} = options
-		const initialChunkSize = 500
-		const chunkSize = 500
+		const initialChunkSize = 200
+		const chunkSize = 250
 		const classifications: string[] = []
 		const centroids: number[][] | number[][][] = []
 		const dataCounts: number[] = []
@@ -155,7 +155,7 @@ export class ModelDeployer {
 		}).on('error', err => {
 			dismissNotification(pleaseAcceptKey)
 			notify("Error deploying the model", { variant: 'error' })
-			throw err
+			console.error(err)
 		}).then(async newContractInstance => {
 			// Set up each class.
 			const addClassPromises = []
@@ -204,7 +204,7 @@ export class ModelDeployer {
 			saveTransactionHash, saveAddress,
 		} = options
 		const defaultLearningRate = 0.5
-		const weightChunkSize = 450
+		const weightChunkSize = 300
 		const { classifications, featureIndices } = model
 		let weightsArray: any[] = []
 		let sparseWeights: any[][] = []
@@ -245,7 +245,7 @@ export class ModelDeployer {
 		}).on('error', err => {
 			dismissNotification(pleaseAcceptKey)
 			notify("Error deploying the model", { variant: 'error' })
-			throw err
+			console.error(err)
 		}).then(async newContractInstance => {
 			// Could create a batch but I was getting various errors when trying to do and could not find docs on what `execute` returns.
 			const transactions = []
@@ -253,6 +253,7 @@ export class ModelDeployer {
 			for (let i = weightChunkSize; i < weightsArray.length; i += weightChunkSize) {
 				let transaction: any
 				if (model.type === 'dense perceptron' || model.type === 'perceptron') {
+					// FIXME Make sure weights are sent in order.
 					transaction = newContractInstance.methods.initializeWeights(weightsArray.slice(i, i + weightChunkSize))
 				} else if (model.type === 'sparse perceptron') {
 					transaction = newContractInstance.methods.initializeWeights(i, weightsArray.slice(i, i + weightChunkSize))
