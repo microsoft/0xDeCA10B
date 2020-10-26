@@ -257,6 +257,12 @@ class AddModel extends React.Component {
           <Typography component="p">
             If you want to use a model that is already deployed, then you can add its information <Link href='/addDeployedModel'>here</Link>.
           </Typography>
+          <Typography component="p">
+              ⚠ WARNING When you click/tap on the SAVE button, transactions will be created for you to approve in your browser's tool (e.g. MetaMask).
+              If the transactions are approved, you might be sending data to a public dencentralized blockchain not controlled by Microsoft.
+              Before approving, you should understand the implications of interacting with a public blockchain.
+              You can learn more <Link href='/about' target='_blank'>here</Link>.
+            </Typography>
 
           <form className={this.classes.container} noValidate autoComplete="off">
             <div className={this.classes.form} >
@@ -298,20 +304,20 @@ class AddModel extends React.Component {
                   <MenuItem>Multiply by 10^9, then round (for raw decimal numbers)</MenuItem>
                 </Tooltip>
                 <Tooltip value={Encoder.MurmurHash3} placement="top-start"
-                  title="Convert each word to a 32-bit number using MurmurHash3">
-                  <MenuItem>MurmurHash3</MenuItem>
+                  title="Convert each word to a 32-bit number using MurmurHash3. Separates word using spaces.">
+                  <MenuItem>MurmurHash3 (for text with sparse models)</MenuItem>
                 </Tooltip>
                 <Tooltip value={Encoder.ImdbVocab} placement="top-start"
                   title="Convert each word in English text to a number using the 1000 most frequent words in the IMDB review dataset">
-                  <MenuItem>IMDB vocab</MenuItem>
+                  <MenuItem>IMDB vocab (for a limited set of English text)</MenuItem>
                 </Tooltip>
                 <Tooltip value={Encoder.USE} placement="top-start"
                   title="Use the Universal Sentence Encoder to convert English text to a vector of numbers">
-                  <MenuItem>Universal Sentence Encoder (for English text)</MenuItem>
+                  <MenuItem>Universal Sentence Encoder (for English text with dense models)</MenuItem>
                 </Tooltip>
                 <Tooltip value={Encoder.MobileNetV2} placement="top-start"
                   title="Use MobileNetV2 to convert images to a vector of numbers">
-                  <MenuItem>MobileNetV2 (for images)</MenuItem>
+                  <MenuItem>MobileNetV2 (for images with dense models)</MenuItem>
                 </Tooltip>
               </Select>
 
@@ -536,21 +542,22 @@ class AddModel extends React.Component {
       }
       const account = accounts[0];
 
-      const [dataHandler, incentiveMechanism, model] = await Promise.all([
+      // Deploy the model first since it is more likely something will go wrong with deploying it compared to the other contracts.
+      const model = await this.deployer.deployModel(this.state.model, {
+        account,
+        toFloat: this.state.toFloat,
+        notify: this.notify, dismissNotification: this.dismissNotification,
+        saveTransactionHash: this.saveTransactionHash, saveAddress: this.saveAddress,
+      })
+
+      const [dataHandler, incentiveMechanism] = await Promise.all([
         this.deployDataHandler(account),
         this.deployIncentiveMechanism(account),
-        this.deployer.deployModel(this.state.model, {
-          account,
-          toFloat: this.state.toFloat,
-          notify: this.notify, dismissNotification: this.dismissNotification,
-          saveTransactionHash: this.saveTransactionHash, saveAddress: this.saveAddress,
-        }),
       ]);
 
       const mainContract = await this.deployMainEntryPoint(account, dataHandler, incentiveMechanism, model);
 
       modelInfo.address = mainContract.options.address;
-
 
       if (this.state.storageType !== 'none') {
         // Save to a database.

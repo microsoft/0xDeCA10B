@@ -1142,6 +1142,12 @@ class Model extends React.Component {
               This page allows you interact with a model deployed to a blockchain.
               You can hover over (or long press for touch screens) certain items to get more details.
             </Typography>
+            <Typography component="p">
+              ⚠ WARNING When you click/tap on the TRAIN/REFUND/REWARD buttons next to data, a transaction will be created for you to approve in your browser's tool (e.g. MetaMask).
+              If the transaction is approved, you might be sending data to a public dencentralized blockchain not controlled by Microsoft.
+              Before approving, you should understand the implications of interacting with a public blockchain.
+              You can learn more <Link href='/about' target='_blank'>here</Link>.
+            </Typography>
           </div>
 
           <div className={this.classes.addToStorageDiv}>
@@ -1218,7 +1224,7 @@ class Model extends React.Component {
             {this.state.tab === this.PREDICT_TAB &&
               <TabContainer>
                 <Typography component="p">
-                  Test out the model by providing data and getting a prediction.
+                  Try out the model by providing data and getting a prediction.
                 </Typography>
                 <form id="predict-form" onSubmit={(e) => { e.preventDefault(); this.predictInput(); }}>
                   <div className={this.classes.tabContainer}>
@@ -1474,7 +1480,7 @@ class Model extends React.Component {
           />
         </div>
       default:
-        console.warn(`No input rendered for inputType: ${this.state.inputType}`)
+        console.warn(`No input box rendered for inputType: ${this.state.inputType}`)
         return <div></div>
     }
   }
