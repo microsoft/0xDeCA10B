@@ -107,7 +107,7 @@ contract('NaiveBayesClassifier', function (accounts) {
     const updateResponse = await classifier.update(data, classification);
     // To help with optimizing gas usage:
     // console.log(`  update gasUsed: ${updateResponse.receipt.gasUsed}`);
-    assert.isBelow(updateResponse.receipt.gasUsed, 106424 + 1, "Too much gas used.");
+    assert.isBelow(updateResponse.receipt.gasUsed, 113704 + 1, "Too much gas used.");
 
     for (let i in prevFeatureCounts) {
       const featureIndex = data[i];
