@@ -16,7 +16,7 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
 import React from 'react';
-import update from 'react-addons-update';
+import update from 'immutability-helper';
 import { checkStorages } from '../components/storageSelector';
 import { getNetworkType } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';

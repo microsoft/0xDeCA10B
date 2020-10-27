@@ -43,7 +43,7 @@ module.exports = async function (deployer) {
 
   console.log(`Deploying IMDB model with ${weights.length} weights.`);
   const intercept = convertNum(model.intercept || model.bias, web3, toFloat);
-  const learningRate = convertNum(0.5, web3, toFloat);
+  const learningRate = convertNum(model.learningRate, web3, toFloat);
 
   console.log(`Deploying DataHandler.`);
   return deployer.deploy(DataHandler64).then(dataHandler => {
