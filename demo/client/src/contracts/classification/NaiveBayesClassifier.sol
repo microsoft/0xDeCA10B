@@ -64,6 +64,7 @@ contract NaiveBayesClassifier is Classifier64 {
      * @param _classCounts The number of occurrences of each class in the training data.
      * @param _featureCounts For each class, the number of times each feature occurs within that class.
      * Each innermost array is a tuple of the feature index and the number of times that feature occurs within the class.
+     * For example: Class 0 has feature 3 13 times and feature 5 15 times. Class 1 has feature 8 18 times: [[[3, 13], [5, 15]], [8, 18]].
      * @param _totalNumFeatures The total number of features throughout all classes.
      * @param _smoothingFactor The smoothing factor (sometimes called alpha). Use toFloat (1 mapped) for Laplace smoothing.
      */

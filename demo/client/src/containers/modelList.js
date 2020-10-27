@@ -185,7 +185,7 @@ class ModelList extends React.Component {
       <Paper className={this.props.classes.removePaper}>
         <Typography component="p" id="remove-choice-modal-title">
           {this.state.removeItem &&
-            `Are you sure you would like to remove "${this.state.removeItem.name || this.state.removeItem.description}" from your local meta-data?`}
+            `Are you sure you would like to remove "${this.state.removeItem.name || this.state.removeItem.description}" from your local meta-data? This does not remove the model from the blockchain.`}
         </Typography>
         <Button className={this.props.classes.button} variant="outlined" //color="primary"
           size="small" onClick={() => this.handleRemove()}>

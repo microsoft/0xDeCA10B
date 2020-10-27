@@ -144,10 +144,10 @@ exports.deploySparseNearestCentroidClassifier = async function (model, web3, toF
             gasUsed += r.receipt.gasUsed
         }
 
-        // Tried with promises but got weird unhelpful errors from Truffle (some were like network timeout errors).
         console.debug("  Adding remaining dimensions.")
         for (let classification = 0; classification < classifications.length; ++classification) {
             for (let j = initialChunkSize; j < centroids[classification].length; j += chunkSize) {
+                // Not parallel since order matters within each classification.
                 const r = await classifierContract.extendCentroid(
                     centroids[classification].slice(j, j + chunkSize), classification)
                 console.debug(`    Added dimensions [${j}, ${Math.min(j + chunkSize, centroids[classification].length)}) for class ${classification}. gasUsed: ${r.receipt.gasUsed}`)
