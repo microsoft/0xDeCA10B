@@ -15,11 +15,12 @@ import ClearIcon from '@material-ui/icons/Clear';
 import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
 import React from 'react';
+import { ContractLoader } from '../contracts/loader';
+import { Encoder } from '../encoding/encoder';
 import { getNetworkType, getWeb3 } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
 import { ModelInformation } from '../storage/data-store';
 import { DataStoreFactory } from '../storage/data-store-factory';
-import { ContractLoader } from '../contracts/loader';
 import { checkStorages, renderStorageSelector } from './storageSelector';
 
 const styles = theme => ({
@@ -80,7 +81,7 @@ class AddDeployedModel extends React.Component {
       name: undefined,
       description: undefined,
       modelType: 'Classifier64',
-      encoder: 'none',
+      encoder: undefined,
       storageType,
       permittedStorageTypes: [],
     }
@@ -135,7 +136,6 @@ class AddDeployedModel extends React.Component {
 
   validateContract() {
     this.setState({
-      checkedContentRestriction: false,
       restrictContent: undefined,
       isValid: undefined,
       validatingContract: true,
@@ -178,7 +178,6 @@ class AddDeployedModel extends React.Component {
           })
         }
         this.setState({
-          checkedContentRestriction: true,
           restrictContent,
           isValid: true,
           validatingContract: false,
@@ -236,7 +235,7 @@ class AddDeployedModel extends React.Component {
             List a deployed model
           </Typography>
           <Typography component="p">
-            Provide the address for the entry point contract.
+            Provide the address for the entry point contract that has already been deployed to a blockchain.
             Then you will be prompted for other information about the contract.
           </Typography>
           <form className={this.classes.container} noValidate autoComplete="off">
@@ -288,20 +287,15 @@ class AddDeployedModel extends React.Component {
               >
                 <MenuItem value={"Classifier64"}>Classifier64</MenuItem>
               </Select>
-              <InputLabel className={this.classes.selectorLabel} htmlFor="encoder">Encoder</InputLabel>
-              <Select className={this.classes.selector}
-                onChange={this.handleInputChange}
-                value={this.state.encoder}
-                inputProps={{
-                  name: 'encoder',
-                }}
-                disabled={!this.state.isValid}
-              >
-                <MenuItem value={"none"}>None</MenuItem>
-                <MenuItem value={"IMDB vocab"}>IMDB vocab (for English text)</MenuItem>
-                <MenuItem value={"universal sentence encoder"}>Universal Sentence Encoder (for English text)</MenuItem>
-                <MenuItem value={"MobileNetv2"}>MobileNetv2 (for images)</MenuItem>
-              </Select>
+
+              {(this.state.restrictContent === false || Object.values(Encoder).indexOf(this.state.encoder) > -1) && <div>
+                <Typography variant="h6" component="h6">
+                  Encoder: {this.state.encoder}
+                </Typography>
+                <Typography component="p">
+                  An encoder is the method that is used to convert the input (text, image, etc.) into a machine readable format.
+                </Typography>
+              </div>}
             </div>
           </form>
           <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}
@@ -315,8 +309,7 @@ class AddDeployedModel extends React.Component {
   }
 
   async save() {
-    const { address, name, description, modelType, encoder } = this.state;
-    const modelInfo = new ModelInformation({ name, address, description, modelType, encoder })
+    const { address, name, description, modelType } = this.state;
 
     // Validate
     if (!name) {
@@ -327,10 +320,8 @@ class AddDeployedModel extends React.Component {
       this.notify("You must select model type", { variant: 'error' });
       return
     }
-    if (encoder === undefined) {
-      this.notify("You must select an encoder", { variant: 'error' });
-      return
-    }
+
+    const modelInfo = new ModelInformation({ name, address, description, modelType })
 
     // Save to a database.
     const storage = this.storages[this.state.storageType];

@@ -24,7 +24,6 @@ class Footer extends React.Component {
     return (
       <footer className={classes.footer}>
         <Typography variant="subtitle1" color="textSecondary" align="center">
-          {/* TODO Make sure CELA validates this text. */}
           ⚠ WARNING Uploaded models and data used to train models are added to a decentralized public blockchain not controlled by Microsoft. We strongly encourage not training models using data with personally identifiable information.
           Learn more <Link href='/about'>here</Link>.
         </Typography>

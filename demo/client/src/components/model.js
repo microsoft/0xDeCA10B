@@ -33,6 +33,8 @@ import GridLoader from 'react-spinners/GridLoader';
 import CollaborativeTrainer from '../contracts/compiled/CollaborativeTrainer64.json';
 import { ContractLoader } from '../contracts/loader';
 import ImdbVocab from '../data/imdb.json';
+import { Encoder, normalizeEncoderName } from '../encoding/encoder';
+import { convertDataToHex } from '../float-utils';
 import { getNetworkType, getWeb3 } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
 import { OriginalData } from '../storage/data-store';
@@ -42,6 +44,7 @@ import { checkStorages, renderStorageSelector } from './storageSelector';
 moment.relativeTimeThreshold('ss', 4);
 
 const INPUT_TYPE_IMAGE = 'image';
+const INPUT_TYPE_RAW = 'raw';
 const INPUT_TYPE_TEXT = 'text';
 
 const styles = theme => ({
@@ -68,10 +71,12 @@ const styles = theme => ({
     paddingTop: theme.spacing(1),
   },
   button: {
-    marginTop: '20px'
+    marginTop: '20px',
+    alignSelf: 'start',
   },
   tabContainer: {
     display: 'flex',
+    flex: 1,
     flexDirection: 'column'
   },
   tabs: {
@@ -79,6 +84,11 @@ const styles = theme => ({
   },
   nextButtonContainer: {
     float: 'right',
+  },
+  form: {
+    display: 'flex',
+    flex: 1,
+    flexDirection: 'column'
   },
 });
 
@@ -288,10 +298,10 @@ class Model extends React.Component {
       const { classifier, dataHandler, incentiveMechanism } = collabTrainer
 
       const { contractInfo } = this.state
+      contractInfo.encoder = await collabTrainer.encoder()
       if (this.state.foundModelInStorage === false) {
         contractInfo.name = await collabTrainer.name()
         contractInfo.description = await collabTrainer.description()
-        contractInfo.encoder = await collabTrainer.encoder()
       }
 
       this.setState({
@@ -334,9 +344,29 @@ class Model extends React.Component {
   async setTransformInputMethod() {
     let { encoder } = this.state.contractInfo
     if (encoder) {
-      encoder = encoder.toLocaleLowerCase('en')
+      encoder = normalizeEncoderName(encoder)
     }
-    if (encoder === 'universal sentence encoder') {
+    if (encoder === normalizeEncoderName(Encoder.None)) {
+      this.setState({ inputType: INPUT_TYPE_RAW });
+      this.transformInput = async (input) => {
+        input = JSON.parse(input)
+        if (!Array.isArray(input)) {
+          throw new Error("The input data must be an array.")
+        }
+        return input.map(v => this.web3.utils.toHex(v));
+      }
+      this.transformInput = this.transformInput.bind(this);
+    } else if (encoder === normalizeEncoderName(Encoder.Mult1E9Round)) {
+      this.setState({ inputType: INPUT_TYPE_RAW });
+      this.transformInput = async (input) => {
+        input = JSON.parse(input)
+        if (!Array.isArray(input)) {
+          throw new Error("The input data must be an array.")
+        }
+        return convertDataToHex(input, this.web3, this.state.toFloat);
+      }
+      this.transformInput = this.transformInput.bind(this);
+    } else if (encoder === normalizeEncoderName(Encoder.USE)) {
       this.setState({ inputType: INPUT_TYPE_TEXT });
       UniversalSentenceEncoder.load().then(use => {
         this.transformInput = async (query) => {
@@ -355,7 +385,7 @@ class Model extends React.Component {
         };
         this.transformInput = this.transformInput.bind(this);
       });
-    } else if (encoder === 'MobileNetv2'.toLocaleLowerCase('en')) {
+    } else if (encoder === Encoder.MobileNetV2.toLocaleLowerCase('en')) {
       this.setState({ inputType: INPUT_TYPE_IMAGE });
       // https://github.com/tensorflow/tfjs-models/tree/master/mobilenet
       mobilenet.load({
@@ -492,8 +522,9 @@ class Model extends React.Component {
 
   getDisplayableEncodedData(data) {
     let d = data.map(v => this.web3.utils.toBN(v).toNumber());
-    const divideFloatList = ['MobileNetv2', 'universal sentence encoder'];
-    if (divideFloatList.indexOf(this.state.contractInfo.encoder) > -1) {
+    const divideFloatList = [Encoder.MobileNetV2, Encoder.USE,].map(normalizeEncoderName);
+    const { encoder } = this.state.contractInfo
+    if (divideFloatList.indexOf(normalizeEncoderName(encoder)) > -1) {
       const _toFloat = this.state.toFloat;
       d = d.map(v => v / _toFloat);
     }
@@ -1042,7 +1073,7 @@ class Model extends React.Component {
             if (this.state.storageType !== 'none') {
               if (this.state.inputType === INPUT_TYPE_IMAGE) {
                 // Just store the encoding.
-              originalData = JSON.stringify(trainData);
+                originalData = JSON.stringify(trainData);
               }
               const storage = this.storages[this.state.storageType];
               return storage.saveOriginalData(transactionHash, new OriginalData(originalData)).then(() => {
@@ -1117,6 +1148,12 @@ class Model extends React.Component {
             <Typography component="p">
               This page allows you interact with a model deployed to a blockchain.
               You can hover over (or long press for touch screens) certain items to get more details.
+            </Typography>
+            <Typography component="p">
+              ⚠ WARNING When you click/tap on the TRAIN/REFUND/REWARD buttons next to data, a transaction will be created for you to approve in your browser's tool (e.g. MetaMask).
+              If the transaction is approved, you might be sending data to a public dencentralized blockchain not controlled by Microsoft.
+              Before approving, you should understand the implications of interacting with a public blockchain.
+              You can learn more <Link href='/about' target='_blank'>here</Link>.
             </Typography>
           </div>
 
@@ -1194,7 +1231,7 @@ class Model extends React.Component {
             {this.state.tab === this.PREDICT_TAB &&
               <TabContainer>
                 <Typography component="p">
-                  Test out the model by providing data and getting a prediction.
+                  Try out the model by providing data and getting a prediction.
                 </Typography>
                 <form id="predict-form" onSubmit={(e) => { e.preventDefault(); this.predictInput(); }}>
                   <div className={this.classes.tabContainer}>
@@ -1416,13 +1453,12 @@ class Model extends React.Component {
   }
 
   renderInputBox() {
-    return this.state.inputType === undefined ?
-      <div></div>
-      : this.state.inputType === INPUT_TYPE_TEXT ?
-        <TextField inputProps={{ 'aria-label': "Input to the model" }} name="input" label="Input" onChange={this.handleInputChange} margin="normal"
-          value={this.state.input}
-        />
-        : <Dropzone onDrop={this.processUploadedImageInput}>
+    if (this.state.inputType === undefined) {
+      return <div></div>
+    }
+    switch (this.state.inputType) {
+      case INPUT_TYPE_IMAGE:
+        return <Dropzone onDrop={this.processUploadedImageInput}>
           {({ getRootProps, getInputProps }) => (<section>
             <div {...getRootProps()}>
               <input {...getInputProps()} />
@@ -1433,7 +1469,29 @@ class Model extends React.Component {
                 src={this.state.acceptedFiles ? undefined : this.state.inputImageUrl} />
             </div>
           </section>)}
-        </Dropzone>;
+        </Dropzone>
+      case INPUT_TYPE_TEXT:
+        return <div className={this.classes.form}>
+          <TextField inputProps={{ 'aria-label': "Input to the model" }} name="input" label="Input" onChange={this.handleInputChange} margin="normal"
+            value={this.state.input}
+          />
+        </div>
+      case INPUT_TYPE_RAW:
+        return <div className={this.classes.form}>
+          <Typography component="p">
+            Provide data as JSON.
+            {normalizeEncoderName(this.state.encoder) === normalizeEncoderName(Encoder.Mult1E9Round) &&
+              `You can give decimal numbers since the numbers will be multiplied by ${this.state.toFloat} and rounded so that they can be processed by the smart contract.`}
+            The data will be converted to hexadecimal before being given to the smart contract.
+          </Typography>
+          <TextField inputProps={{ 'aria-label': "Input to the model" }} name="input" label="Input" onChange={this.handleInputChange} margin="normal"
+            value={this.state.input}
+          />
+        </div>
+      default:
+        console.warn(`No input box rendered for inputType: ${this.state.inputType}`)
+        return <div></div>
+    }
   }
 }
 

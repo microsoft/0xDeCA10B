@@ -24,6 +24,7 @@ import CollaborativeTrainer64 from '../contracts/compiled/CollaborativeTrainer64
 import DataHandler64 from '../contracts/compiled/DataHandler64.json';
 import Points64 from '../contracts/compiled/Points64.json';
 import Stakeable64 from '../contracts/compiled/Stakeable64.json';
+import { Encoder } from '../encoding/encoder';
 import { getNetworkType, getWeb3 } from '../getWeb3';
 import { ModelDeployer } from '../ml-models/deploy-model';
 import { ModelInformation } from '../storage/data-store';
@@ -45,6 +46,7 @@ const styles = theme => ({
   },
   button: {
     marginTop: 20,
+    alignSelf: 'start',
   },
   selectorLabel: {
     marginTop: 8,
@@ -86,7 +88,7 @@ class AddModel extends React.Component {
       toFloat: 1E9,
       modelType: 'Classifier64',
       modelFileName: undefined,
-      encoder: 'none',
+      encoder: Encoder.None,
       incentiveMechanism: 'Points64',
       refundTimeWaitTimeS: 0,
       ownerClaimWaitTimeS: 0,
@@ -229,13 +231,13 @@ class AddModel extends React.Component {
       return "A model file must be uploaded"
     }
     if (!(this.state.refundTimeWaitTimeS <= this.state.ownerClaimWaitTimeS)) {
-      return "The refund/reward wait time must be at most the owner wait time"
+      return "The owner wait time must greater than or equal to the refund/reward wait time"
     }
     if (!(this.state.ownerClaimWaitTimeS <= this.state.anyAddressClaimWaitTimeS)) {
-      return "The owner wait time must be at most the full deposit take wait time"
+      return "The full deposit take wait time greather than or equal to the owner wait time"
     }
     if (this.state.costWeight < 0) {
-      return "The deposit wait must be at least 0"
+      return "The deposit wait must be greater than or equal to 0"
     }
     return null
   }
@@ -256,9 +258,15 @@ class AddModel extends React.Component {
           <Typography component="p">
             If you want to use a model that is already deployed, then you can add its information <Link href='/addDeployedModel'>here</Link>.
           </Typography>
+          <Typography component="p">
+            ⚠ WARNING When you click/tap on the SAVE button, transactions will be created for you to approve in your browser's tool (e.g. MetaMask).
+            If the transactions are approved, you might be sending data to a public dencentralized blockchain not controlled by Microsoft.
+            Before approving, you should understand the implications of interacting with a public blockchain.
+              You can learn more <Link href='/about' target='_blank'>here</Link>.
+            </Typography>
 
           <form className={this.classes.container} noValidate autoComplete="off">
-            <div className={this.classes.form} >
+            <div className={this.classes.form}>
               <TextField
                 name="name"
                 label="Model name"
@@ -288,25 +296,29 @@ class AddModel extends React.Component {
                   name: 'encoder',
                 }}
               >
-                <Tooltip value="none" placement="top-start"
-                  title="No transformation will be applied">
-                  <MenuItem>None</MenuItem>
+                <Tooltip value={Encoder.None} placement="top-start"
+                  title="No transformation will be applied (except for whatever is required to send the data to the contract such as converting to hexadecimal)">
+                  <MenuItem>None (for raw integer data)</MenuItem>
                 </Tooltip>
-                <Tooltip value="MurmurHash3" placement="top-start"
-                  title="Convert each word to a 32-bit number using MurmurHash3">
-                  <MenuItem>MurmurHash3</MenuItem>
+                <Tooltip value={Encoder.Mult1E9Round} placement="top-start"
+                  title="Each number will be multiplied by 10^9 and then rounded since smart contracts use integers instead of decimal numbers">
+                  <MenuItem>Multiply by 10^9, then round (for raw decimal numbers)</MenuItem>
                 </Tooltip>
-                <Tooltip value="IMDB vocab" placement="top-start"
+                <Tooltip value={Encoder.MurmurHash3} placement="top-start"
+                  title="Convert each word to a 32-bit number using MurmurHash3. Separates word using spaces.">
+                  <MenuItem>MurmurHash3 (for text with sparse models)</MenuItem>
+                </Tooltip>
+                <Tooltip value={Encoder.ImdbVocab} placement="top-start"
                   title="Convert each word in English text to a number using the 1000 most frequent words in the IMDB review dataset">
-                  <MenuItem>IMDB vocab</MenuItem>
+                  <MenuItem>IMDB vocab (for a limited set of English text)</MenuItem>
                 </Tooltip>
-                <Tooltip value="universal sentence encoder" placement="top-start"
-                  title="Use Universal Sentence Encoder to convert English text to a vector of numbers">
-                  <MenuItem>Universal Sentence Encoder (for English text)</MenuItem>
+                <Tooltip value={Encoder.USE} placement="top-start"
+                  title="Use the Universal Sentence Encoder to convert English text to a vector of numbers">
+                  <MenuItem>Universal Sentence Encoder (for English text with dense models)</MenuItem>
                 </Tooltip>
-                <Tooltip value="MobileNetv2" placement="top-start"
-                  title="Use MobileNetv2 to convert images to a vector of numbers">
-                  <MenuItem>MobileNetv2 (for images)</MenuItem>
+                <Tooltip value={Encoder.MobileNetV2} placement="top-start"
+                  title="Use MobileNetV2 to convert images to a vector of numbers">
+                  <MenuItem>MobileNetV2 (for images with dense models)</MenuItem>
                 </Tooltip>
               </Select>
 
@@ -372,24 +384,31 @@ class AddModel extends React.Component {
               }
 
               {/* Storage */}
+              <Typography variant="h6" component="h6">
+                Model Meta-data Storage
+              </Typography>
+              <Typography component="p">
+                When you click the save button below, you will be prompted to store your model on a blockchain.
+                In the next selection dropdown, you can choose if you want to store meta-data for this model so that you can easily find it using this demo website.
+              </Typography>
               <div className={this.classes.selector}>
                 {renderStorageSelector("Where to store the supplied meta-data about this model like its address",
                   this.state.storageType, this.handleInputChange, this.state.permittedStorageTypes)}
               </div>
+              {this.state.networkType === 'main' && <Typography component="p">
+                {"⚠ You are currently set up to deploy to a main network. Please consider deploying to a test network before deploying to a main network. "}
+              </Typography>}
+
+              {disableReason !== null && <Typography component="p">
+                ⚠ {disableReason}
+              </Typography>}
+              <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}
+                disabled={disableReason !== null}
+              >
+                Save
+              </Button>
             </div>
           </form>
-          {this.state.networkType === 'main' && <Typography component="p">
-            {"⚠ You are currently set up to deploy to a main network. Please consider deploying to a test network before deploying to a main network. "}
-          </Typography>}
-
-          {disableReason !== null && <Typography component="p">
-            ⚠ {disableReason}
-          </Typography>}
-          <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}
-            disabled={disableReason !== null}
-          >
-            Save
-          </Button>
         </Paper>
         <Paper className={this.classes.root} elevation={1}>
           <Typography component="h3">
@@ -524,21 +543,22 @@ class AddModel extends React.Component {
       }
       const account = accounts[0];
 
-      const [dataHandler, incentiveMechanism, model] = await Promise.all([
+      // Deploy the model first since it is more likely something will go wrong with deploying it compared to the other contracts.
+      const model = await this.deployer.deployModel(this.state.model, {
+        account,
+        toFloat: this.state.toFloat,
+        notify: this.notify, dismissNotification: this.dismissNotification,
+        saveTransactionHash: this.saveTransactionHash, saveAddress: this.saveAddress,
+      })
+
+      const [dataHandler, incentiveMechanism] = await Promise.all([
         this.deployDataHandler(account),
         this.deployIncentiveMechanism(account),
-        this.deployer.deployModel(this.state.model, {
-          account,
-          toFloat: this.state.toFloat,
-          notify: this.notify, dismissNotification: this.dismissNotification,
-          saveTransactionHash: this.saveTransactionHash, saveAddress: this.saveAddress,
-        }),
       ]);
 
       const mainContract = await this.deployMainEntryPoint(account, dataHandler, incentiveMechanism, model);
 
       modelInfo.address = mainContract.options.address;
-
 
       if (this.state.storageType !== 'none') {
         // Save to a database.

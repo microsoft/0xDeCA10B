@@ -7,6 +7,7 @@ import {Classifier64} from "./Classifier.sol";
 
 /**
  * A Multinomial Naive Bayes classifier.
+ * `update` and `predict` methods take `data` that holds the indices of the features that are present.
  * Works like in https://scikit-learn.org/stable/modules/naive_bayes.html#multinomial-naive-bayes.
  *
  * The prediction function is not optimized with typical things like working with log-probabilities because:
@@ -63,6 +64,7 @@ contract NaiveBayesClassifier is Classifier64 {
      * @param _classCounts The number of occurrences of each class in the training data.
      * @param _featureCounts For each class, the number of times each feature occurs within that class.
      * Each innermost array is a tuple of the feature index and the number of times that feature occurs within the class.
+     * For example: Class 0 has feature 3 13 times and feature 5 15 times. Class 1 has feature 8 18 times: [[[3, 13], [5, 15]], [8, 18]].
      * @param _totalNumFeatures The total number of features throughout all classes.
      * @param _smoothingFactor The smoothing factor (sometimes called alpha). Use toFloat (1 mapped) for Laplace smoothing.
      */
@@ -138,6 +140,7 @@ contract NaiveBayesClassifier is Classifier64 {
     }
 
     function predict(int64[] memory data) public override view returns (uint64 bestClass) {
+        // Sparse representation: each number in data is a feature index.
         // Implementation: simple calculation (no log-probabilities optimization, see contract docs for the reasons)
         bestClass = 0;
         uint maxProb = 0;
@@ -159,7 +162,7 @@ contract NaiveBayesClassifier is Classifier64 {
     }
 
     function update(int64[] memory data, uint64 classification) public override onlyOwner {
-        // Data is binarized (data holds the indices of the features that are present).
+        // `data` holds the indices of the features that are present.
         // We could also change this to hold the feature index and counts without changing the interface:
         // each int64 would be split into featureIndex|count and decomposed using bit shift operations.
 

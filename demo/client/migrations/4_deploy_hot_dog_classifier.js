@@ -18,7 +18,7 @@ module.exports = function (deployer) {
   // Information to persist to the database.
   const name = "Hot Dog Classifier"
   const description = "Classifies pictures as hot dog or not hot dog."
-  const encoder = 'MobileNetv2'
+  const encoder = 'MobileNetV2'
   const modelInfo = {
     name,
     description,

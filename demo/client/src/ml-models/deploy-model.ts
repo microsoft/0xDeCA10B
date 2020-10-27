@@ -61,7 +61,7 @@ export class ModelDeployer {
 		}).on('error', err => {
 			dismissNotification(pleaseAcceptKey)
 			notify("Error deploying the model", { variant: 'error' })
-			throw err
+			console.error(err)
 		}).then(async newContractInstance => {
 			const addClassPromises = []
 			for (let i = 1; i < classifications.length; ++i) {
@@ -110,8 +110,8 @@ export class ModelDeployer {
 			notify, dismissNotification,
 			saveTransactionHash, saveAddress,
 		} = options
-		const initialChunkSize = 500
-		const chunkSize = 500
+		const initialChunkSize = 200
+		const chunkSize = 250
 		const classifications: string[] = []
 		const centroids: number[][] | number[][][] = []
 		const dataCounts: number[] = []
@@ -155,7 +155,7 @@ export class ModelDeployer {
 		}).on('error', err => {
 			dismissNotification(pleaseAcceptKey)
 			notify("Error deploying the model", { variant: 'error' })
-			throw err
+			console.error(err)
 		}).then(async newContractInstance => {
 			// Set up each class.
 			const addClassPromises = []
@@ -177,10 +177,10 @@ export class ModelDeployer {
 			}
 			await Promise.all(addClassPromises)
 			// Extend each class.
-			// Tried with promises but got weird unhelpful errors from Truffle (some were like network timeout errors).
 			for (let classification = 0; classification < classifications.length; ++classification) {
 				for (let j = initialChunkSize; j < centroids[classification].length; j += chunkSize) {
 					const notification = notify(`Please accept the prompt to upload the values for dimensions [${j},${j + chunkSize}) for the "${classifications[classification]}" class`)
+					// Not parallel since order matters.
 					await newContractInstance.methods.extendCentroid(
 						centroids[classification].slice(j, j + chunkSize), classification).send().on('transactionHash', () => {
 							dismissNotification(notification)
@@ -204,7 +204,7 @@ export class ModelDeployer {
 			saveTransactionHash, saveAddress,
 		} = options
 		const defaultLearningRate = 0.5
-		const weightChunkSize = 450
+		const weightChunkSize = 300
 		const { classifications, featureIndices } = model
 		let weightsArray: any[] = []
 		let sparseWeights: any[][] = []
@@ -245,12 +245,12 @@ export class ModelDeployer {
 		}).on('error', err => {
 			dismissNotification(pleaseAcceptKey)
 			notify("Error deploying the model", { variant: 'error' })
-			throw err
+			console.error(err)
 		}).then(async newContractInstance => {
-			// Could create a batch but I was getting various errors when trying to do and could not find docs on what `execute` returns.
-			const transactions = []
 			// Add remaining weights.
 			for (let i = weightChunkSize; i < weightsArray.length; i += weightChunkSize) {
+				// Not parallel since order matters for the dense model.
+				// Even for the sparse model, it nice not to be bombarded with many notifications that can look out of order.
 				let transaction: any
 				if (model.type === 'dense perceptron' || model.type === 'perceptron') {
 					transaction = newContractInstance.methods.initializeWeights(weightsArray.slice(i, i + weightChunkSize))
@@ -259,37 +259,31 @@ export class ModelDeployer {
 				} else {
 					throw new Error(`Unrecognized model type: "${model.type}"`)
 				}
-				transactions.push(new Promise((resolve, reject) => {
-					// Subtract 1 from the count because the first chunk has already been uploaded.
-					const notification = notify(`Please accept the prompt to upload classifier 
-					weights [${i},${i + weightChunkSize}) (${i / weightChunkSize}/${Math.ceil(weightsArray.length / weightChunkSize) - 1})`)
-					transaction.send().on('transactionHash', () => {
-						dismissNotification(notification)
-					}).on('error', (err: any) => {
-						dismissNotification(notification)
-						notify(`Error setting weights classifier weights [${i},${i + weightChunkSize})`, { variant: 'error' })
-						reject(err)
-					}).then(resolve)
-				}))
+				// Subtract 1 from the count because the first chunk has already been uploaded.
+				const notification = notify(`Please accept the prompt to upload classifier 
+					weights [${i},${Math.min(i + weightChunkSize, weightsArray.length)}) (${i / weightChunkSize}/${Math.ceil(weightsArray.length / weightChunkSize) - 1})`)
+				await transaction.send().on('transactionHash', () => {
+					dismissNotification(notification)
+				}).on('error', (err: any) => {
+					dismissNotification(notification)
+					notify(`Error setting weights classifier weights [${i},${Math.min(i + weightChunkSize, weightsArray.length)})`, { variant: 'error' })
+					console.error(err)
+				})
 			}
 			if (featureIndices !== undefined) {
 				// Add feature indices to use.
 				for (let i = 0; i < featureIndices.length; i += weightChunkSize) {
-					transactions.push(new Promise((resolve, reject) => {
-						const notification = notify(`Please accept the prompt to upload the feature indices [${i},${i + weightChunkSize})`)
-						newContractInstance.methods.addFeatureIndices(featureIndices.slice(i, i + weightChunkSize)).send()
-							.on('transactionHash', () => {
-								dismissNotification(notification)
-							}).on('error', (err: any) => {
-								dismissNotification(notification)
-								notify(`Error setting feature indices for [${i},${i + weightChunkSize})`, { variant: 'error' })
-								reject(err)
-							}).then(resolve)
-					}))
+					const notification = notify(`Please accept the prompt to upload the feature indices [${i},${Math.min(i + weightChunkSize, featureIndices.length)})`)
+					await newContractInstance.methods.addFeatureIndices(featureIndices.slice(i, i + weightChunkSize)).send()
+						.on('transactionHash', () => {
+							dismissNotification(notification)
+						}).on('error', (err: any) => {
+							dismissNotification(notification)
+							notify(`Error setting feature indices for [${i},${Math.min(i + weightChunkSize, featureIndices.length)})`, { variant: 'error' })
+							console.error(err)
+						})
 				}
 			}
-
-			await Promise.all(transactions)
 
 			for (let i = 0; i < sparseWeights.length; i += Math.round(weightChunkSize / 2)) {
 				const notification = notify(`Please accept the prompt to upload sparse classifier weights [${i},${i + Math.round(weightChunkSize / 2)}) out of ${sparseWeights.length}`)

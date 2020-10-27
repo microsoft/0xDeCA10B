@@ -33,14 +33,17 @@ class About extends React.Component {
       </Typography>
       <Typography className={classes.section} component="p">
         If you have not changed the default blockchain network in your browser's or extension's settings, then it is likely set to use the public Ethereum mainnet.
-        Microsoft does not fully endorse nor support the use of the mainnet or any other third party network because all information in it is public.
+        Microsoft does not fully endorse nor support the use of the mainnet or any other third party network because all information in it is public and might be difficult to completely delete.
       </Typography>
       <Typography className={classes.sectionTitle} variant="h5" component="h5">
         <Link color='inherit' href='#project' name='project'>About This Project</Link>
       </Typography>
       <Typography className={classes.section} component="p">
         The goal of this project is to promote sharing machine learning models at a greater scale.
-        To achieve this, we store model on a blockchain and allow people to update the models by providing their own data to a smart contracts which train the model.
+        To achieve this, models are stored on a blockchain and so that people can update the models by providing their own data to smart contracts which train the model.
+        Since this project could involve interacting with public blockchains, it is strongly encouraged that personal data is not used when interacting with models.
+        This project is meant to be a proof of concept.
+        For greater privacy and control over data, a private and permissioned chain can be used by trusted collaborators.
         An overview of the project can be found in our <Link href='https://aka.ms/0xDeCA10B-blog1' target="_blank">blog post</Link>.
       </Typography>
       <Typography className={classes.sectionTitle} variant="h5" component="h5">

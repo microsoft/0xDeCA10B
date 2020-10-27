@@ -21,6 +21,7 @@ export class NaiveBayesModel extends Model {
 	 * @param classCounts The number of occurrences of each class in the training data.
 	 * @param featureCounts For each class, the number of times each feature occurs within that class.
 	 * Each innermost list is a tuple of the feature index and the number of times that feature occurs within the class.
+	 * For example: Class 0 has feature 3 13 times and feature 5 15 times. Class 1 has feature 8 18 times: [[[3, 13], [5, 15]], [8, 18]].
 	 * @param totalNumFeatures The total number of features throughout all classes.
 	 * @param smoothingFactor The smoothing factor (sometimes called alpha). Use 1 for Laplace smoothing.
 	 */
