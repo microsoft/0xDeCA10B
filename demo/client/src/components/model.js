@@ -71,10 +71,12 @@ const styles = theme => ({
     paddingTop: theme.spacing(1),
   },
   button: {
-    marginTop: '20px'
+    marginTop: '20px',
+    alignSelf: 'start',
   },
   tabContainer: {
     display: 'flex',
+    flex: 1,
     flexDirection: 'column'
   },
   tabs: {
@@ -82,6 +84,11 @@ const styles = theme => ({
   },
   nextButtonContainer: {
     float: 'right',
+  },
+  form: {
+    display: 'flex',
+    flex: 1,
+    flexDirection: 'column'
   },
 });
 
@@ -1464,11 +1471,13 @@ class Model extends React.Component {
           </section>)}
         </Dropzone>
       case INPUT_TYPE_TEXT:
-        return <TextField inputProps={{ 'aria-label': "Input to the model" }} name="input" label="Input" onChange={this.handleInputChange} margin="normal"
-          value={this.state.input}
-        />
+        return <div className={this.classes.form}>
+          <TextField inputProps={{ 'aria-label': "Input to the model" }} name="input" label="Input" onChange={this.handleInputChange} margin="normal"
+            value={this.state.input}
+          />
+        </div>
       case INPUT_TYPE_RAW:
-        return <div>
+        return <div className={this.classes.form}>
           <Typography component="p">
             Provide data as JSON.
             {normalizeEncoderName(this.state.encoder) === normalizeEncoderName(Encoder.Mult1E9Round) &&

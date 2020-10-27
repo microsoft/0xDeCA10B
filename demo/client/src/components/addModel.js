@@ -46,6 +46,7 @@ const styles = theme => ({
   },
   button: {
     marginTop: 20,
+    alignSelf: 'start',
   },
   selectorLabel: {
     marginTop: 8,
@@ -230,13 +231,13 @@ class AddModel extends React.Component {
       return "A model file must be uploaded"
     }
     if (!(this.state.refundTimeWaitTimeS <= this.state.ownerClaimWaitTimeS)) {
-      return "The refund/reward wait time must be at most the owner wait time"
+      return "The owner wait time must greater than or equal to the refund/reward wait time"
     }
     if (!(this.state.ownerClaimWaitTimeS <= this.state.anyAddressClaimWaitTimeS)) {
-      return "The owner wait time must be at most the full deposit take wait time"
+      return "The full deposit take wait time greather than or equal to the owner wait time"
     }
     if (this.state.costWeight < 0) {
-      return "The deposit wait must be at least 0"
+      return "The deposit wait must be greater than or equal to 0"
     }
     return null
   }
@@ -258,14 +259,14 @@ class AddModel extends React.Component {
             If you want to use a model that is already deployed, then you can add its information <Link href='/addDeployedModel'>here</Link>.
           </Typography>
           <Typography component="p">
-              ⚠ WARNING When you click/tap on the SAVE button, transactions will be created for you to approve in your browser's tool (e.g. MetaMask).
-              If the transactions are approved, you might be sending data to a public dencentralized blockchain not controlled by Microsoft.
-              Before approving, you should understand the implications of interacting with a public blockchain.
+            ⚠ WARNING When you click/tap on the SAVE button, transactions will be created for you to approve in your browser's tool (e.g. MetaMask).
+            If the transactions are approved, you might be sending data to a public dencentralized blockchain not controlled by Microsoft.
+            Before approving, you should understand the implications of interacting with a public blockchain.
               You can learn more <Link href='/about' target='_blank'>here</Link>.
             </Typography>
 
           <form className={this.classes.container} noValidate autoComplete="off">
-            <div className={this.classes.form} >
+            <div className={this.classes.form}>
               <TextField
                 name="name"
                 label="Model name"
@@ -388,26 +389,26 @@ class AddModel extends React.Component {
               </Typography>
               <Typography component="p">
                 When you click the save button below, you will be prompted to store your model on a blockchain.
-                In the next selection field, you can choose if you want to store meta-data for this model so that you can easily find it using this demo website.
+                In the next selection dropdown, you can choose if you want to store meta-data for this model so that you can easily find it using this demo website.
               </Typography>
               <div className={this.classes.selector}>
                 {renderStorageSelector("Where to store the supplied meta-data about this model like its address",
                   this.state.storageType, this.handleInputChange, this.state.permittedStorageTypes)}
               </div>
+              {this.state.networkType === 'main' && <Typography component="p">
+                {"⚠ You are currently set up to deploy to a main network. Please consider deploying to a test network before deploying to a main network. "}
+              </Typography>}
+
+              {disableReason !== null && <Typography component="p">
+                ⚠ {disableReason}
+              </Typography>}
+              <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}
+                disabled={disableReason !== null}
+              >
+                Save
+              </Button>
             </div>
           </form>
-          {this.state.networkType === 'main' && <Typography component="p">
-            {"⚠ You are currently set up to deploy to a main network. Please consider deploying to a test network before deploying to a main network. "}
-          </Typography>}
-
-          {disableReason !== null && <Typography component="p">
-            ⚠ {disableReason}
-          </Typography>}
-          <Button className={this.classes.button} variant="outlined" color="primary" onClick={this.save}
-            disabled={disableReason !== null}
-          >
-            Save
-          </Button>
         </Paper>
         <Paper className={this.classes.root} elevation={1}>
           <Typography component="h3">
