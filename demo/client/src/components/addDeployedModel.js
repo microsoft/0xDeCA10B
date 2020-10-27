@@ -294,7 +294,7 @@ class AddDeployedModel extends React.Component {
                 </Typography>
                 <Typography component="p">
                   An encoder is the method that is used to convert the input (text, image, etc.) into a machine readable format.
-              </Typography>
+                </Typography>
               </div>}
             </div>
           </form>
