@@ -1,6 +1,6 @@
 /**
  * Possible types of encoders.
- * These can be stored in smart contracts on public blockchains so do not make changes to the values.
+ * The string values can be stored in smart contracts on public blockchains so do not make changes to the values.
  * Changing the casing of a value should be fine.
  */
 export enum Encoder {

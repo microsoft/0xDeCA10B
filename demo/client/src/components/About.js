@@ -40,7 +40,7 @@ class About extends React.Component {
       </Typography>
       <Typography className={classes.section} component="p">
         The goal of this project is to promote sharing machine learning models at a greater scale.
-        To achieve this, we store models on a blockchain and allow people to update the models by providing their own data to a smart contracts which train the model.
+        To achieve this, models are stored on a blockchain and so that people can update the models by providing their own data to smart contracts which train the model.
         Since this project could involve interacting with public blockchains, it is strongly encouraged that personal data is not used when interacting with models.
         This project is meant to be a proof of concept.
         For greater privacy and control over data, a private and permissioned chain can be used by trusted collaborators.
