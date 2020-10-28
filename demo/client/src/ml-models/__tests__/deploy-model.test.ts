@@ -132,7 +132,7 @@ describe("ModelDeployer", () => {
 
 	it("should deploy dense Perceptron", async () => {
 		const classifications = ["A", "B"]
-		const weights = [1, -1]
+		const weights = [1, -1, 2.33, -8.66]
 		const intercept = 0
 		const m = await deployer.deployModel(
 			new DensePerceptronModel(
@@ -156,8 +156,8 @@ describe("ModelDeployer", () => {
 
 	it("should deploy sparse Perceptron", async () => {
 		const classifications = ["AA", "BB"]
-		const weights = [2, -2]
-		const sparseWeights = { '4': 7, '11': 8, }
+		const weights = [2, -2, 2.44, -7.55]
+		const sparseWeights = { '8': 7, '11': 8, '12': 8.21, '15': -4.55}
 		const intercept = 3
 		const m = await deployer.deployModel(
 			new SparsePerceptronModel(
@@ -171,7 +171,7 @@ describe("ModelDeployer", () => {
 			})
 
 		for (let i = 0; i < classifications.length; ++i) {
-			assert.equal(await m.methods.classifications(i).call(), classifications[i])
+			assert.strictEqual(await m.methods.classifications(i).call(), classifications[i])
 		}
 		for (let i = 0; i < weights.length; ++i) {
 			assertEqualNumbers(await m.methods.weights(i).call(), convertNum(weights[i], web3))

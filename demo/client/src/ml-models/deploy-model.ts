@@ -5,7 +5,7 @@ import NaiveBayesClassifier from '../contracts/compiled/NaiveBayesClassifier.jso
 import NearestCentroidClassifier from '../contracts/compiled/NearestCentroidClassifier.json'
 import SparseNearestCentroidClassifier from '../contracts/compiled/SparseNearestCentroidClassifier.json'
 import SparsePerceptron from '../contracts/compiled/SparsePerceptron.json'
-import { convertDataToHex, convertToHex } from '../float-utils'
+import { convertData, convertDataToHex, convertNum, convertToHex } from '../float-utils'
 import { DensePerceptronModel, Model, NaiveBayesModel, NearestCentroidModel, SparseNearestCentroidModel, SparsePerceptronModel } from './model-interfaces'
 
 export class ModelDeployer {
@@ -220,7 +220,7 @@ export class ModelDeployer {
 		}
 
 		if (model.weights !== undefined && model.weights !== null && Array.isArray(model.weights)) {
-			weightsArray = convertDataToHex(model.weights, this.web3, toFloat)
+			weightsArray = convertData(model.weights, this.web3, toFloat)
 		}
 		const intercept = convertToHex(model.intercept, this.web3, toFloat)
 		const learningRate = convertToHex(model.learningRate || defaultLearningRate, this.web3, toFloat)
@@ -262,7 +262,10 @@ export class ModelDeployer {
 				// Subtract 1 from the count because the first chunk has already been uploaded.
 				const notification = notify(`Please accept the prompt to upload classifier 
 					weights [${i},${Math.min(i + weightChunkSize, weightsArray.length)}) (${i / weightChunkSize}/${Math.ceil(weightsArray.length / weightChunkSize) - 1})`)
-				await transaction.send().on('transactionHash', () => {
+				await transaction.send({
+					from: account,
+					gas: this.gasLimit,
+				}).on('transactionHash', () => {
 					dismissNotification(notification)
 				}).on('error', (err: any) => {
 					dismissNotification(notification)
@@ -274,21 +277,26 @@ export class ModelDeployer {
 				// Add feature indices to use.
 				for (let i = 0; i < featureIndices.length; i += weightChunkSize) {
 					const notification = notify(`Please accept the prompt to upload the feature indices [${i},${Math.min(i + weightChunkSize, featureIndices.length)})`)
-					await newContractInstance.methods.addFeatureIndices(featureIndices.slice(i, i + weightChunkSize)).send()
-						.on('transactionHash', () => {
-							dismissNotification(notification)
-						}).on('error', (err: any) => {
-							dismissNotification(notification)
-							notify(`Error setting feature indices for [${i},${Math.min(i + weightChunkSize, featureIndices.length)})`, { variant: 'error' })
-							console.error(err)
-						})
+					await newContractInstance.methods.addFeatureIndices(featureIndices.slice(i, i + weightChunkSize)).send({
+						from: account,
+						gas: this.gasLimit,
+					}).on('transactionHash', () => {
+						dismissNotification(notification)
+					}).on('error', (err: any) => {
+						dismissNotification(notification)
+						notify(`Error setting feature indices for [${i},${Math.min(i + weightChunkSize, featureIndices.length)})`, { variant: 'error' })
+						console.error(err)
+					})
 				}
 			}
 
 			for (let i = 0; i < sparseWeights.length; i += Math.round(weightChunkSize / 2)) {
 				const notification = notify(`Please accept the prompt to upload sparse classifier weights [${i},${i + Math.round(weightChunkSize / 2)}) out of ${sparseWeights.length}`)
 				await newContractInstance.methods.initializeSparseWeights(
-					sparseWeights.slice(i, i + Math.round(weightChunkSize / 2))).send().on('transactionHash', () => {
+					sparseWeights.slice(i, i + Math.round(weightChunkSize / 2))).send({
+						from: account,
+						gas: this.gasLimit,
+					}).on('transactionHash', () => {
 						dismissNotification(notification)
 					}).on('error', (err: any) => {
 						dismissNotification(notification)
