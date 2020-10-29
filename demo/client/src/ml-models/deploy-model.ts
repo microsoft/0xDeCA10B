@@ -5,7 +5,7 @@ import NaiveBayesClassifier from '../contracts/compiled/NaiveBayesClassifier.jso
 import NearestCentroidClassifier from '../contracts/compiled/NearestCentroidClassifier.json'
 import SparseNearestCentroidClassifier from '../contracts/compiled/SparseNearestCentroidClassifier.json'
 import SparsePerceptron from '../contracts/compiled/SparsePerceptron.json'
-import { convertData, convertDataToHex, convertNum, convertToHex } from '../float-utils'
+import { convertData, convertNum,  convertDataToHex, convertToHex } from '../float-utils'
 import { DensePerceptronModel, Model, NaiveBayesModel, NearestCentroidModel, SparseNearestCentroidModel, SparsePerceptronModel } from './model-interfaces'
 
 export class ModelDeployer {
@@ -214,16 +214,18 @@ export class ModelDeployer {
 			if (typeof sparseModel.sparseWeights === 'object' && sparseModel.sparseWeights !== null) {
 				for (let [featureIndexKey, weight] of Object.entries(sparseModel.sparseWeights)) {
 					const featureIndex = parseInt(featureIndexKey, 10)
-					sparseWeights.push([this.web3.utils.toHex(featureIndex), convertToHex(weight, this.web3, toFloat)])
+					sparseWeights.push([this.web3.utils.toBN(featureIndex), convertNum(weight, this.web3, toFloat)])
 				}
 			}
+			console.debug("sparseWeights:", sparseWeights)
 		}
 
 		if (model.weights !== undefined && model.weights !== null && Array.isArray(model.weights)) {
+			console.debug("model.weights:", model.weights)
 			weightsArray = convertData(model.weights, this.web3, toFloat)
 		}
-		const intercept = convertToHex(model.intercept, this.web3, toFloat)
-		const learningRate = convertToHex(model.learningRate || defaultLearningRate, this.web3, toFloat)
+		const intercept = convertNum(model.intercept, this.web3, toFloat)
+		const learningRate = convertNum(model.learningRate || defaultLearningRate, this.web3, toFloat)
 
 		if (featureIndices !== undefined && featureIndices.length !== weightsArray.length + sparseWeights.length) {
 			return Promise.reject("The number of features must match the number of weights.")
@@ -232,6 +234,7 @@ export class ModelDeployer {
 		const ContractInfo = ModelDeployer.modelTypes[model.type]
 		const contract = new this.web3.eth.Contract(ContractInfo.abi, undefined, { from: account })
 		const pleaseAcceptKey = notify(`Please accept the prompt to deploy the Perceptron classifier with the first ${Math.min(weightsArray.length, weightChunkSize)} weights`)
+		console.debug("weightsArray:", weightsArray)
 		return contract.deploy({
 			data: ContractInfo.bytecode,
 			arguments: [classifications, weightsArray.slice(0, weightChunkSize), intercept, learningRate],
@@ -290,17 +293,19 @@ export class ModelDeployer {
 				}
 			}
 
-			for (let i = 0; i < sparseWeights.length; i += Math.round(weightChunkSize / 2)) {
-				const notification = notify(`Please accept the prompt to upload sparse classifier weights [${i},${i + Math.round(weightChunkSize / 2)}) out of ${sparseWeights.length}`)
+			const sparseWeightsChunkSize = Math.round(weightChunkSize / 2)
+			for (let i = 0; i < sparseWeights.length; i += sparseWeightsChunkSize) {
+				const notification = notify(`Please accept the prompt to upload sparse classifier weights [${i},${Math.min(i + sparseWeightsChunkSize, sparseWeights.length)}) out of ${sparseWeights.length}`)
+				console.debug("sparseWeights.slice(i, i + sparseWeightsChunkSize):", sparseWeights.slice(i, i + sparseWeightsChunkSize))
 				await newContractInstance.methods.initializeSparseWeights(
-					sparseWeights.slice(i, i + Math.round(weightChunkSize / 2))).send({
+					sparseWeights.slice(i, i + sparseWeightsChunkSize)).send({
 						from: account,
 						gas: this.gasLimit,
 					}).on('transactionHash', () => {
 						dismissNotification(notification)
 					}).on('error', (err: any) => {
 						dismissNotification(notification)
-						notify(`Error setting sparse classifier weights [${i},${i + Math.round(weightChunkSize / 2)}) out of ${sparseWeights.length}`, { variant: 'error' })
+						notify(`Error setting sparse classifier weights [${i},${Math.min(i + sparseWeightsChunkSize, sparseWeights.length)}) out of ${sparseWeights.length}`, { variant: 'error' })
 						throw err
 					})
 			}
