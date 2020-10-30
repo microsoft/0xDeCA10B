@@ -5,7 +5,7 @@ import NaiveBayesClassifier from '../contracts/compiled/NaiveBayesClassifier.jso
 import NearestCentroidClassifier from '../contracts/compiled/NearestCentroidClassifier.json'
 import SparseNearestCentroidClassifier from '../contracts/compiled/SparseNearestCentroidClassifier.json'
 import SparsePerceptron from '../contracts/compiled/SparsePerceptron.json'
-import { convertData, convertDataToHex, convertNum, convertToHex } from '../float-utils'
+import { convertData, convertNum } from '../float-utils'
 import { DensePerceptronModel, Model, NaiveBayesModel, NearestCentroidModel, SparseNearestCentroidModel, SparsePerceptronModel } from './model-interfaces'
 
 export class ModelDeployer {
@@ -42,7 +42,7 @@ export class ModelDeployer {
 		const initialFeatureChunkSize = 150
 		const featureChunkSize = 350
 		const { classifications, classCounts, featureCounts, totalNumFeatures } = model
-		const smoothingFactor = convertToHex(model.smoothingFactor || defaultSmoothingFactor, this.web3, toFloat)
+		const smoothingFactor = convertNum(model.smoothingFactor || defaultSmoothingFactor, this.web3, toFloat)
 
 		const ContractInfo = ModelDeployer.modelTypes[model.type]
 		const contract = new this.web3.eth.Contract(ContractInfo.abi, undefined, { from: account })
@@ -120,7 +120,7 @@ export class ModelDeployer {
 			classifications.push(classification)
 			dataCounts.push(centroidInfo.dataCount)
 			if (Array.isArray(centroidInfo.centroid)) {
-				centroids.push(convertDataToHex(centroidInfo.centroid, this.web3, toFloat))
+				centroids.push(convertData(centroidInfo.centroid, this.web3, toFloat))
 				if (numDimensions === null) {
 					numDimensions = centroidInfo.centroid.length
 				} else {
@@ -132,7 +132,7 @@ export class ModelDeployer {
 				const sparseCentroid: number[][] = []
 				for (let [featureIndexKey, value] of Object.entries(centroidInfo.centroid)) {
 					const featureIndex = parseInt(featureIndexKey)
-					sparseCentroid.push([this.web3.utils.toHex(featureIndex), convertToHex(value, this.web3, toFloat)])
+					sparseCentroid.push([this.web3.utils.toHex(featureIndex), convertNum(value, this.web3, toFloat)])
 				}
 				centroids.push(sparseCentroid as any)
 			}
@@ -214,12 +214,14 @@ export class ModelDeployer {
 			if (typeof sparseModel.sparseWeights === 'object' && sparseModel.sparseWeights !== null) {
 				for (let [featureIndexKey, weight] of Object.entries(sparseModel.sparseWeights)) {
 					const featureIndex = parseInt(featureIndexKey, 10)
-					sparseWeights.push([this.web3.utils.toHex(featureIndex), convertToHex(weight, this.web3, toFloat)])
+					// Converting negative numbers to hex can cause issues.
+					sparseWeights.push([this.web3.utils.toHex(featureIndex), convertNum(weight, this.web3, toFloat)])
 				}
 			}
 		}
 
 		if (model.weights !== undefined && model.weights !== null && Array.isArray(model.weights)) {
+			// Converting negative numbers to hex can cause issues.
 			weightsArray = convertData(model.weights, this.web3, toFloat)
 		}
 		const intercept = convertNum(model.intercept, this.web3, toFloat)

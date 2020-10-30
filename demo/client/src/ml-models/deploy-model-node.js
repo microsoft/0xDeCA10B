@@ -17,6 +17,12 @@ async function deployDensePerceptron(model, web3, toFloat) {
     const weights = convertData(model.weights, web3, toFloat)
     const intercept = convertNum(model.intercept || model.bias, web3, toFloat)
     const learningRate = convertNum(model.learningRate || 1, web3, toFloat)
+
+    // TODO Handle feature indices.
+    if (model.featureIndices) {
+        throw new Error("featureIndices are not supported yet.")
+    }
+
     console.log(`  Deploying Dense Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights.`)
     const classifierContract = await DensePerceptron.new(classifications, weights.slice(0, weightChunkSize), intercept, learningRate)
     gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
@@ -45,6 +51,11 @@ async function deploySparsePerceptron(model, web3, toFloat) {
     const learningRate = convertNum(model.learningRate || 1, web3, toFloat)
     const sparseWeights = []
 
+    // TODO Handle feature indices.
+    if (model.featureIndices) {
+        throw new Error("featureIndices are not supported yet.")
+    }
+
     if (typeof model.sparseWeights === 'object') {
         for (let [featureIndexKey, weight] of Object.entries(model.sparseWeights)) {
             const featureIndex = parseInt(featureIndexKey, 10)
@@ -63,8 +74,6 @@ async function deploySparsePerceptron(model, web3, toFloat) {
         console.debug(`    Added classifier weights [${i}, ${Math.min(i + weightChunkSize, weights.length)}) gasUsed: ${r.receipt.gasUsed}`)
         gasUsed += r.receipt.gasUsed
     }
-
-    // TODO Handle feature indices.
 
     const sparseWeightsChunkSize = Math.round(weightChunkSize / 2)
     for (let i = 0; i < sparseWeights.length; i += sparseWeightsChunkSize) {
