@@ -5,7 +5,7 @@ import NaiveBayesClassifier from '../contracts/compiled/NaiveBayesClassifier.jso
 import NearestCentroidClassifier from '../contracts/compiled/NearestCentroidClassifier.json'
 import SparseNearestCentroidClassifier from '../contracts/compiled/SparseNearestCentroidClassifier.json'
 import SparsePerceptron from '../contracts/compiled/SparsePerceptron.json'
-import { convertData, convertNum } from '../float-utils'
+import { convertData, convertDataToHex, convertNum, convertToHex } from '../float-utils'
 import { DensePerceptronModel, Model, NaiveBayesModel, NearestCentroidModel, SparseNearestCentroidModel, SparsePerceptronModel } from './model-interfaces'
 
 export class ModelDeployer {
@@ -120,19 +120,24 @@ export class ModelDeployer {
 			classifications.push(classification)
 			dataCounts.push(centroidInfo.dataCount)
 			if (Array.isArray(centroidInfo.centroid)) {
-				centroids.push(convertData(centroidInfo.centroid, this.web3, toFloat))
 				if (numDimensions === null) {
+					// First centroid.
 					numDimensions = centroidInfo.centroid.length
+					// The values for the first centroid are passed in a 2d array which works best with hex values.
+					centroids.push(convertDataToHex(centroidInfo.centroid, this.web3, toFloat))
 				} else {
 					if (centroidInfo.centroid.length !== numDimensions) {
 						throw new Error(`Found a centroid with ${centroidInfo.centroid.length} dimensions. Expected: ${numDimensions}.`)
 					}
+					// After the first centroid, centroids are passed each in a 1d array so BNs work better.
+					centroids.push(convertData(centroidInfo.centroid, this.web3, toFloat))
 				}
 			} else {
 				const sparseCentroid: number[][] = []
 				for (let [featureIndexKey, value] of Object.entries(centroidInfo.centroid)) {
 					const featureIndex = parseInt(featureIndexKey)
-					sparseCentroid.push([this.web3.utils.toHex(featureIndex), convertNum(value, this.web3, toFloat)])
+					// Hex for values is okay here since the values should be positive.
+					sparseCentroid.push([this.web3.utils.toHex(featureIndex), convertToHex(value, this.web3, toFloat)])
 				}
 				centroids.push(sparseCentroid as any)
 			}
@@ -214,8 +219,7 @@ export class ModelDeployer {
 			if (typeof sparseModel.sparseWeights === 'object' && sparseModel.sparseWeights !== null) {
 				for (let [featureIndexKey, weight] of Object.entries(sparseModel.sparseWeights)) {
 					const featureIndex = parseInt(featureIndexKey, 10)
-					// Converting negative numbers to hex can cause issues.
-					sparseWeights.push([this.web3.utils.toHex(featureIndex), convertNum(weight, this.web3, toFloat)])
+					sparseWeights.push([this.web3.utils.toHex(featureIndex), convertToHex(weight, this.web3, toFloat)])
 				}
 			}
 		}
