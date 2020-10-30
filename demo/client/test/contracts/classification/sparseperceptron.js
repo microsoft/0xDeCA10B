@@ -4,6 +4,7 @@ const Classifier = artifacts.require("./classification/SparsePerceptron");
 const Stakeable64 = artifacts.require("./incentive/Stakeable64");
 
 const { convertData, convertNum } = require('../../../src/float-utils-node');
+const { deployModel } = require('../../../src/ml-models/deploy-model-node')
 
 contract('CollaborativeTrainer with Perceptron', function (accounts) {
   const toFloat = 1E9;
@@ -261,5 +262,26 @@ contract('CollaborativeTrainer with Perceptron', function (accounts) {
           });
         });
       });
+  });
+
+  it("...should initializeSparseWeights", async function () {
+    const model = {
+      type: 'sparse perceptron',
+      classifications,
+      weights: [0, 5, -1, 2.1, -1.4],
+      sparseWeights: { '8': 9.1, '12': -7.3 },
+      intercept: 2,
+      learningRate: 0.5,
+    }
+    const { classifierContract } = await deployModel(model, web3, toFloat)
+    assert.equal(await classifierContract.intercept().then(parseFloatBN), model.intercept)
+    assert.equal(await classifierContract.learningRate().then(parseFloatBN), model.learningRate)
+    for (let i = 0; i < model.weights; ++i) {
+      assert.equal(await classifierContract.weights(i).then(parseFloatBN), model.weights[i])
+    }
+
+    for (const [featureIndex, weight] of Object.entries(model.sparseWeights)) {
+      assert.equal(await classifierContract.weights(parseInt(featureIndex, 10)).then(parseFloatBN), weight)
+    }
   });
 });

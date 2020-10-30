@@ -181,7 +181,6 @@ describe("ModelDeployer", () => {
 	})
 
 	it("should deploy sparse Perceptron - with sparseWeights", async () => {
-		// FIXME this test fails because of the sparseWeights somehow.
 		const classifications = ["AA", "BB"]
 		const weights = [2, -2, 2.44, -7.55]
 		const sparseWeights = { '8': 7, '11': 8, '12': 8.21, '15': -4.55 }
@@ -195,7 +194,7 @@ describe("ModelDeployer", () => {
 			),
 			{
 				account,
-				notify: console.debug
+				// notify: console.debug,
 			})
 
 		for (let i = 0; i < classifications.length; ++i) {
@@ -207,10 +206,14 @@ describe("ModelDeployer", () => {
 		assertEqualNumbers(await m.methods.learningRate().call(), convertNum(0.5, web3), "learningRate:")
 
 		for (let i = 0; i < weights.length; ++i) {
-			assertEqualNumbers(await m.methods.weights(i).call(), convertNum(weights[i], web3), `weight ${i}:`)
+			const actual = await m.methods.weights(i).call()
+			assertEqualNumbers(actual, convertNum(weights[i], web3), `weight ${i}:`)
 		}
-		for (const [featureIndex, weight] of Object.entries(sparseWeights)) {
-			assertEqualNumbers(await m.methods.weights(featureIndex).call(), convertNum(weight, web3), `sparseWeight ${featureIndex}:`)
+
+		for (const [featureIndexKey, weight] of Object.entries(sparseWeights)) {
+			const featureIndex = parseInt(featureIndexKey, 10)
+			const actual = await m.methods.weights(featureIndex).call()
+			assertEqualNumbers(actual, convertNum(weight, web3), `sparseWeight ${featureIndex}:`)
 		}
 	})
 })
