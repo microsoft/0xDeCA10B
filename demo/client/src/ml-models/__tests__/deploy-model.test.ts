@@ -155,7 +155,7 @@ describe("ModelDeployer", () => {
 
 	it("should deploy sparse Perceptron", async () => {
 		const classifications = ["AA", "BB"]
-		const weights = [2, -2, 2.44, -7.55]
+		const weights = [2, -2, 2.44, -7.55, 0.537080412, 2000, -23232.32]
 		const sparseWeights = null
 		const intercept = 3
 		const m = await deployer.deployModel(

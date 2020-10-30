@@ -1,7 +1,7 @@
 const _toFloat = 1E9;
 
 export function convertNum(num, web3, toFloat = _toFloat) {
-    return web3.utils.toBN(Math.round(num * toFloat));
+    return Math.round(num * toFloat);
 }
 
 export function convertToHex(num, web3, toFloat = _toFloat) {
