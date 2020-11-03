@@ -120,6 +120,7 @@ export class ModelDeployer {
 			classifications.push(classification)
 			dataCounts.push(centroidInfo.dataCount)
 			if (Array.isArray(centroidInfo.centroid)) {
+				centroids.push(convertData(centroidInfo.centroid, this.web3, toFloat))
 				if (numDimensions === null) {
 					numDimensions = centroidInfo.centroid.length
 				} else {
@@ -127,7 +128,6 @@ export class ModelDeployer {
 						throw new Error(`Found a centroid with ${centroidInfo.centroid.length} dimensions. Expected: ${numDimensions}.`)
 					}
 				}
-				centroids.push(convertData(centroidInfo.centroid, this.web3, toFloat))
 			} else {
 				const sparseCentroid: number[][] = []
 				for (let [featureIndexKey, value] of Object.entries(centroidInfo.centroid)) {

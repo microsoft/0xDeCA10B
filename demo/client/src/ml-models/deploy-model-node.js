@@ -59,7 +59,7 @@ async function deploySparsePerceptron(model, web3, toFloat) {
     if (typeof model.sparseWeights === 'object') {
         for (let [featureIndexKey, weight] of Object.entries(model.sparseWeights)) {
             const featureIndex = parseInt(featureIndexKey, 10)
-            sparseWeights.push([web3.utils.toHex(featureIndex), convertNum(weight, web3, toFloat)])
+            sparseWeights.push([featureIndex, convertNum(weight, web3, toFloat)])
         }
     }
 
