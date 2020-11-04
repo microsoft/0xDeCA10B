@@ -86,11 +86,14 @@ yarn blockchain
 ```
 
 Do once:
-* Add http://localhost:7545 to MetaMask.
-* Copy the first private key output.
+* In your browser, you will need to add http://localhost:7545 as a custom RPC, you can use the MetaMask extension for this.
+  * If required, you can set the chain ID to: 0xDeCA10B
+* Copy the first private key output by the above command.
 * Use that private key to create a new account in MetaMask.
 
-## Server (Optional)
+## Server
+This is used by default in development mode but not in production.
+
 If you want to store meta-data in a local database file instead of just within the browser, then start the server in one terminal.
 This step allows you to see models listed when you open the dashboard for the first time.
 

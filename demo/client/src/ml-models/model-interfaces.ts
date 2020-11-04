@@ -143,7 +143,7 @@ export class SparsePerceptronModel extends Model {
 		type: 'sparse perceptron',
 		public classifications: string[],
 		public weights: number[],
-		public sparseWeights: { [featureIndex: string]: number },
+		public sparseWeights: { [featureIndex: string]: number } | null,
 		public intercept: number,
 		public learningRate?: number,
 		public featureIndices?: number[],

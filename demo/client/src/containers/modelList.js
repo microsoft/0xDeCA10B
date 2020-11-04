@@ -16,7 +16,7 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import { withSnackbar } from 'notistack';
 import PropTypes from 'prop-types';
 import React from 'react';
-import update from 'react-addons-update';
+import update from 'immutability-helper';
 import { checkStorages } from '../components/storageSelector';
 import { getNetworkType } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
@@ -237,7 +237,7 @@ class ModelList extends React.Component {
               {serviceStorageEnabled ? " or if they are listed on a centralized database" : ""}.
             </Typography>
             <Typography component="p">
-              You can deploy your own model <Link href='/addModel'>here</Link> or use an already deployed model by filling in the information <Link href='/addDeployedModel'>here</Link>.
+              You can deploy your own model <Link href='/add'>here</Link> or use an already deployed model by filling in the information <Link href='/addDeployedModel'>here</Link>.
             </Typography>
           </div>
           {this.state.loadingModels ?

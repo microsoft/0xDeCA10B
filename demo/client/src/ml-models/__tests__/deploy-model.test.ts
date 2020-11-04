@@ -2,35 +2,32 @@ import assert from 'assert'
 import Web3 from 'web3'
 import { convertNum } from '../../float-utils'
 import { ModelDeployer } from '../deploy-model'
-import { CentroidInfo, DensePerceptronModel, NaiveBayesModel, NearestCentroidModel, SparseCentroidInfo, SparseNearestCentroidModel, SparsePerceptronModel } from '../model-interfaces'
+import { CentroidInfo, DensePerceptronModel, Model, NaiveBayesModel, NearestCentroidModel, SparseCentroidInfo, SparseNearestCentroidModel, SparsePerceptronModel } from '../model-interfaces'
 
 declare const web3: Web3
 
 function assertEqualNumbers(actual: any, expected: any, message?: string | Error): void {
+	if (message) {
+		message += "\n"
+	}
 	if (web3.utils.isBN(actual)) {
 		if (web3.utils.isBN(expected)) {
-			if (message === undefined) {
-				message = `actual: ${actual} (${typeof actual})\nexpected: ${expected} (${typeof expected})`
-			}
+			message = `${message || ""}actual: ${actual} (BN)\nexpected: ${expected} (BN)`
 			return assert(actual.eq(expected), message)
 		} else {
 			const expectedBN = web3.utils.toBN(expected)
-			if (message === undefined) {
-				message = `actual: ${actual} (${typeof actual})\nexpected: ${expected} (${typeof expected}) => BN: ${expectedBN}`
-			}
+			message = `${message || ""}actual: ${actual} (BN)\nexpected: ${expected} (${typeof expected}) => BN: ${expectedBN}`
 			return assert(actual.eq(expectedBN), message)
 		}
 	} else if (web3.utils.isBN(expected)) {
 		const actualBN = web3.utils.toBN(actual)
-		if (message === undefined) {
-			message = `actual: ${actual} (${typeof actual}) => BN: ${actualBN}\nexpected: ${expected} (${typeof expected})`
-		}
+		message = `${message || ""}actual: ${actual} (${typeof actual}) => BN: ${actualBN}\nexpected: ${expected} (BN)`
 		return assert(actualBN.eq(expected), message)
 	} else {
 		if (typeof actual === 'string') {
 			actual = parseInt(actual)
 		}
-		return assert.equal(actual, expected, message)
+		return assert.strictEqual(actual, expected, message)
 	}
 }
 
@@ -68,8 +65,9 @@ describe("ModelDeployer", () => {
 				account,
 			})
 
+		assertEqualNumbers(await m.methods.smoothingFactor().call(), convertNum(model.smoothingFactor, web3), "smoothingFactor")
 		for (let i = 0; i < model.classifications.length; ++i) {
-			assert.equal(await m.methods.classifications(i).call(), model.classifications[i])
+			assert.strictEqual(await m.methods.classifications(i).call(), model.classifications[i])
 			assertEqualNumbers(await m.methods.getNumSamples(i).call(), model.classCounts[i])
 			for (const [featureIndex, count] of model.featureCounts[i]) {
 				assertEqualNumbers(await m.methods.getFeatureCount(i, featureIndex).call(), count)
@@ -83,8 +81,8 @@ describe("ModelDeployer", () => {
 		const model = new NearestCentroidModel(
 			'dense nearest centroid classifier',
 			{
-				"AA": new CentroidInfo([-1, -1], 2),
-				"BB": new CentroidInfo([+1, +1], 2),
+				"AA": new CentroidInfo([-1, -1, 4.88, -8.44, -3], 2),
+				"BB": new CentroidInfo([+1, -1.8, 9.07, 3, -3], 2),
 			}
 		)
 		const m = await deployer.deployModel(
@@ -96,20 +94,21 @@ describe("ModelDeployer", () => {
 		let i = -1
 		for (let [classification, centroidInfo] of Object.entries(model.centroids)) {
 			++i
-			assert.equal(await m.methods.classifications(i).call(), classification)
+			assert.strictEqual(await m.methods.classifications(i).call(), classification)
 			assertEqualNumbers(await m.methods.getNumSamples(i).call(), centroidInfo.dataCount)
 			for (let j = 0; j < centroidInfo.centroid.length; ++j) {
-				assertEqualNumbers(await m.methods.getCentroidValue(i, j).call(), convertNum(centroidInfo.centroid[j], web3))
+				const actual = await m.methods.getCentroidValue(i, j).call()
+				assertEqualNumbers(actual, convertNum(centroidInfo.centroid[j], web3), `centroid value for class ${i}[${j}]`)
 			}
 		}
 	})
 
 	it("should deploy sparse Nearest Centroid", async () => {
-		// Values should all be positive since the representation is sparse.
 		const model = new SparseNearestCentroidModel(
 			'sparse nearest centroid classifier',
 			{
-				"AA": new SparseCentroidInfo({ '0': 0, '1': +1, '7': 1 }, 2),
+				// Values should all be positive since the representation is sparse.
+				"AA": new SparseCentroidInfo({ '0': 0, '1': +1, '7': 1.5, }, 2),
 				"BB": new SparseCentroidInfo({ '0': +1, '1': 0, '5': 0.5 }, 2),
 			}
 		)
@@ -122,17 +121,50 @@ describe("ModelDeployer", () => {
 		let i = -1
 		for (let [classification, centroidInfo] of Object.entries(model.centroids)) {
 			++i
-			assert.equal(await m.methods.classifications(i).call(), classification)
+			assert.strictEqual(await m.methods.classifications(i).call(), classification)
 			assertEqualNumbers(await m.methods.getNumSamples(i).call(), centroidInfo.dataCount)
 			for (const [featureIndex, value] of Object.entries(centroidInfo.centroid)) {
-				assertEqualNumbers(await m.methods.getCentroidValue(i, featureIndex).call(), convertNum(value, web3))
+				assertEqualNumbers(await m.methods.getCentroidValue(i, featureIndex).call(), convertNum(value, web3), `centroid value for class ${i}[${featureIndex}]`)
+			}
+		}
+	})
+
+	it("should deploy sparse Nearest Centroid with array centroids", async () => {
+		// This shouldn't happen but it could if a model gets exported from the Python code
+		// and the type is set correctly.
+		const model = {
+			type: 'sparse nearest centroid classifier',
+			centroids: {
+				"AA": {
+					centroid: [0, 1, 1.5, 2, 87.88],
+					dataCount: 2
+				},
+				"BB": {
+					centroid: [1, 0, 0.5, 3.787],
+					dataCount: 2
+				},
+			}
+		}
+		const m = await deployer.deployModel(
+			model as Model,
+			{
+				account,
+			})
+
+		let i = -1
+		for (let [classification, centroidInfo] of Object.entries(model.centroids)) {
+			++i
+			assert.strictEqual(await m.methods.classifications(i).call(), classification)
+			assertEqualNumbers(await m.methods.getNumSamples(i).call(), centroidInfo.dataCount)
+			for (const [featureIndex, value] of Object.entries(centroidInfo.centroid)) {
+				assertEqualNumbers(await m.methods.getCentroidValue(i, featureIndex).call(), convertNum(value, web3), `centroid value for class ${i}[${featureIndex}]`)
 			}
 		}
 	})
 
 	it("should deploy dense Perceptron", async () => {
 		const classifications = ["A", "B"]
-		const weights = [1, -1]
+		const weights = [1, -1, 2.33, -8.66]
 		const intercept = 0
 		const m = await deployer.deployModel(
 			new DensePerceptronModel(
@@ -146,7 +178,7 @@ describe("ModelDeployer", () => {
 			})
 
 		for (let i = 0; i < classifications.length; ++i) {
-			assert.equal(await m.methods.classifications(i).call(), classifications[i])
+			assert.strictEqual(await m.methods.classifications(i).call(), classifications[i])
 		}
 		for (let i = 0; i < weights.length; ++i) {
 			assertEqualNumbers(await m.methods.weights(i).call(), convertNum(weights[i], web3))
@@ -156,8 +188,8 @@ describe("ModelDeployer", () => {
 
 	it("should deploy sparse Perceptron", async () => {
 		const classifications = ["AA", "BB"]
-		const weights = [2, -2]
-		const sparseWeights = { '4': 7, '11': 8, }
+		const weights = [2, -2, 2.44, -7.55, 0.537080412, 2000, -23232.32]
+		const sparseWeights = null
 		const intercept = 3
 		const m = await deployer.deployModel(
 			new SparsePerceptronModel(
@@ -171,14 +203,52 @@ describe("ModelDeployer", () => {
 			})
 
 		for (let i = 0; i < classifications.length; ++i) {
-			assert.equal(await m.methods.classifications(i).call(), classifications[i])
+			assert.strictEqual(await m.methods.classifications(i).call(), classifications[i])
 		}
+
+		assertEqualNumbers(await m.methods.intercept().call(), convertNum(intercept, web3), "intercept:")
+
+		assertEqualNumbers(await m.methods.learningRate().call(), convertNum(0.5, web3), "learningRate:")
+
 		for (let i = 0; i < weights.length; ++i) {
-			assertEqualNumbers(await m.methods.weights(i).call(), convertNum(weights[i], web3))
+			assertEqualNumbers(await m.methods.weights(i).call(), convertNum(weights[i], web3), `weight ${i}:`)
 		}
-		for (const [featureIndex, weight] of Object.entries(sparseWeights)) {
-			assertEqualNumbers(await m.methods.weights(featureIndex).call(), convertNum(weight, web3))
+	})
+
+	it("should deploy sparse Perceptron - with sparseWeights", async () => {
+		const classifications = ["AA", "BB"]
+		const weights = [2, -2, 2.44, -7.55, -3]
+		const sparseWeights = { '8': 7, '11': 8, '12': 8.21, '15': -4.55, '17': -3 }
+		const intercept = 3
+		const m = await deployer.deployModel(
+			new SparsePerceptronModel(
+				'sparse perceptron',
+				classifications,
+				weights, sparseWeights,
+				intercept,
+			),
+			{
+				account,
+				// notify: console.debug,
+			})
+
+		for (let i = 0; i < classifications.length; ++i) {
+			assert.strictEqual(await m.methods.classifications(i).call(), classifications[i])
 		}
-		assertEqualNumbers(await m.methods.intercept().call(), convertNum(intercept, web3))
+
+		assertEqualNumbers(await m.methods.intercept().call(), convertNum(intercept, web3), "intercept:")
+
+		assertEqualNumbers(await m.methods.learningRate().call(), convertNum(0.5, web3), "learningRate:")
+
+		for (let i = 0; i < weights.length; ++i) {
+			const actual = await m.methods.weights(i).call()
+			assertEqualNumbers(actual, convertNum(weights[i], web3), `weight ${i}:`)
+		}
+
+		for (const [featureIndexKey, weight] of Object.entries(sparseWeights)) {
+			const featureIndex = parseInt(featureIndexKey, 10)
+			const actual = await m.methods.weights(featureIndex).call()
+			assertEqualNumbers(actual, convertNum(weight, web3), `sparseWeight ${featureIndex}:`)
+		}
 	})
 })

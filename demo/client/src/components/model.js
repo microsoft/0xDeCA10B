@@ -1097,8 +1097,8 @@ class Model extends React.Component {
             }
           })
           .on('error', err => {
-            console.error(err);
-            this.notify("Error adding data. See the console for details.", { variant: 'error' })
+            console.error(err)
+            this.notify("Error adding data. See the console for details. If you were using a private network, it might help to \"Reset Account\" in your browser or extension (MetaMask).", { variant: 'error' })
           });
       });
   }

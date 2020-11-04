@@ -1,10 +1,10 @@
 {
   "name": "decai-demo",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "license": "MIT",
   "private": true,
   "scripts": {
-    "blockchain": "mkdir --parents blockchain_db && ganache-cli --db blockchain_db --networkId 5782 --gasLimit 9000000 --gasPrice 1 --host 0.0.0.0 --port ${PORT:-7545} --mnemonic \"net pistol fun vibrant sausage vintage general silk weekend street brave rubber\"",
+    "blockchain": "mkdir --parents blockchain_db && ganache-cli --db blockchain_db --networkId 5782 --chainId 0xDeCA10B --gasLimit 9000000 --gasPrice 1 --host 0.0.0.0 --port ${PORT:-7545} --mnemonic \"net pistol fun vibrant sausage vintage general silk weekend street brave rubber\"",
     "clean": "rm -rf blockchain_db db.sqlite client/src/contracts/compiled/*.json",
     "client": "cd client && yarn start",
     "prod-client": "cd client && yarn start-prod",
@@ -16,7 +16,7 @@
   "dependencies": {
     "body-parser": "^1.18.3",
     "express": "^4.16.4",
-    "ganache-cli": "6.5.1",
+    "ganache-cli": "^6.12.1",
     "sql.js": "^1.1.0"
   },
   "devDependencies": {

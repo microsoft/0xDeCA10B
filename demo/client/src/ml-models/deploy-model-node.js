@@ -17,6 +17,12 @@ async function deployDensePerceptron(model, web3, toFloat) {
     const weights = convertData(model.weights, web3, toFloat)
     const intercept = convertNum(model.intercept || model.bias, web3, toFloat)
     const learningRate = convertNum(model.learningRate || 1, web3, toFloat)
+
+    // TODO Handle feature indices.
+    if (model.featureIndices) {
+        throw new Error("featureIndices are not supported yet.")
+    }
+
     console.log(`  Deploying Dense Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights.`)
     const classifierContract = await DensePerceptron.new(classifications, weights.slice(0, weightChunkSize), intercept, learningRate)
     gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
@@ -43,6 +49,20 @@ async function deploySparsePerceptron(model, web3, toFloat) {
     const weights = convertData(model.weights, web3, toFloat)
     const intercept = convertNum(model.intercept || model.bias, web3, toFloat)
     const learningRate = convertNum(model.learningRate || 1, web3, toFloat)
+    const sparseWeights = []
+
+    // TODO Handle feature indices.
+    if (model.featureIndices) {
+        throw new Error("featureIndices are not supported yet.")
+    }
+
+    if (typeof model.sparseWeights === 'object') {
+        for (let [featureIndexKey, weight] of Object.entries(model.sparseWeights)) {
+            const featureIndex = parseInt(featureIndexKey, 10)
+            sparseWeights.push([featureIndex, convertNum(weight, web3, toFloat)])
+        }
+    }
+
     console.log(`  Deploying Sparse Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights...`)
     const classifierContract = await SparsePerceptron.new(classifications, weights.slice(0, weightChunkSize), intercept, learningRate)
     let gasUsed = (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
@@ -52,6 +72,14 @@ async function deploySparsePerceptron(model, web3, toFloat) {
     for (let i = weightChunkSize; i < weights.length; i += weightChunkSize) {
         const r = await classifierContract.initializeWeights(i, weights.slice(i, i + weightChunkSize))
         console.debug(`    Added classifier weights [${i}, ${Math.min(i + weightChunkSize, weights.length)}) gasUsed: ${r.receipt.gasUsed}`)
+        gasUsed += r.receipt.gasUsed
+    }
+
+    const sparseWeightsChunkSize = Math.round(weightChunkSize / 2)
+    for (let i = 0; i < sparseWeights.length; i += sparseWeightsChunkSize) {
+        const r = await classifierContract.initializeSparseWeights(
+            sparseWeights.slice(i, i + sparseWeightsChunkSize))
+        console.debug(`    Added sparse classifier weights [${i},${Math.min(i + sparseWeightsChunkSize, sparseWeights.length)}) out of ${sparseWeights.length}. gasUsed: ${r.receipt.gasUsed}`)
         gasUsed += r.receipt.gasUsed
     }
 
@@ -205,11 +233,14 @@ async function deployNaiveBayes(model, web3, toFloat) {
 }
 
 /**
+ * @param model A model object or a string for the path to a JSON model file.
  * @returns The contract for the model, an instance of `Classifier64`
  * along with the the total amount of gas used to deploy the model.
  */
-exports.deployModel = async function (path, web3, toFloat = _toFloat) {
-    const model = JSON.parse(fs.readFileSync(path, 'utf8'))
+exports.deployModel = async function (model, web3, toFloat = _toFloat) {
+    if (typeof model === 'string') {
+        model = JSON.parse(fs.readFileSync(model, 'utf8'))
+    }
     switch (model.type) {
         case 'dense perceptron':
             return deployDensePerceptron(model, web3, toFloat)
