@@ -2,7 +2,7 @@ import assert from 'assert'
 import Web3 from 'web3'
 import { convertNum } from '../../float-utils'
 import { ModelDeployer } from '../deploy-model'
-import { CentroidInfo, DensePerceptronModel, NaiveBayesModel, NearestCentroidModel, SparseCentroidInfo, SparseNearestCentroidModel, SparsePerceptronModel } from '../model-interfaces'
+import { CentroidInfo, DensePerceptronModel, Model, NaiveBayesModel, NearestCentroidModel, SparseCentroidInfo, SparseNearestCentroidModel, SparsePerceptronModel } from '../model-interfaces'
 
 declare const web3: Web3
 
@@ -114,6 +114,39 @@ describe("ModelDeployer", () => {
 		)
 		const m = await deployer.deployModel(
 			model,
+			{
+				account,
+			})
+
+		let i = -1
+		for (let [classification, centroidInfo] of Object.entries(model.centroids)) {
+			++i
+			assert.strictEqual(await m.methods.classifications(i).call(), classification)
+			assertEqualNumbers(await m.methods.getNumSamples(i).call(), centroidInfo.dataCount)
+			for (const [featureIndex, value] of Object.entries(centroidInfo.centroid)) {
+				assertEqualNumbers(await m.methods.getCentroidValue(i, featureIndex).call(), convertNum(value, web3), `centroid value for class ${i}[${featureIndex}]`)
+			}
+		}
+	})
+
+	it("should deploy sparse Nearest Centroid with array centroids", async () => {
+		// This shouldn't happen but it could if a model gets exported from the Python code
+		// and the type is set correctly.
+		const model = {
+			type: 'sparse nearest centroid classifier',
+			centroids: {
+				"AA": {
+					centroid: [0, 1, 1.5, 2, 87.88],
+					dataCount: 2
+				},
+				"BB": {
+					centroid: [1, 0, 0.5, 3.787],
+					dataCount: 2
+				},
+			}
+		}
+		const m = await deployer.deployModel(
+			model as Model,
 			{
 				account,
 			})

@@ -237,7 +237,7 @@ class ModelList extends React.Component {
               {serviceStorageEnabled ? " or if they are listed on a centralized database" : ""}.
             </Typography>
             <Typography component="p">
-              You can deploy your own model <Link href='/addModel'>here</Link> or use an already deployed model by filling in the information <Link href='/addDeployedModel'>here</Link>.
+              You can deploy your own model <Link href='/add'>here</Link> or use an already deployed model by filling in the information <Link href='/addDeployedModel'>here</Link>.
             </Typography>
           </div>
           {this.state.loadingModels ?

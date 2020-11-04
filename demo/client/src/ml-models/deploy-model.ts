@@ -119,7 +119,7 @@ export class ModelDeployer {
 		for (let [classification, centroidInfo] of Object.entries(model.centroids)) {
 			classifications.push(classification)
 			dataCounts.push(centroidInfo.dataCount)
-			if (Array.isArray(centroidInfo.centroid)) {
+			if (Array.isArray(centroidInfo.centroid) && model.type !== 'sparse nearest centroid classifier') {
 				centroids.push(convertData(centroidInfo.centroid, this.web3, toFloat))
 				if (numDimensions === null) {
 					numDimensions = centroidInfo.centroid.length
@@ -130,6 +130,7 @@ export class ModelDeployer {
 				}
 			} else {
 				const sparseCentroid: number[][] = []
+				// `centroidInfo.centroid` could be an array or dict.
 				for (let [featureIndexKey, value] of Object.entries(centroidInfo.centroid)) {
 					const featureIndex = parseInt(featureIndexKey)
 					sparseCentroid.push([featureIndex, convertNum(value, this.web3, toFloat)])
@@ -179,14 +180,14 @@ export class ModelDeployer {
 			// Extend each class.
 			for (let classification = 0; classification < classifications.length; ++classification) {
 				for (let j = initialChunkSize; j < centroids[classification].length; j += chunkSize) {
-					const notification = notify(`Please accept the prompt to upload the values for dimensions [${j},${j + chunkSize}) for the "${classifications[classification]}" class`)
+					const notification = notify(`Please accept the prompt to upload the values for dimensions [${j},${Math.min(j + chunkSize, centroids[classification].length)}) for the "${classifications[classification]}" class`)
 					// Not parallel since order matters.
 					await newContractInstance.methods.extendCentroid(
 						centroids[classification].slice(j, j + chunkSize), classification).send().on('transactionHash', () => {
 							dismissNotification(notification)
 						}).on('error', (err: any) => {
 							dismissNotification(notification)
-							notify(`Error setting feature indices for [${j},${j + chunkSize}) for the "${classifications[classification]}" class`, { variant: 'error' })
+							notify(`Error setting feature indices for [${j},${Math.min(j + chunkSize, centroids[classification].length)}) for the "${classifications[classification]}" class`, { variant: 'error' })
 							throw err
 						})
 				}
@@ -223,7 +224,7 @@ export class ModelDeployer {
 			weightsArray = convertData(model.weights, this.web3, toFloat)
 		}
 		const intercept = convertNum(model.intercept, this.web3, toFloat)
-		const learningRate = convertNum(model.learningRate || defaultLearningRate, this.web3, toFloat) 
+		const learningRate = convertNum(model.learningRate || defaultLearningRate, this.web3, toFloat)
 
 		if (featureIndices !== undefined && featureIndices.length !== weightsArray.length + sparseWeights.length) {
 			return Promise.reject("The number of features must match the number of weights.")
