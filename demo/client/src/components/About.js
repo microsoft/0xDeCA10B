@@ -3,6 +3,7 @@ import Link from '@material-ui/core/Link';
 import { withStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import React from 'react';
+import { version } from '../../package.json';
 
 const styles = theme => ({
   sectionTitle: {
@@ -64,6 +65,12 @@ class About extends React.Component {
       <Typography className={classes.section} component="p">
         The source code for this project can be found <Link href='https://aka.ms/0xDeCA10B' target="_blank">here</Link>.
         We also have a <Link href='https://aka.ms/0xDeCA10B-blog1' target="_blank">blog post</Link> explaining the purpose of this project.
+      </Typography>
+      <Typography className={classes.sectionTitle} variant="h5" component="h5">
+        <Link color='inherit' href='#learn-more' name='learn-more'>Version</Link>
+      </Typography>
+      <Typography className={classes.section} component="p">
+        {version}
       </Typography>
     </Container >);
   }

@@ -13,7 +13,8 @@ It is not ready to be deployed for production yet.
 # Setup
 This section explains how to set up locally on Linux/WSL, alternatively, you can skip ahead and use a Docker image.
 
-The following steps are made for Linux and require `npm`. They do work in WSL.
+The following steps are made for Linux/WSL and require `npm` with `node` version 10.
+Other later versions of node might work too but some node-gyp issues occurred with version 14.
 
 Run
 ```bash
@@ -72,7 +73,7 @@ If you have problems running the setup steps related to node-gyp, then you might
 ## Update
 To update dependencies after already setting up:
 ```bash
-yarn global add yarn && yarn install && (cd client && yarn install)
+./setup.sh
 ```
 
 # Deploy
