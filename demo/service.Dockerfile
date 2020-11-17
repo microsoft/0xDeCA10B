@@ -24,4 +24,4 @@ RUN NODE_ENV='production' bash setup.sh
 
 RUN cd client && npx --no-install truffle compile
 
-RUN cd client && yarn build
+RUN cd client && GENERATE_SOURCEMAP=false yarn build

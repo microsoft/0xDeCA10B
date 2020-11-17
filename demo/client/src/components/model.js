@@ -284,11 +284,11 @@ class Model extends React.Component {
     }
 
     {
-      const validator = new OnlineSafetyValidator(this.web3)
+      const validator = new OnlineSafetyValidator()
       const networkType = await getNetworkType()
       this.setState({
         checkedContentRestriction: true,
-        restrictContent: !validator.isPermitted(networkType, contractAddress)
+        restrictContent: this.state.metaDataLocation !== 'local' && !validator.isPermitted(networkType, contractAddress)
       })
     }
 
@@ -1133,7 +1133,7 @@ class Model extends React.Component {
                 <Typography component="p">
                   {"⚠ The details for this model cannot be shown because it has not been verified. \
                   Text and images from other users will not be shown in order to ensure online safety. "}
-                  <Link href='/about' target='_blank'>Learn more</Link>.
+                  <Link href='/about#online-safety' target='_blank'>Learn more</Link>.
                 </Typography>
                 : <Tooltip placement="top-start" title="The description for this model">
                   <Typography component="p">

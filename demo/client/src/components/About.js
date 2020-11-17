@@ -1,9 +1,10 @@
-import Container from '@material-ui/core/Container';
-import Link from '@material-ui/core/Link';
-import { withStyles } from '@material-ui/core/styles';
-import Typography from '@material-ui/core/Typography';
-import React from 'react';
-import { version } from '../../package.json';
+import Container from '@material-ui/core/Container'
+import Link from '@material-ui/core/Link'
+import { withStyles } from '@material-ui/core/styles'
+import Typography from '@material-ui/core/Typography'
+import React from 'react'
+import { version } from '../../package.json'
+import { OnlineSafetyValidator } from '../safety/validator'
 
 const styles = theme => ({
   sectionTitle: {
@@ -13,9 +14,11 @@ const styles = theme => ({
     textAlign: 'left',
     marginTop: theme.spacing(1),
   },
-});
+})
 
 class About extends React.Component {
+  validator = new OnlineSafetyValidator()
+
   render() {
     const name = "Sharing Updatable Models"
     const { classes } = this.props
@@ -47,6 +50,15 @@ class About extends React.Component {
         For greater privacy and control over data, a private and permissioned chain can be used by trusted collaborators.
         An overview of the project can be found in our <Link href='https://aka.ms/0xDeCA10B-blog1' target="_blank">blog post</Link>.
       </Typography>
+      {this.validator.isEnabled() && <div>
+        <Typography className={classes.sectionTitle} variant="h5" component="h5">
+          <Link color='inherit' href='#online-safety' name='online-safety'>Online Safety</Link>
+        </Typography>
+        <Typography className={classes.section} component="p">
+          Special precautions have been enabled to stop unvalidated text from showing in this platform.
+          You may notice that model names, descriptions, data, classifications, and other text fields will be hidden.
+      </Typography>
+      </div>}
       <Typography className={classes.sectionTitle} variant="h5" component="h5">
         <Link color='inherit' href='#code-of-conduct' name='code-of-conduct'>Code of Conduct</Link>
       </Typography>
@@ -72,8 +84,8 @@ class About extends React.Component {
       <Typography className={classes.section} component="p">
         {version}
       </Typography>
-    </Container >);
+    </Container >)
   }
 }
 
-export default withStyles(styles)(About);
+export default withStyles(styles)(About)
