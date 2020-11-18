@@ -185,7 +185,7 @@ class Model extends React.Component {
       // Default to restricting content for safety.
       checkedContentRestriction: false,
       restrictContent: true,
-      restrictModelMetaData: metaDataLocation !== 'local',
+      restrictModelMetaData: true,
 
       numDataRowsLimit: 20,
 
@@ -292,7 +292,7 @@ class Model extends React.Component {
       const validator = new OnlineSafetyValidator()
       const networkType = await getNetworkType()
       const restrictContent = !validator.isPermitted(networkType, contractAddress)
-      const restrictModelMetaData = this.state.metaDataLocation !== 'local' && restrictContent
+      const restrictModelMetaData = !this.state.foundModelInStorage && restrictContent
       this.setState({
         checkedContentRestriction: true,
         restrictContent,
@@ -1127,9 +1127,9 @@ class Model extends React.Component {
             "In order to ensure online safety, the name for the model will not be shown"
             : "The name set for the model"}>
             <Typography variant="h5" component="h3">
-              {this.state.checkedContentRestriction ?
-                this.state.contractInfo.name && restrictModelMetaData ?
-                  "(hidden)"
+              {this.state.contractInfo.name && this.state.checkedContentRestriction?
+                restrictModelMetaData ?
+                  "(name hidden)"
                   : this.state.contractInfo.name
                 : "(loading)"
               }

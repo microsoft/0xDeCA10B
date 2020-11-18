@@ -55,8 +55,8 @@ class About extends React.Component {
           <Link color='inherit' href='#online-safety' name='online-safety'>Online Safety</Link>
         </Typography>
         <Typography className={classes.section} component="p">
-          Special precautions have been enabled to stop unvalidated text from showing in this platform.
-          You may notice that model names, descriptions, data, classifications, or other text fields might be hidden.
+          Special precautions have been enabled to stop unvalidated text and images from showing in this platform.
+          You may notice that model names, descriptions, data, classifications, or other values might be hidden.
       </Typography>
       </div>}
       <Typography className={classes.sectionTitle} variant="h5" component="h5">

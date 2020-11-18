@@ -169,7 +169,7 @@ class AddDeployedModel extends React.Component {
 
       this.contractLoader.load(address).then(async collabTrainer => {
         const restrictContent = !this.validator.isPermitted(await getNetworkType(), address)
-        // Be careful that the name and description do not leak if content is restricted.
+        // Be careful that the name and description are not shown if content is restricted.
         const name = restrictContent ? undefined : await collabTrainer.name()
         const description = restrictContent ? undefined : await collabTrainer.description()
         const encoder = await collabTrainer.encoder()
