@@ -56,7 +56,7 @@ class About extends React.Component {
         </Typography>
         <Typography className={classes.section} component="p">
           Special precautions have been enabled to stop unvalidated text from showing in this platform.
-          You may notice that model names, descriptions, data, classifications, and other text fields will be hidden.
+          You may notice that model names, descriptions, data, classifications, or other text fields might be hidden.
       </Typography>
       </div>}
       <Typography className={classes.sectionTitle} variant="h5" component="h5">
