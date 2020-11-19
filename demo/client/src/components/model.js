@@ -151,12 +151,14 @@ class Model extends React.Component {
       }
     }
 
+    const metaDataLocation = currentUrlParams.get('metaDataLocation') || 'local'
+
     this.state = {
       readyForInput: false,
       contractInfo: {},
       foundModelInStorage: undefined,
       modelId: currentUrlParams.get('modelId'),
-      metaDataLocation: currentUrlParams.get('metaDataLocation') || 'local',
+      metaDataLocation,
       contractAddress: currentUrlParams.get('address'),
       classifications: [],
       tab: tabIndex,
@@ -179,9 +181,12 @@ class Model extends React.Component {
       totalGoodDataCount: undefined,
       storageType,
       permittedStorageTypes: [],
+
       // Default to restricting content for safety.
       checkedContentRestriction: false,
       restrictContent: true,
+      restrictModelMetaData: true,
+
       numDataRowsLimit: 20,
 
       refundFromBlock: 0,
@@ -284,11 +289,14 @@ class Model extends React.Component {
     }
 
     {
-      const validator = new OnlineSafetyValidator(this.web3)
+      const validator = new OnlineSafetyValidator()
       const networkType = await getNetworkType()
+      const restrictContent = !validator.isPermitted(networkType, contractAddress)
+      const restrictModelMetaData = !this.state.foundModelInStorage && restrictContent
       this.setState({
         checkedContentRestriction: true,
-        restrictContent: !validator.isPermitted(networkType, contractAddress)
+        restrictContent,
+        restrictModelMetaData,
       })
     }
 
@@ -1111,16 +1119,17 @@ class Model extends React.Component {
   }
 
   render() {
+    const { restrictContent, restrictModelMetaData } = this.state
     return (
       <Container>
         <Paper className={this.classes.root} elevation={1}>
-          <Tooltip placement="top-start" title={this.state.restrictContent === true ?
+          <Tooltip placement="top-start" title={restrictModelMetaData === true ?
             "In order to ensure online safety, the name for the model will not be shown"
             : "The name set for the model"}>
             <Typography variant="h5" component="h3">
-              {this.state.checkedContentRestriction ?
-                this.state.contractInfo.name && this.state.restrictContent ?
-                  "(hidden)"
+              {this.state.contractInfo.name && this.state.checkedContentRestriction?
+                restrictModelMetaData ?
+                  "(name hidden)"
                   : this.state.contractInfo.name
                 : "(loading)"
               }
@@ -1128,20 +1137,19 @@ class Model extends React.Component {
           </Tooltip>
 
           <div className={this.classes.descriptionDiv}>
-            {this.state.checkedContentRestriction ?
-              this.state.contractInfo.description && this.state.restrictContent ?
-                <Typography component="p">
-                  {"⚠ The details for this model cannot be shown because it has not been verified. \
-                  Text and images from other users will not be shown in order to ensure online safety. "}
-                  <Link href='/about' target='_blank'>Learn more</Link>.
-                </Typography>
-                : <Tooltip placement="top-start" title="The description for this model">
+            {this.state.checkedContentRestriction && <div>
+              {this.state.contractInfo.description && !restrictModelMetaData &&
+                <Tooltip placement="top-start" title="The description for this model">
                   <Typography component="p">
                     {this.state.contractInfo.description}
                   </Typography>
-                </Tooltip>
-              : <Typography component="p">{"(loading)"}</Typography>
-            }
+                </Tooltip>}
+            </div>}
+            {(restrictContent || restrictModelMetaData) && <Typography component="p">
+              {"⚠ Some information about to this model or data given to it cannot be shown because it has not been validated as being safe to display. \
+                For example, data such as text and images from other users might not be shown in order to ensure online safety. "}
+              <Link href='/about#online-safety' target='_blank'>Learn more</Link>.
+            </Typography>}
           </div>
 
           <div>
@@ -1481,8 +1489,8 @@ class Model extends React.Component {
           <Typography component="p">
             Provide data as JSON.
             {normalizeEncoderName(this.state.encoder) === normalizeEncoderName(Encoder.Mult1E9Round) &&
-              `You can give decimal numbers since the numbers will be multiplied by ${this.state.toFloat} and rounded so that they can be processed by the smart contract.`}
-            The data will be converted to hexadecimal before being given to the smart contract.
+              ` You can give decimal numbers since the numbers will be multiplied by ${this.state.toFloat} and rounded so that they can be processed by the smart contract.`}
+            {" "}The data will be converted to hexadecimal before being given to the smart contract.
           </Typography>
           <TextField inputProps={{ 'aria-label': "Input to the model" }} name="input" label="Input" onChange={this.handleInputChange} margin="normal"
             value={this.state.input}

@@ -1,6 +1,6 @@
 {
   "name": "decai-demo-client",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "license": "MIT",
   "private": true,
   "proxy": "http://localhost:5387/",
@@ -39,7 +39,7 @@
   "scripts": {
     "start": "bash deploy_client.sh",
     "start-prod": "bash start_prod.sh",
-    "build": "react-scripts build",
+    "build": "react-scripts build --expose-gc --max_old_space_size=8192",
     "test": "bash test.sh",
     "train-vpa-classifier": "node src/ml-models/vpa/train-classifier.js",
     "train-hot-dog-classifier": "node src/ml-models/hot_dog-not/train-classifier.js",

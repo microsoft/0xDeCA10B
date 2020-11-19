@@ -117,7 +117,7 @@ class ModelList extends React.Component {
         const newModels = response.models
         const { remaining } = response
         newModels.forEach(model => {
-          model.restrictContent = !this.validator.isPermitted(networkType, model.address)
+          model.restrictContent = storageType !== 'local' && !this.validator.isPermitted(networkType, model.address)
           model.metaDataLocation = storageType
         })
         if (newModels.length > 0) {

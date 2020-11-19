@@ -169,15 +169,12 @@ class AddDeployedModel extends React.Component {
 
       this.contractLoader.load(address).then(async collabTrainer => {
         const restrictContent = !this.validator.isPermitted(await getNetworkType(), address)
-        if (!restrictContent) {
-          const name = await collabTrainer.name()
-          const description = await collabTrainer.description()
-          const encoder = await collabTrainer.encoder()
-          this.setState({
-            name, description, encoder,
-          })
-        }
+        // Be careful that the name and description are not shown if content is restricted.
+        const name = restrictContent ? undefined : await collabTrainer.name()
+        const description = restrictContent ? undefined : await collabTrainer.description()
+        const encoder = await collabTrainer.encoder()
         this.setState({
+          name, description, encoder,
           restrictContent,
           isValid: true,
           validatingContract: false,
@@ -261,7 +258,7 @@ class AddDeployedModel extends React.Component {
               <TextField
                 name="name"
                 label="Model name"
-                value={this.state.name || ""}
+                value={this.state.restrictContent ? "" : this.state.name || ""}
                 inputProps={{ 'aria-label': "Model name" }}
                 margin="normal"
                 onChange={this.handleInputChange}
@@ -270,7 +267,7 @@ class AddDeployedModel extends React.Component {
               <TextField
                 name="description"
                 label="Model description"
-                value={this.state.description || ""}
+                value={this.state.restrictContent ? "" : this.state.description || ""}
                 inputProps={{ 'aria-label': "Model description" }}
                 margin="normal"
                 onChange={this.handleInputChange}
