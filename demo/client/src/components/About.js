@@ -84,7 +84,7 @@ class About extends React.Component {
         We also have a <Link href='https://aka.ms/0xDeCA10B-blog1' target="_blank">blog post</Link> explaining the purpose of this project.
       </Typography>
       <Typography className={classes.sectionTitle} variant="h5" component="h5">
-        <Link color='inherit' href='#learn-more' name='learn-more'>Version</Link>
+        <Link color='inherit' href='#version' name='version'>Version</Link>
       </Typography>
       <Typography className={classes.section} component="p">
         {version}
