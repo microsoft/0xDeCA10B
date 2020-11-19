@@ -1,4 +1,5 @@
-# Decentralized & Collaborative AI on Blockchain
+# Sharing Updatable Models (SUM) on Blockchain
+(formerly Decentralized & Collaborative AI on Blockchain)
 
 <img src="./assets/logo.gif?raw=true" width=500 alt="Animated logo for the project. A neural network appears on a block. The nodes change color until finally converging. The block slides away on a chain and the process restarts on the next blank block.">
 
@@ -7,7 +8,7 @@
 |:-:|:-:|:-:|
 | [![Build Status](https://dev.azure.com/maluuba/0xDeCA10B/_apis/build/status/demo-CI?branchName=master)](https://dev.azure.com/maluuba/0xDeCA10B/_build/latest?definitionId=116&branchName=master) | [![Build Status](https://dev.azure.com/maluuba/0xDeCA10B/_apis/build/status/simulation-CI?branchName=master)](https://dev.azure.com/maluuba/0xDeCA10B/_build/latest?definitionId=117&branchName=master) | [![Build Status](https://dev.azure.com/maluuba/0xDeCA10B/_apis/build/status/Security%20Checks?branchName=master)](https://dev.azure.com/maluuba/0xDeCA10B/_build/latest?definitionId=118&branchName=master) |
 
-**Decentralized & Collaborative AI on Blockchain** is a framework to host and train publicly available machine learning models.
+**Sharing Updatable Models (SUM) on Blockchain** is a framework to host and train publicly available machine learning models.
 Ideally, using a model to get a prediction is free.
 Adding data consists of validation by three steps as described below.
 
