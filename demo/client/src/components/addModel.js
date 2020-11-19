@@ -29,6 +29,7 @@ import { getNetworkType, getWeb3 } from '../getWeb3';
 import { ModelDeployer } from '../ml-models/deploy-model';
 import { ModelInformation } from '../storage/data-store';
 import { DataStoreFactory } from '../storage/data-store-factory';
+import { BASE_TITLE } from '../title';
 import { checkStorages, renderStorageSelector } from './storageSelector';
 
 const styles = theme => ({
@@ -127,6 +128,7 @@ class AddModel extends React.Component {
   }
 
   componentDidMount = async () => {
+    document.title = `Add Model - ${BASE_TITLE}`
     checkStorages(this.storages).then(permittedStorageTypes => {
       permittedStorageTypes.push('none')
       this.setState({ permittedStorageTypes })

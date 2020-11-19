@@ -39,6 +39,7 @@ import { getNetworkType, getWeb3 } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
 import { OriginalData } from '../storage/data-store';
 import { DataStoreFactory } from '../storage/data-store-factory';
+import { BASE_TITLE } from '../title';
 import { checkStorages, renderStorageSelector } from './storageSelector';
 
 moment.relativeTimeThreshold('ss', 4);
@@ -224,6 +225,7 @@ class Model extends React.Component {
   }
 
   componentDidMount = async () => {
+    document.title = `Model - ${BASE_TITLE}`
     checkStorages(this.storages).then(permittedStorageTypes => {
       permittedStorageTypes.push('none')
       this.setState({ permittedStorageTypes })
@@ -288,17 +290,15 @@ class Model extends React.Component {
       // Use the contract address from the database and assume it conforms to the known interfaces.
     }
 
-    {
-      const validator = new OnlineSafetyValidator()
-      const networkType = await getNetworkType()
-      const restrictContent = !validator.isPermitted(networkType, contractAddress)
-      const restrictModelMetaData = !this.state.foundModelInStorage && restrictContent
-      this.setState({
-        checkedContentRestriction: true,
-        restrictContent,
-        restrictModelMetaData,
-      })
-    }
+    const validator = new OnlineSafetyValidator()
+    const networkType = await getNetworkType()
+    const restrictContent = !validator.isPermitted(networkType, contractAddress)
+    const restrictModelMetaData = !this.state.foundModelInStorage && restrictContent
+    this.setState({
+      checkedContentRestriction: true,
+      restrictContent,
+      restrictModelMetaData,
+    })
 
     // Using one `.then` and then awaiting helps with making the page more responsive.
     new ContractLoader(this.web3).load(contractAddress).then(async collabTrainer => {
@@ -310,6 +310,10 @@ class Model extends React.Component {
       if (this.state.foundModelInStorage === false) {
         contractInfo.name = await collabTrainer.name()
         contractInfo.description = await collabTrainer.description()
+      }
+
+      if (!restrictModelMetaData && contractInfo.name) {
+        document.title = `${contractInfo.name} - ${BASE_TITLE}`
       }
 
       this.setState({
@@ -329,7 +333,7 @@ class Model extends React.Component {
         })
       })
     }).catch(err => {
-      this.notify(`There was an error loading the contract at ${contractAddress}. Try using a different network.`, { variant: 'error', persist: true, })
+      this.notify(`There was an error loading the contract at ${contractAddress}. Try using a different network.`, { variant: 'error', autoHideDuration: 15 * 1000, })
       console.error(err)
     })
   }
@@ -1127,7 +1131,7 @@ class Model extends React.Component {
             "In order to ensure online safety, the name for the model will not be shown"
             : "The name set for the model"}>
             <Typography variant="h5" component="h3">
-              {this.state.contractInfo.name && this.state.checkedContentRestriction?
+              {this.state.contractInfo.name && this.state.checkedContentRestriction ?
                 restrictModelMetaData ?
                   "(name hidden)"
                   : this.state.contractInfo.name

@@ -21,6 +21,7 @@ import { checkStorages } from '../components/storageSelector';
 import { getNetworkType } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
 import { DataStoreFactory } from '../storage/data-store-factory';
+import { BASE_TITLE } from '../title';
 
 const styles = theme => ({
   descriptionDiv: {
@@ -76,6 +77,7 @@ class ModelList extends React.Component {
   }
 
   componentDidMount = async () => {
+    document.title = BASE_TITLE
     checkStorages(this.storages).then(permittedStorageTypes => {
       permittedStorageTypes = permittedStorageTypes.filter(storageType => storageType !== undefined)
       this.setState({ permittedStorageTypes }, () => {
