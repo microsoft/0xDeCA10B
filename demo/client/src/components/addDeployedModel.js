@@ -21,6 +21,7 @@ import { getNetworkType, getWeb3 } from '../getWeb3';
 import { OnlineSafetyValidator } from '../safety/validator';
 import { ModelInformation } from '../storage/data-store';
 import { DataStoreFactory } from '../storage/data-store-factory';
+import { BASE_TITLE } from '../title';
 import { checkStorages, renderStorageSelector } from './storageSelector';
 
 const styles = theme => ({
@@ -91,6 +92,7 @@ class AddDeployedModel extends React.Component {
   }
 
   componentDidMount = async () => {
+    document.title = `Add Deployed Model - ${BASE_TITLE}`
     checkStorages(this.storages).then(permittedStorageTypes => {
       this.setState({ permittedStorageTypes })
     })

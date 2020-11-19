@@ -5,6 +5,7 @@ import Typography from '@material-ui/core/Typography'
 import React from 'react'
 import { version } from '../../package.json'
 import { OnlineSafetyValidator } from '../safety/validator'
+import { BASE_TITLE } from '../title'
 
 const styles = theme => ({
   sectionTitle: {
@@ -18,6 +19,10 @@ const styles = theme => ({
 
 class About extends React.Component {
   validator = new OnlineSafetyValidator()
+
+  componentDidMount() {
+    document.title = `About - ${BASE_TITLE}`
+  }
 
   render() {
     const name = "Sharing Updatable Models"
