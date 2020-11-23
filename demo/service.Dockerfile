@@ -10,7 +10,10 @@
 
 FROM appsvc/node:10-lts
 
-LABEL maintainer="Justin D. Harris (justin.harris@microsoft.com)"
+LABEL maintainer="Justin D. Harris (Microsoft)"
+LABEL org.label-schema.vendor="Microsoft"
+LABEL org.label-schema.url="https://github.com/microsoft/0xDeCA10B/tree/master/demo"
+LABEL org.label-schema.vcs-url="https://github.com/microsoft/0xDeCA10B/tree/master/demo"
 
 # Already set:
 # WORKDIR /home/site/wwwroot
@@ -25,3 +28,5 @@ RUN NODE_ENV='production' bash setup.sh
 RUN cd client && npx --no-install truffle compile
 
 RUN cd client && GENERATE_SOURCEMAP=false yarn build
+
+ENV ORYX_AI_INSTRUMENTATION_KEY=
