@@ -292,8 +292,10 @@ class Model extends React.Component {
 
     const validator = new OnlineSafetyValidator()
     const networkType = await getNetworkType()
-    const restrictContent = !validator.isPermitted(networkType, contractAddress)
-    const restrictModelMetaData = !this.state.foundModelInStorage && restrictContent
+    // Any external content (original data) could be malicious, so hide it when online safety is enabled.
+    const restrictContent = validator.isEnabled()
+    // Any model meta data in the storage in okay to display (maybe should be limited to local storage).
+    const restrictModelMetaData = !this.state.foundModelInStorage && !validator.isPermitted(networkType, contractAddress)
     this.setState({
       checkedContentRestriction: true,
       restrictContent,
