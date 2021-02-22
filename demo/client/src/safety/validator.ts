@@ -14,10 +14,18 @@ export class OnlineSafetyValidator {
 		return `${networkType}-${address.toLocaleLowerCase('en')}`
 	}
 
+	/**
+	 * @returns `true` if validation is enabled, `false` otherwise.
+	 */
 	isEnabled(): boolean {
 		return this.enabled
 	}
 
+	/**
+	 * @param networkType The type of the network.
+	 * @param address The address of the smart contract.
+	 * @returns `true` is the information in the smart contract (name, description, classifications, etc.) can be displayed.
+	 */
 	isPermitted(networkType: string, address: string): boolean {
 		if (!this.enabled) {
 			// Everything is permitted.

@@ -186,7 +186,7 @@ class Model extends React.Component {
       // Default to restricting content for safety.
       checkedContentRestriction: false,
       restrictContent: true,
-      restrictModelMetaData: true,
+      restrictModelInfo: true,
 
       numDataRowsLimit: 20,
 
@@ -294,12 +294,12 @@ class Model extends React.Component {
     const networkType = await getNetworkType()
     // Any external content (original data) could be malicious, so hide it when online safety is enabled.
     const restrictContent = validator.isEnabled()
-    // Any model meta data in the storage in okay to display (maybe should be limited to local storage).
-    const restrictModelMetaData = !this.state.foundModelInStorage && !validator.isPermitted(networkType, contractAddress)
+    // Any model meta data in the local storage should be okay to display.
+    const restrictModelInfo = this.state.metaDataLocation !== 'local' && !this.state.foundModelInStorage && !validator.isPermitted(networkType, contractAddress)
     this.setState({
       checkedContentRestriction: true,
       restrictContent,
-      restrictModelMetaData,
+      restrictModelInfo,
     })
 
     // Using one `.then` and then awaiting helps with making the page more responsive.
@@ -314,7 +314,7 @@ class Model extends React.Component {
         contractInfo.description = await collabTrainer.description()
       }
 
-      if (!restrictModelMetaData && contractInfo.name) {
+      if (!restrictModelInfo && contractInfo.name) {
         document.title = `${contractInfo.name} - ${BASE_TITLE}`
       }
 
@@ -554,6 +554,7 @@ class Model extends React.Component {
       return "(original data was not found)"
     }
     if (isForTaking && this.state.restrictContent) {
+      // Hide data from other people because it could be offensive.
       return "(hidden)"
     }
     if (this.state.inputType === INPUT_TYPE_IMAGE) {
@@ -1125,16 +1126,16 @@ class Model extends React.Component {
   }
 
   render() {
-    const { restrictContent, restrictModelMetaData } = this.state
+    const { restrictContent, restrictModelInfo } = this.state
     return (
       <Container>
         <Paper className={this.classes.root} elevation={1}>
-          <Tooltip placement="top-start" title={restrictModelMetaData === true ?
+          <Tooltip placement="top-start" title={restrictModelInfo === true ?
             "In order to ensure online safety, the name for the model will not be shown"
             : "The name set for the model"}>
             <Typography variant="h5" component="h3">
               {this.state.contractInfo.name && this.state.checkedContentRestriction ?
-                restrictModelMetaData ?
+                restrictModelInfo ?
                   "(name hidden)"
                   : this.state.contractInfo.name
                 : "(loading)"
@@ -1144,14 +1145,14 @@ class Model extends React.Component {
 
           <div className={this.classes.descriptionDiv}>
             {this.state.checkedContentRestriction && <div>
-              {this.state.contractInfo.description && !restrictModelMetaData &&
+              {this.state.contractInfo.description && !restrictModelInfo &&
                 <Tooltip placement="top-start" title="The description for this model">
                   <Typography component="p">
                     {this.state.contractInfo.description}
                   </Typography>
                 </Tooltip>}
             </div>}
-            {(restrictContent || restrictModelMetaData) && <Typography component="p">
+            {(restrictContent || restrictModelInfo) && <Typography component="p">
               {"⚠ Some information about to this model or data given to it cannot be shown because it has not been validated as being safe to display. \
                 For example, data such as text and images from other users might not be shown in order to ensure online safety. "}
               <Link href='/about#online-safety' target='_blank'>Learn more</Link>.
@@ -1259,7 +1260,7 @@ class Model extends React.Component {
                     <br />
                     <Tooltip placement="top-start" title={this.state.encodedPredictionData || ""}>
                       <Typography component="p">
-                        <b>Prediction: {this.state.restrictContent ? this.state.prediction : this.getClassificationName(this.state.prediction)}</b>
+                        <b>Prediction: {this.state.restrictModelInfo ? this.state.prediction : this.getClassificationName(this.state.prediction)}</b>
                       </Typography>
                     </Tooltip>
                     <GridLoader loading={this.state.predicting}
@@ -1289,7 +1290,7 @@ class Model extends React.Component {
                     >
                       {this.state.classifications.map((classificationName, classIndex) => {
                         return <MenuItem key={`class-select-${classIndex}`} value={classIndex}>
-                          {this.state.restrictContent ? classIndex : classificationName}
+                          {this.state.restrictModelInfo ? classIndex : classificationName}
                         </MenuItem>;
                       })}
                     </Select>
@@ -1351,7 +1352,7 @@ class Model extends React.Component {
                             {d.originalData}{d.dataMatches === false && " ⚠ The actual data doesn't match this!"}
                           </TableCell>
                         </Tooltip>
-                        <TableCell>{this.state.restrictContent ? d.classification : this.getClassificationName(d.classification)}</TableCell>
+                        <TableCell>{this.state.restrictModelInfo ? d.classification : this.getClassificationName(d.classification)}</TableCell>
                         <Tooltip title={`${d.initialDeposit} wei`}>
                           <TableCell >
                             {this.getHumanReadableEth(d.initialDeposit)}
@@ -1370,7 +1371,7 @@ class Model extends React.Component {
                                 : d.alreadyClaimed ?
                                   "Already refunded or completely claimed."
                                   : d.classification !== d.prediction ?
-                                    `Classification does not match. Got "${this.state.restrictContent ? d.prediction : this.getClassificationName(d.prediction)}".`
+                                    `Classification does not match. Got "${this.state.restrictModelInfo ? d.prediction : this.getClassificationName(d.prediction)}".`
                                     : "Can't happen?"
                               : `Wait ${moment.duration(d.time + this.state.refundWaitTimeS - (new Date().getTime() / 1000), 's').humanize()} to refund.`
                           }
@@ -1430,7 +1431,7 @@ class Model extends React.Component {
                             {d.originalData}{d.dataMatches === false && " ⚠ The actual data doesn't match this!"}
                           </TableCell>
                         </Tooltip>
-                        <TableCell>{this.state.restrictContent ? d.classification : this.getClassificationName(d.classification)}</TableCell>
+                        <TableCell>{this.state.restrictModelInfo ? d.classification : this.getClassificationName(d.classification)}</TableCell>
                         <Tooltip title={`${d.initialDeposit} wei`}>
                           <TableCell>
                             {this.getHumanReadableEth(d.initialDeposit)}
@@ -1449,7 +1450,7 @@ class Model extends React.Component {
                                   : d.alreadyClaimed ?
                                     "Already refunded or completely claimed."
                                     : d.classification === d.prediction ?
-                                      `Classification must be wrong for you to claim this. Got "${this.state.restrictContent ? d.prediction : this.getClassificationName(d.prediction)}".`
+                                      `Classification must be wrong for you to claim this. Got "${this.state.restrictModelInfo ? d.prediction : this.getClassificationName(d.prediction)}".`
                                       : "Can't happen?"
                               : `Wait ${moment.duration(d.time + this.state.refundWaitTimeS - (new Date().getTime() / 1000), 's').humanize()} to claim.`
                           }

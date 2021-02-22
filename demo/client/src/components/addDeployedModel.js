@@ -138,7 +138,7 @@ class AddDeployedModel extends React.Component {
 
   validateContract() {
     this.setState({
-      restrictContent: undefined,
+      restrictModelInfo: undefined,
       isValid: undefined,
       validatingContract: true,
       invalidReason: undefined,
@@ -170,14 +170,14 @@ class AddDeployedModel extends React.Component {
       }
 
       this.contractLoader.load(address).then(async collabTrainer => {
-        const restrictContent = !this.validator.isPermitted(await getNetworkType(), address)
+        const restrictModelInfo = !this.validator.isPermitted(await getNetworkType(), address)
         // Be careful that the name and description are not shown if content is restricted.
-        const name = restrictContent ? undefined : await collabTrainer.name()
-        const description = restrictContent ? undefined : await collabTrainer.description()
+        const name = restrictModelInfo ? undefined : await collabTrainer.name()
+        const description = restrictModelInfo ? undefined : await collabTrainer.description()
         const encoder = await collabTrainer.encoder()
         this.setState({
           name, description, encoder,
-          restrictContent,
+          restrictModelInfo,
           isValid: true,
           validatingContract: false,
         })
@@ -260,7 +260,7 @@ class AddDeployedModel extends React.Component {
               <TextField
                 name="name"
                 label="Model name"
-                value={this.state.restrictContent ? "" : this.state.name || ""}
+                value={this.state.restrictModelInfo ? "" : this.state.name || ""}
                 inputProps={{ 'aria-label': "Model name" }}
                 margin="normal"
                 onChange={this.handleInputChange}
@@ -269,7 +269,7 @@ class AddDeployedModel extends React.Component {
               <TextField
                 name="description"
                 label="Model description"
-                value={this.state.restrictContent ? "" : this.state.description || ""}
+                value={this.state.restrictModelInfo ? "" : this.state.description || ""}
                 inputProps={{ 'aria-label': "Model description" }}
                 margin="normal"
                 onChange={this.handleInputChange}
@@ -287,7 +287,7 @@ class AddDeployedModel extends React.Component {
                 <MenuItem value={"Classifier64"}>Classifier64</MenuItem>
               </Select>
 
-              {(this.state.restrictContent === false || Object.values(Encoder).indexOf(this.state.encoder) > -1) && <div>
+              {(this.state.restrictModelInfo === false || Object.values(Encoder).indexOf(this.state.encoder) > -1) && <div>
                 <Typography variant="h6" component="h6">
                   Encoder: {this.state.encoder}
                 </Typography>
