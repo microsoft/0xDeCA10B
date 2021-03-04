@@ -23,7 +23,7 @@ class FitnessDataLoader(DataLoader):
     """
     Load sport activity data from Endomondo.
 
-    Requires endomondoHR_proper.json from https://sites.google.com/eng.ucsd.edu/fitrec-project/home
+    Requires endomondoHR_proper.json from https://sites.google.com/eng.ucsd.edu/fitrec-project/home to be stored at simulation/training_data/fitness/endomondoHR_proper.json.
 
     From the first 5K samples, the 2842 'bike' and 2158 'run' occurrences.
 
@@ -64,7 +64,7 @@ class FitnessDataLoader(DataLoader):
 
         data = []
         labels = []
-        data_folder_path = Path(__file__, '../../../../training_data/fitness')
+        data_folder_path = Path(__file__, '../../../../training_data/fitness').resolve()
         user_id_to_set = {}
         sport_to_label = {
             'bike': 0,
@@ -77,7 +77,9 @@ class FitnessDataLoader(DataLoader):
             max_num_samples = 10_000
         classes = '|'.join(self._classes)
         classes_pattern = re.compile(f' \'sport\': \'({classes})\', ')
-        with open(data_folder_path / 'endomondoHR_proper.json') as f, \
+        data_path = data_folder_path / 'endomondoHR_proper.json'
+        assert data_path.exists(), f"See the documentation for how to download the dataset. It must be stored at {data_path}"
+        with open(data_path) as f, \
                 tqdm(f,
                      desc="Loading data",
                      unit_scale=True, mininterval=2, unit=" samples",
@@ -139,10 +141,10 @@ class FitnessDataLoader(DataLoader):
             thresholds[i] = np.median([d['rawValues'][i] for d in data[:train_size]])
 
         def _featurize(datum):
-            rawValues = np.array(thresholds < datum['rawValues'], dtype=np.int8)
-            gender_one_hot = np.zeros(len(gender_to_index), dtype=np.int)
+            raw_values = np.array(thresholds < datum['rawValues'], dtype=np.int8)
+            gender_one_hot = np.zeros(len(gender_to_index), dtype=np.int8)
             gender_one_hot[datum['gender']] = 1
-            return np.concatenate([rawValues, gender_one_hot])
+            return np.concatenate([raw_values, gender_one_hot])
 
         if self._logger.isEnabledFor(logging.DEBUG):
             self._logger.debug("Labels: %s", Counter(labels))

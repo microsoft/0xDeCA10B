@@ -119,7 +119,7 @@ class ModelList extends React.Component {
         const newModels = response.models
         const { remaining } = response
         newModels.forEach(model => {
-          model.restrictContent = storageType !== 'local' && !this.validator.isPermitted(networkType, model.address)
+          model.restrictInfo = storageType !== 'local' && !this.validator.isPermitted(networkType, model.address)
           model.metaDataLocation = storageType
         })
         if (newModels.length > 0) {
@@ -207,7 +207,7 @@ class ModelList extends React.Component {
       const allowRemoval = m.metaDataLocation === 'local'
       return (
         <ListItem key={`model-${index}`} button component="a" href={url}>
-          <ListItemText primary={m.restrictContent ? `(name hidden) Address: ${m.address}` : m.name}
+          <ListItemText primary={m.restrictInfo ? `(name hidden) Address: ${m.address}` : m.name}
             secondary={m.accuracy && `Accuracy: ${(m.accuracy * 100).toFixed(1)}%`} />
           {/* For accessibility: keep secondary action even when disabled so that the <li> is used. */}
           <ListItemSecondaryAction>
