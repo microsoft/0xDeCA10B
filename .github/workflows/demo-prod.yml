@@ -1,0 +1,19 @@
+name: Deploy
+
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Docker Build & Push
+        run: |
+          cd demo
+          docker login --username 0xDeCA10Bcontainerreg 0xdeca10bcontainerreg.azurecr.io --password ${{ secrets._0XDECA10B_AZURECR_PASSWORD }}
+          docker build --file service.Dockerfile -t 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-demo-prod .          
+          docker push 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-demo-prod:latest
+          
