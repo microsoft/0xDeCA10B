@@ -30,7 +30,7 @@ Despite the malicious efforts, the accuracy can still be maintained and the hone
 This section explains how to set up locally, alternatively, you can skip ahead and use a Docker image.
 Run:
 ```bash
-conda create --channel conda-forge --name decai-simulation 'python>=3.7' bokeh ipython mkl mkl-service numpy pandas phantomjs scikit-learn scipy six tensorflow
+conda create --channel conda-forge --name decai-simulation 'python>=3.7' bokeh ipython mkl mkl-service numpy pandas phantomjs scikit-learn scipy tensorflow
 conda activate decai-simulation
 pip install -e .
 ```
@@ -97,6 +97,7 @@ pip install -e .[test]
 ```
 
 Run tests:
+(it might take a few minutes the first time because some spaCy models might need to be downloaded)
 ```bash
 pytest
 ```
