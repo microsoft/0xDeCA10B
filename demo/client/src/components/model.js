@@ -1260,7 +1260,7 @@ class Model extends React.Component {
                     <br />
                     <Tooltip placement="top-start" title={this.state.encodedPredictionData || ""}>
                       <Typography component="p">
-                        <b>Prediction: {this.state.restrictModelInfo ? this.state.prediction : this.getClassificationName(this.state.prediction)}</b>
+                        <b>Prediction: {this.state.restrictContent ? this.state.prediction : this.getClassificationName(this.state.prediction)}</b>
                       </Typography>
                     </Tooltip>
                     <GridLoader loading={this.state.predicting}
@@ -1290,7 +1290,7 @@ class Model extends React.Component {
                     >
                       {this.state.classifications.map((classificationName, classIndex) => {
                         return <MenuItem key={`class-select-${classIndex}`} value={classIndex}>
-                          {this.state.restrictModelInfo ? classIndex : classificationName}
+                          {this.state.restrictContent ? classIndex : classificationName}
                         </MenuItem>;
                       })}
                     </Select>
@@ -1352,7 +1352,7 @@ class Model extends React.Component {
                             {d.originalData}{d.dataMatches === false && " ⚠ The actual data doesn't match this!"}
                           </TableCell>
                         </Tooltip>
-                        <TableCell>{this.state.restrictModelInfo ? d.classification : this.getClassificationName(d.classification)}</TableCell>
+                        <TableCell>{this.state.restrictContent ? d.classification : this.getClassificationName(d.classification)}</TableCell>
                         <Tooltip title={`${d.initialDeposit} wei`}>
                           <TableCell >
                             {this.getHumanReadableEth(d.initialDeposit)}
@@ -1371,7 +1371,7 @@ class Model extends React.Component {
                                 : d.alreadyClaimed ?
                                   "Already refunded or completely claimed."
                                   : d.classification !== d.prediction ?
-                                    `Classification does not match. Got "${this.state.restrictModelInfo ? d.prediction : this.getClassificationName(d.prediction)}".`
+                                    `Classification does not match. Got "${this.state.restrictContent ? d.prediction : this.getClassificationName(d.prediction)}".`
                                     : "Can't happen?"
                               : `Wait ${moment.duration(d.time + this.state.refundWaitTimeS - (new Date().getTime() / 1000), 's').humanize()} to refund.`
                           }
@@ -1431,7 +1431,7 @@ class Model extends React.Component {
                             {d.originalData}{d.dataMatches === false && " ⚠ The actual data doesn't match this!"}
                           </TableCell>
                         </Tooltip>
-                        <TableCell>{this.state.restrictModelInfo ? d.classification : this.getClassificationName(d.classification)}</TableCell>
+                        <TableCell>{this.state.restrictContent ? d.classification : this.getClassificationName(d.classification)}</TableCell>
                         <Tooltip title={`${d.initialDeposit} wei`}>
                           <TableCell>
                             {this.getHumanReadableEth(d.initialDeposit)}
@@ -1450,7 +1450,7 @@ class Model extends React.Component {
                                   : d.alreadyClaimed ?
                                     "Already refunded or completely claimed."
                                     : d.classification === d.prediction ?
-                                      `Classification must be wrong for you to claim this. Got "${this.state.restrictModelInfo ? d.prediction : this.getClassificationName(d.prediction)}".`
+                                      `Classification must be wrong for you to claim this. Got "${this.state.restrictContent ? d.prediction : this.getClassificationName(d.prediction)}".`
                                       : "Can't happen?"
                               : `Wait ${moment.duration(d.time + this.state.refundWaitTimeS - (new Date().getTime() / 1000), 's').humanize()} to claim.`
                           }
