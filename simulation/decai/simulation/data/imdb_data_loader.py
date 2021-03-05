@@ -13,7 +13,7 @@ from .data_loader import DataLoader
 @dataclass
 class ImdbDataLoader(DataLoader):
     """
-    Load data from IMDB reviews.
+    Load data for sentiment analysis of IMDB reviews.
 
     https://keras.io/datasets/#imdb-movie-reviews-sentiment-classification
     """
