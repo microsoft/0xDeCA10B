@@ -9,5 +9,6 @@ class TestMurmurHash3(unittest.TestCase):
         cls.h = MurmurHash3()
 
     def test_classifications(self):
-        assert type(self.h.hash("hey")) == int
-        assert self.h.hash("hey") == 318325784
+        h = self.h.hash("hey")
+        assert type(h) == int
+        assert h == 318325784
