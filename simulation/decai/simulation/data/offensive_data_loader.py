@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import requests
 from injector import ClassAssistedBuilder, Module, inject, provider, singleton
+from scipy.sparse import csr_matrix
 from sklearn.utils import shuffle
 from spacy.lang.en import English
 from tqdm import tqdm
@@ -36,8 +37,6 @@ class OffensiveDataLoader(DataLoader):
     def load_data(self, train_size: int = None, test_size: int = None) -> (Tuple, Tuple):
         self._logger.info("Loading data.")
 
-        data = []
-        labels = []
         data_folder_path = Path(__file__,
                                 '../../../../training_data/offensive/hate-speech-and-offensive-language').resolve()
 
@@ -61,12 +60,17 @@ class OffensiveDataLoader(DataLoader):
         nlp = English()
         tokenize = nlp.tokenizer
 
-        def _featurize(text: str) -> np.array:
+        def _featurize(text: str) -> Tuple[int]:
             tokens = tokenize(text)
-            result = np.array(tuple(self._token_hash.hash(token.text) for token in tokens),
-                              dtype=np.uint32)
+            result = tuple(self._token_hash.hash(token.text) for token in tokens)
             return result
 
+        # Make a sparse matrix following the term-document example from:
+        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.html
+        data = []
+        indptr = [0]
+        indices = []
+        labels = []
         class_index = list(loaded_data.columns).index('class')
         assert class_index > -1
         for row in tqdm(loaded_data.itertuples(),
@@ -74,10 +78,13 @@ class OffensiveDataLoader(DataLoader):
                         unit_scale=True, mininterval=2, unit=" samples",
                         total=max_num_samples or len(loaded_data),
                         ):
-            if max_num_samples is not None and len(data) >= max_num_samples:
+            if max_num_samples is not None and len(indptr) > max_num_samples:
                 break
             text = row.tweet
-            data.append(_featurize(text))
+            token_indices = _featurize(text)
+            indices.extend(token_indices)
+            data.extend((1 for _ in range(len(token_indices))))
+            indptr.append(len(indices))
             is_offensive = row[class_index] != 2
             labels.append(1 if is_offensive else 0)
 
@@ -89,10 +96,11 @@ class OffensiveDataLoader(DataLoader):
         if test_size is None:
             test_size = len(data) - train_size
 
+        data = csr_matrix((data, indices, indptr), dtype=np.uint32)
         data, labels = shuffle(data, labels, random_state=self._seed)
-        x_train = np.array(data[:train_size])
+        x_train = data[:train_size]
         y_train = np.array(labels[:train_size])
-        x_test = np.array(data[-test_size:])
+        x_test = data[-test_size:]
         y_test = np.array(labels[-test_size:])
 
         self._logger.info("Done loading data.")

@@ -28,3 +28,6 @@ class TestOffensiveDataLoader(unittest.TestCase):
         assert x_train.shape[0] == y_train.shape[0]
         assert x_test.shape[0] == 10
         assert x_test.shape[0] == y_test.shape[0]
+
+        assert y_train.shape == (20,)
+        assert y_test.shape == (10,)
