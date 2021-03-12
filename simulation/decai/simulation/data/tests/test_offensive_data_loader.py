@@ -23,11 +23,13 @@ class TestOffensiveDataLoader(unittest.TestCase):
         cls.data_loader = cast(OffensiveDataLoader, cls.data_loader)
 
     def test_load(self):
-        (x_train, y_train), (x_test, y_test) = self.data_loader.load_data(train_size=20, test_size=10)
-        assert x_train.shape[0] == 20
+        train_size = 20
+        test_size = 10
+        (x_train, y_train), (x_test, y_test) = self.data_loader.load_data(train_size=train_size, test_size=test_size)
+        assert x_train.shape[0] == train_size
         assert x_train.shape[0] == y_train.shape[0]
-        assert x_test.shape[0] == 10
+        assert x_test.shape[0] == test_size
         assert x_test.shape[0] == y_test.shape[0]
 
-        assert y_train.shape == (20,)
-        assert y_test.shape == (10,)
+        assert y_train.shape == (train_size,)
+        assert y_test.shape == (test_size,)
