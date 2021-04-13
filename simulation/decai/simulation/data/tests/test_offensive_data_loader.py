@@ -33,3 +33,10 @@ class TestOffensiveDataLoader(unittest.TestCase):
 
         assert y_train.shape == (train_size,)
         assert y_test.shape == (test_size,)
+
+        # Test some values to help avoid regressions.
+        x_train_values_x, x_train_values_y = x_train[0].nonzero()
+        assert x_train_values_x[0] == 0
+        assert x_train_values_y[0] == 495653056
+        assert x_train_values_x[1] == 0
+        assert x_train_values_y[1] == 443377497

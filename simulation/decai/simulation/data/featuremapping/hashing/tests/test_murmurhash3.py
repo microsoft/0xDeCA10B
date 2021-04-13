@@ -12,3 +12,5 @@ class TestMurmurHash3(unittest.TestCase):
         h = self.h.hash("hey")
         assert type(h) == int
         assert h == 318325784
+
+        assert self.h.hash("blockchain") == 3905957473
