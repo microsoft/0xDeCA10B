@@ -1,16 +1,17 @@
+import itertools
 import os
 from dataclasses import dataclass, field
 from logging import Logger
 from pathlib import Path
-from typing import List, Tuple
+from typing import Callable, Iterable, List, Tuple
 
 import numpy as np
 import pandas as pd
 import requests
 from injector import ClassAssistedBuilder, Module, inject, provider, singleton
 from scipy.sparse import csr_matrix
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.utils import shuffle
-from spacy.lang.en import English
 from tqdm import tqdm
 
 from .data_loader import DataLoader
@@ -25,11 +26,11 @@ class OffensiveDataLoader(DataLoader):
     """
 
     _logger: Logger
-    _seed: int = field(default=2, init=False)
-    _train_split: float = field(default=0.7, init=False)
     _token_hash: TokenHash
 
-    # TODO Add options to limit to only the most important (use TF-IDF) tokens.
+    _seed: int = field(default=2, init=False)
+    _train_split: float = field(default=0.7, init=False)
+    _max_features: int = field(default=1000, init=False)
 
     def classifications(self) -> List[str]:
         return ["OFFENSIVE", "SAFE"]
@@ -57,19 +58,7 @@ class OffensiveDataLoader(DataLoader):
 
         loaded_data = pd.read_csv(data_path)
 
-        nlp = English()
-        tokenize = nlp.tokenizer
-
-        def _featurize(text: str) -> Tuple[int]:
-            tokens = tokenize(text)
-            result = tuple(self._token_hash.hash(token.text) for token in tokens)
-            return result
-
-        # Make a sparse matrix following the term-document example from:
-        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.html
         data = []
-        indptr = [0]
-        indices = []
         labels = []
         class_index = list(loaded_data.columns).index('class')
         assert class_index > -1
@@ -78,13 +67,11 @@ class OffensiveDataLoader(DataLoader):
                         unit_scale=True, mininterval=2, unit=" samples",
                         total=max_num_samples or len(loaded_data),
                         ):
-            if max_num_samples is not None and len(indptr) > max_num_samples:
+            if max_num_samples is not None and len(data) > max_num_samples:
                 break
             text = row.tweet
-            token_indices = _featurize(text)
-            indices.extend(token_indices)
-            data.extend((1 for _ in range(len(token_indices))))
-            indptr.append(len(indices))
+            # TODO Some extra pre-processing like HTML conversion might be needed.
+            data.append(text)
             is_offensive = row[class_index] != 2
             labels.append(1 if is_offensive else 0)
 
@@ -96,15 +83,51 @@ class OffensiveDataLoader(DataLoader):
         if test_size is None:
             test_size = len(data) - train_size
 
-        data = csr_matrix((data, indices, indptr), dtype=np.uint32)
         data, labels = shuffle(data, labels, random_state=self._seed)
-        x_train = data[:train_size]
+        x_train = itertools.islice(data, train_size)
+
+        # Compute the top features.
+        t = TfidfVectorizer(max_features=self._max_features, norm=None)
+        t.fit(tqdm(x_train,
+                   desc="Computing top token features",
+                   total=train_size,
+                   unit_scale=True, mininterval=2,
+                   unit=" texts"
+                   ))
+        top_tokens = t.get_feature_names()
+        self._logger.debug("Some top feature names: %s", top_tokens[:10])
+
+        tokenize = t.build_analyzer()
+        feature_tokens = set(t.get_feature_names())
+
+        def _featurize(text: str) -> Tuple[int]:
+            tokens = [token for token in tokenize(text) if token in feature_tokens]
+            result = tuple(self._token_hash.hash(token) for token in tokens)
+            return result
+
+        x_train = itertools.islice(data, train_size)
+        x_train = self.build_sparse_matrix(_featurize, x_train)
         y_train = np.array(labels[:train_size])
-        x_test = data[-test_size:]
+
+        x_test = itertools.islice(data, len(data) - test_size, len(data))
+        x_test = self.build_sparse_matrix(_featurize, x_test)
         y_test = np.array(labels[-test_size:])
 
         self._logger.info("Done loading data.")
         return (x_train, y_train), (x_test, y_test)
+
+    def build_sparse_matrix(self, featurize: Callable[[str], Tuple[int]], raw_data: Iterable[str]):
+        # Make a sparse matrix following the term-document example from:
+        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.html
+        data = []
+        indptr = [0]
+        indices = []
+        for text in raw_data:
+            token_indices = featurize(text)
+            indices.extend(token_indices)
+            data.extend((1 for _ in range(len(token_indices))))
+            indptr.append(len(indices))
+        return csr_matrix((data, indices, indptr), dtype=np.uint32)
 
 
 @dataclass
