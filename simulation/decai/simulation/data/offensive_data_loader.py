@@ -29,9 +29,10 @@ class OffensiveDataLoader(DataLoader):
     _logger: Logger
     _token_hash: TokenHash
 
+    max_num_features: Optional[int] = field(default=1000, init=True)
+
     _seed: int = field(default=2, init=False)
     _train_split: float = field(default=0.7, init=False)
-    _max_features: Optional[int] = field(default=1000, init=False)
 
     def classifications(self) -> List[str]:
         return ["OFFENSIVE", "SAFE"]
@@ -88,7 +89,7 @@ class OffensiveDataLoader(DataLoader):
         x_train = itertools.islice(data, train_size)
 
         # Compute the top features.
-        t = TfidfVectorizer(max_features=self._max_features, norm=None)
+        t = TfidfVectorizer(max_features=self.max_num_features, norm=None)
         t.fit(tqdm(x_train,
                    desc="Computing top token features",
                    total=train_size,
@@ -136,8 +137,9 @@ class OffensiveDataLoader(DataLoader):
 
 @dataclass
 class OffensiveDataModule(Module):
+    max_num_features: int = field(default=1000)
 
     @provider
     @singleton
     def provide_data_loader(self, builder: ClassAssistedBuilder[OffensiveDataLoader]) -> DataLoader:
-        return builder.build()
+        return builder.build(max_num_features=self.max_num_features)

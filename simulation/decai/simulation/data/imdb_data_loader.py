@@ -3,7 +3,7 @@ from logging import Logger
 from typing import List
 
 import numpy as np
-from injector import ClassAssistedBuilder, inject, Module, provider, singleton
+from injector import ClassAssistedBuilder, Module, inject, provider, singleton
 from keras.datasets import imdb
 
 from .data_loader import DataLoader

@@ -210,9 +210,13 @@ class Simulator(object):
             (x_train, y_train), (x_test, y_test) = \
                 self._data_loader.load_data(train_size=train_size, test_size=test_size)
             classifications = self._data_loader.classifications()
-            init_idx = int(len(x_train) * init_train_data_portion)
+            try:
+                x_train_len = len(x_train)
+            except:
+                x_train_len = x_train.shape[0]
+            init_idx = int(x_train_len * init_train_data_portion)
             self._logger.info("Initializing model with %d out of %d samples.",
-                              init_idx, len(x_train))
+                              init_idx, x_train_len)
             x_init_data, y_init_data = x_train[:init_idx], y_train[:init_idx]
             x_remaining, y_remaining = x_train[init_idx:], y_train[init_idx:]
 
