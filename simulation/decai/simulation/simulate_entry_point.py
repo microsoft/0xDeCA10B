@@ -140,3 +140,5 @@ def main():
 # Run with `bokeh serve PATH`.
 if re.match('bk_script_|bokeh_app_', __name__):
     main()
+else:
+    print("`__name__` didn't match the pattern. Bokeh app will not run.")

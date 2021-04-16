@@ -210,10 +210,8 @@ class Simulator(object):
             (x_train, y_train), (x_test, y_test) = \
                 self._data_loader.load_data(train_size=train_size, test_size=test_size)
             classifications = self._data_loader.classifications()
-            try:
-                x_train_len = len(x_train)
-            except:
-                x_train_len = x_train.shape[0]
+            # TODO Convert x_train and x_test if they are sparse and make a feature mapper.
+            x_train_len = x_train.shape[0]
             init_idx = int(x_train_len * init_train_data_portion)
             self._logger.info("Initializing model with %d out of %d samples.",
                               init_idx, x_train_len)

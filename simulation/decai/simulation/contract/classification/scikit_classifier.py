@@ -8,16 +8,17 @@ from typing import Any, List
 
 import joblib
 import numpy as np
-from injector import inject, Module, provider, ClassAssistedBuilder
+import scipy
+from injector import ClassAssistedBuilder, Module, inject, provider
 from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.naive_bayes import MultinomialNB
 
 from decai.simulation.contract.classification.classifier import Classifier
-# Purposely not a singleton so that it is easy to get a model that has not been initialized.
 from decai.simulation.contract.classification.ncc import NearestCentroidClassifier
 
 
+# Purposely not a singleton so that it is easy to get a model that has not been initialized.
 @inject
 @dataclass
 class SciKitClassifier(Classifier):
@@ -34,7 +35,8 @@ class SciKitClassifier(Classifier):
 
     def evaluate(self, data, labels) -> float:
         assert self._model is not None, "The model has not been initialized yet."
-        assert isinstance(data, np.ndarray), "The data must be an array."
+        assert isinstance(data, (np.ndarray, scipy.sparse.csr.csr_matrix)), \
+            f"The data must be a matrix. Got: {type(data)}"
         assert isinstance(labels, np.ndarray), "The labels must be an array."
         self._logger.debug("Evaluating.")
         return self._model.score(data, labels)
@@ -60,7 +62,7 @@ class SciKitClassifier(Classifier):
         assert self._model is None, "The model has already been initialized."
         self._logger.debug("Initializing model.")
         self._model = self._model_initializer()
-
+        self._logger.debug("training_data.shape: %s. dtype: %s", training_data.shape, training_data.dtype)
         self._model.fit(training_data, labels)
         self._logger.debug("Saving model to \"%s\".", self._original_model_path)
         os.makedirs(os.path.dirname(self._original_model_path), exist_ok=True)
@@ -116,7 +118,7 @@ class SciKitClassifier(Classifier):
                 list(map(str, range(len(self.centroids_))))
             for i, classification in enumerate(classifications):
                 centroids[classification] = dict(centroid=self._model.centroids_[i].tolist(),
-                                               dataCount=self._model._num_samples_per_centroid[i])
+                                                 dataCount=self._model._num_samples_per_centroid[i])
             model = {
                 'type': model_type or 'nearest centroid classifier',
                 'centroids': centroids,
