@@ -17,10 +17,10 @@ from sklearn.naive_bayes import MultinomialNB
 
 from decai.simulation.contract.classification.classifier import Classifier
 from decai.simulation.contract.classification.ncc import NearestCentroidClassifier
-# Purposely not a singleton so that it is easy to get a model that has not been initialized.
 from decai.simulation.data.featuremapping.feature_index_mapper import FeatureIndexMapping
 
 
+# Purposely not a singleton so that it is easy to get a model that has not been initialized.
 @inject
 @dataclass
 class SciKitClassifier(Classifier):
@@ -93,16 +93,23 @@ class SciKitClassifier(Classifier):
                model_type: str = None,
                feature_index_mapping: FeatureIndexMapping = None):
         assert self._model is not None, "The model has not been initialized yet."
-        assert feature_index_mapping is None, "TODO"
         if isinstance(self._model, SGDClassifier) and self._model.loss == 'perceptron':
             if classifications is None:
                 classifications = ["0", "1"]
+
             model = {
                 'type': model_type or 'sparse perceptron',
                 'classifications': classifications,
                 'weights': self._model.coef_[0].tolist(),
                 'intercept': self._model.intercept_[0],
             }
+
+            if feature_index_mapping is not None:
+                if model_type is None:
+                    model['type'] = 'sparse perceptron'
+                weights = model['weights']
+                weights = {str(i): v for (i, v) in zip(feature_index_mapping, weights) if v != 0}
+                model['sparseWeights'] = weights
         elif isinstance(self._model, MultinomialNB):
             if classifications is None:
                 classifications = list(map(str, range(self._model.feature_count_.shape[1])))
@@ -112,6 +119,8 @@ class SciKitClassifier(Classifier):
                 for index, count in enumerate(class_features):
                     if count != 0:
                         # Counts should already be integers.
+                        if feature_index_mapping is not None:
+                            index = feature_index_mapping[index]
                         class_feature_counts.append((index, int(count)))
                 feature_counts.append(class_feature_counts)
             model = {
@@ -123,12 +132,21 @@ class SciKitClassifier(Classifier):
                 'smoothingFactor': self._model.alpha,
             }
         elif isinstance(self._model, NearestCentroidClassifier):
+            assert feature_index_mapping is None, "TODO"
+            if feature_index_mapping is not None:
+                if model_type is None:
+                    model_type = 'sparse nearest centroid classifier'
+
             centroids = dict()
             if classifications is None:
-                list(map(str, range(len(self.centroids_))))
+                classifications = list(map(str, range(len(self.centroids_))))
             for i, classification in enumerate(classifications):
-                centroids[classification] = dict(centroid=self._model.centroids_[i].tolist(),
-                                                 dataCount=self._model._num_samples_per_centroid[i])
+                centroid = self._model.centroids_[i].tolist()
+                if feature_index_mapping is not None:
+                    centroid = {str(i): v for (i, v) in zip(feature_index_mapping, centroid) if v != 0}
+                centroids[classification] = dict(
+                    centroid=centroid,
+                    dataCount=self._model._num_samples_per_centroid[i])
             model = {
                 'type': model_type or 'nearest centroid classifier',
                 'centroids': centroids,

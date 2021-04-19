@@ -281,7 +281,8 @@ class Simulator(object):
 
                         with open(save_path, 'w') as f:
                             json.dump(save_data, f, separators=(',', ':'))
-                        self._decai.model.export(model_save_path, classifications)
+                        self._decai.model.export(model_save_path, classifications,
+                                                 feature_index_mapping=feature_index_mapping)
 
                         if os.path.exists(plot_save_path):
                             os.remove(plot_save_path)
@@ -457,7 +458,7 @@ class Simulator(object):
 
             with open(save_path, 'w') as f:
                 json.dump(save_data, f, separators=(',', ':'))
-            self._decai.model.export(model_save_path, classifications)
+            self._decai.model.export(model_save_path, classifications, feature_index_mapping=feature_index_mapping)
 
             if os.path.exists(plot_save_path):
                 os.remove(plot_save_path)

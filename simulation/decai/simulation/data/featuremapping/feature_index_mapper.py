@@ -18,6 +18,8 @@ class FeatureIndexMapper:
             assert isinstance(testing_data, np.ndarray), \
                 f"Testing data must also be an ndarray if the training data is an ndarray. Got: {type(testing_data)}."
             return training_data, testing_data, None
-        # TODO Map the data.
-
-        raise NotImplementedError
+        assert len(training_data.shape) == 2
+        mapping = sorted(set(training_data.nonzero()[1]))
+        result_train = training_data[:, mapping].todense()
+        result_test = testing_data[:, mapping].todense()
+        return result_train, result_test, mapping
