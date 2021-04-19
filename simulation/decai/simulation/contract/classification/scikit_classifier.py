@@ -4,11 +4,12 @@ import os
 import time
 from dataclasses import dataclass
 from logging import Logger
-from typing import Any, List
+from pathlib import Path
+from typing import Any, Callable, List
 
 import joblib
 import numpy as np
-import scipy
+import scipy.sparse
 from injector import ClassAssistedBuilder, Module, inject, provider
 from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
@@ -16,9 +17,10 @@ from sklearn.naive_bayes import MultinomialNB
 
 from decai.simulation.contract.classification.classifier import Classifier
 from decai.simulation.contract.classification.ncc import NearestCentroidClassifier
-
-
 # Purposely not a singleton so that it is easy to get a model that has not been initialized.
+from decai.simulation.data.featuremapping.feature_index_mapper import FeatureIndexMapping
+
+
 @inject
 @dataclass
 class SciKitClassifier(Classifier):
@@ -27,15 +29,16 @@ class SciKitClassifier(Classifier):
     """
 
     _logger: Logger
-    _model_initializer: Any
+    _model_initializer: Callable[[], Any]
+
+    _model = None
 
     def __post_init__(self):
-        self._model = None
-        self._original_model_path = f'saved_models/{time.time()}-{id(self)}.joblib'
+        self._original_model_path = Path('saved_models') / f'{time.time()}-{id(self)}.joblib'
 
     def evaluate(self, data, labels) -> float:
         assert self._model is not None, "The model has not been initialized yet."
-        assert isinstance(data, (np.ndarray, scipy.sparse.csr.csr_matrix)), \
+        assert isinstance(data, np.ndarray) or scipy.sparse.isspmatrix(data), \
             f"The data must be a matrix. Got: {type(data)}"
         assert isinstance(labels, np.ndarray), "The labels must be an array."
         self._logger.debug("Evaluating.")
@@ -58,15 +61,16 @@ class SciKitClassifier(Classifier):
                              m, report, result * 100)
         return result
 
-    def init_model(self, training_data, labels):
+    def init_model(self, training_data, labels, save_model=False):
         assert self._model is None, "The model has already been initialized."
         self._logger.debug("Initializing model.")
         self._model = self._model_initializer()
         self._logger.debug("training_data.shape: %s. dtype: %s", training_data.shape, training_data.dtype)
         self._model.fit(training_data, labels)
-        self._logger.debug("Saving model to \"%s\".", self._original_model_path)
-        os.makedirs(os.path.dirname(self._original_model_path), exist_ok=True)
-        joblib.dump(self._model, self._original_model_path)
+        if save_model:
+            self._logger.debug("Saving model to \"%s\".", self._original_model_path)
+            os.makedirs(os.path.dirname(self._original_model_path), exist_ok=True)
+            joblib.dump(self._model, self._original_model_path)
 
     def predict(self, data):
         assert self._model is not None, "The model has not been initialized yet."
@@ -79,11 +83,17 @@ class SciKitClassifier(Classifier):
 
     def reset_model(self):
         assert self._model is not None, "The model has not been initialized yet."
+        assert self._original_model_path.exists(), "The model has not been saved. Perhaps saving was disabled."
         self._logger.debug("Loading model from \"%s\".", self._original_model_path)
         self._model = joblib.load(self._original_model_path)
 
-    def export(self, path: str, classifications: List[str] = None, model_type: str = None):
+    def export(self,
+               path: str,
+               classifications: List[str] = None,
+               model_type: str = None,
+               feature_index_mapping: FeatureIndexMapping = None):
         assert self._model is not None, "The model has not been initialized yet."
+        assert feature_index_mapping is None, "TODO"
         if isinstance(self._model, SGDClassifier) and self._model.loss == 'perceptron':
             if classifications is None:
                 classifications = ["0", "1"]

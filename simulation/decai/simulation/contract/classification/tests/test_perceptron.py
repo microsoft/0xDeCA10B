@@ -187,7 +187,7 @@ class TestCollaborativeTrainer(unittest.TestCase):
             [1, 1, 1],
         ])
         y = np.array([_ground_truth(x) for x in X])
-        m.init_model(X, y)
+        m.init_model(X, y, save_model=True)
         data = np.array([
             [0, 0, 0],
             [0, 0, 1],

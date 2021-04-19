@@ -26,7 +26,7 @@ from decai.simulation.contract.collab_trainer import CollaborativeTrainer
 from decai.simulation.contract.incentive.prediction_market import MarketPhase, PredictionMarket
 from decai.simulation.contract.objects import Address, Msg, RejectException, TimeMock
 from decai.simulation.data.data_loader import DataLoader
-from decai.simulation.data.featuremapping.feature_mapper import FeatureMapper
+from decai.simulation.data.featuremapping.feature_index_mapper import FeatureIndexMapper
 
 
 @dataclass
@@ -74,7 +74,7 @@ class Simulator(object):
                  balances: Balances,
                  data_loader: DataLoader,
                  decai: CollaborativeTrainer,
-                 feature_mapper: FeatureMapper,
+                 feature_index_mapper: FeatureIndexMapper,
                  logger: Logger,
                  time_method: TimeMock,
                  ):
@@ -82,7 +82,7 @@ class Simulator(object):
         self._balances = balances
         self._data_loader = data_loader
         self._decai = decai
-        self._feature_mapper = feature_mapper
+        self._feature_index_mapper = feature_index_mapper
         self._logger = logger
         self._time = time_method
 
@@ -213,8 +213,7 @@ class Simulator(object):
             (x_train, y_train), (x_test, y_test) = \
                 self._data_loader.load_data(train_size=train_size, test_size=test_size)
             classifications = self._data_loader.classifications()
-            # TODO Convert x_train and x_test if they are sparse and make a feature mapper.
-            x_train, x_test, feature_mapping = self._feature_mapper.map(x_train, x_test)
+            x_train, x_test, feature_index_mapping = self._feature_index_mapper.map(x_train, x_test)
             x_train_len = x_train.shape[0]
             init_idx = int(x_train_len * init_train_data_portion)
             self._logger.info("Initializing model with %d out of %d samples.",
@@ -222,7 +221,8 @@ class Simulator(object):
             x_init_data, y_init_data = x_train[:init_idx], y_train[:init_idx]
             x_remaining, y_remaining = x_train[init_idx:], y_train[init_idx:]
 
-            self._decai.model.init_model(x_init_data, y_init_data)
+            save_model = isinstance(self._decai.im, PredictionMarket) and self._decai.im.reset_model_during_reward_phase
+            self._decai.model.init_model(x_init_data, y_init_data, save_model)
 
             if self._logger.isEnabledFor(logging.DEBUG):
                 s = self._decai.model.evaluate(x_init_data, y_init_data)
@@ -285,7 +285,7 @@ class Simulator(object):
 
                         if os.path.exists(plot_save_path):
                             os.remove(plot_save_path)
-                        export_png(plot, plot_save_path)
+                        export_png(plot, filename=plot_save_path)
 
                     self._time.set_time(current_time)
 
