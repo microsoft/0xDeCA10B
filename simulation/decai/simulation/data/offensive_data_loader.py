@@ -112,6 +112,7 @@ class OffensiveDataLoader(DataLoader):
         y_train = np.array(labels[:train_size])
 
         x_test = map(_featurize, itertools.islice(data, len(data) - test_size, len(data)))
+        # TODO Might have to might sure it has the same number of columns as x_train.
         x_test = self._build_sparse_matrix(x_test)
         y_test = np.array(labels[-test_size:])
 
@@ -132,7 +133,7 @@ class OffensiveDataLoader(DataLoader):
             indices.extend(feature_indices)
             data.extend((1 for _ in range(len(feature_indices))))
             indptr.append(len(indices))
-        return csr_matrix((data, indices, indptr), dtype=np.uint32)
+        return csr_matrix((data, indices, indptr), dtype=np.uint8)
 
 
 @dataclass

@@ -286,7 +286,10 @@ class Simulator(object):
 
                         if os.path.exists(plot_save_path):
                             os.remove(plot_save_path)
-                        export_png(plot, filename=plot_save_path)
+                        try:
+                            export_png(plot, filename=plot_save_path)
+                        except Exception as e:
+                            self._logger.exception("Could not save picture of the plot.", exc_info=e)
 
                     self._time.set_time(current_time)
 
@@ -462,7 +465,10 @@ class Simulator(object):
 
             if os.path.exists(plot_save_path):
                 os.remove(plot_save_path)
-            export_png(plot, filename=plot_save_path)
+            try:
+                export_png(plot, filename=plot_save_path)
+            except Exception as e:
+                self._logger.exception("Could not save picture of the plot.", exc_info=e)
 
         doc.add_root(plot)
         thread = Thread(target=task)

@@ -108,6 +108,7 @@ class SciKitClassifier(Classifier):
                 if model_type is None:
                     model['type'] = 'sparse perceptron'
                 weights = model['weights']
+                del model['weights']
                 weights = {str(i): v for (i, v) in zip(feature_index_mapping, weights) if v != 0}
                 model['sparseWeights'] = weights
         elif isinstance(self._model, MultinomialNB):
