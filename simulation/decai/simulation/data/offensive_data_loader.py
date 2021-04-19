@@ -29,7 +29,7 @@ class OffensiveDataLoader(DataLoader):
     _logger: Logger
     _token_hash: TokenHash
 
-    max_num_features: Optional[int] = field(default=1000, init=True)
+    max_num_features: int
 
     _seed: int = field(default=2, init=False)
     _train_split: float = field(default=0.7, init=False)

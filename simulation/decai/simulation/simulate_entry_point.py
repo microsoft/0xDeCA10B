@@ -101,7 +101,7 @@ def main():
 
     # This file is set up to use different models and datasets.
     dataset = 'offensive'
-    model_type = 'perceptron'
+    model_type = 'nb'
 
     assert dataset in datasets
     assert model_type in models

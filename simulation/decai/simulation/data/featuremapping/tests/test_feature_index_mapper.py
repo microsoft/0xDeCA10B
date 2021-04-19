@@ -33,6 +33,7 @@ class TestFeatureIndexMapper(unittest.TestCase):
         x_test_sparse = scipy.sparse.csr_matrix((3333, 21312344), dtype=np.uint8)
         x_test_sparse[x_test.nonzero()] = 1
         mapped_train, mapped_test, feature_index_mapping = self.f.map(x_train_sparse, x_test_sparse)
+        self.assertEqual(int, type(feature_index_mapping[0]))
         self.assertEqual([1, 2, 3], feature_index_mapping)
         self.assertTrue(mapped_train.sum(axis=0).all(),
                         "Every column should have at least one non-zero value.")

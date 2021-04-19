@@ -23,7 +23,7 @@ class FeatureIndexMapper:
                 f"Testing data must also be an ndarray if the training data is an ndarray. Got: {type(testing_data)}."
             return training_data, testing_data, None
 
-        mapping = sorted(set(training_data.nonzero()[-1]))
+        mapping = sorted(map(int,set(training_data.nonzero()[-1])))
         feature_index_to_index_mapping = {v: index for (index, v) in enumerate(mapping)}
         # We want: `result_train = training_data[:, mapping].todense()` but this was allocating a large matrix even before calling `todense()`.
         # Also tried making a mapping matrix and multiplying by it but that also allocated memory.
