@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass
 from functools import partial
 from itertools import cycle
 from logging import Logger
+from platform import uname
 from queue import PriorityQueue
 from threading import Thread
 from typing import List
@@ -85,6 +86,22 @@ class Simulator(object):
         self._feature_index_mapper = feature_index_mapper
         self._logger = logger
         self._time = time_method
+
+    def save_plot_image(self, plot, plot_save_path):
+        try:
+            export_png(plot, filename=plot_save_path)
+        except Exception as e:
+            show_error_details = True
+            message = "Could not save picture of the plot."
+            try:
+                # Check if in WSL.
+                show_error_details = not ('microsoft' in uname().release.lower())
+            except:
+                pass
+            if show_error_details:
+                self._logger.exception(message, exc_info=e)
+            else:
+                self._logger.warning(f"{message} %s", e)
 
     def simulate(self,
                  agents: List[Agent],
@@ -286,10 +303,7 @@ class Simulator(object):
 
                         if os.path.exists(plot_save_path):
                             os.remove(plot_save_path)
-                        try:
-                            export_png(plot, filename=plot_save_path)
-                        except Exception as e:
-                            self._logger.exception("Could not save picture of the plot.", exc_info=e)
+                        self.save_plot_image(plot, plot_save_path)
 
                     self._time.set_time(current_time)
 
@@ -465,10 +479,7 @@ class Simulator(object):
 
             if os.path.exists(plot_save_path):
                 os.remove(plot_save_path)
-            try:
-                export_png(plot, filename=plot_save_path)
-            except Exception as e:
-                self._logger.exception("Could not save picture of the plot.", exc_info=e)
+            self.save_plot_image(plot, plot_save_path)
 
         doc.add_root(plot)
         thread = Thread(target=task)

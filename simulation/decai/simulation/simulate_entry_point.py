@@ -109,7 +109,7 @@ def main():
     train_size = datasets[dataset]['train_size']
     test_size = datasets[dataset]['test_size']
     if train_size is None:
-        init_train_data_portion = 1  # 0.08
+        init_train_data_portion = 0.08
     else:
         init_train_data_portion = 100 / train_size
 

@@ -34,6 +34,15 @@ class OffensiveDataLoader(DataLoader):
     _seed: int = field(default=2, init=False)
     _train_split: float = field(default=0.7, init=False)
 
+    _class_mapping = [
+        # Hate
+        0,
+        # Offensive
+        0,
+        # Neither (Safe)
+        1,
+    ]
+
     def classifications(self) -> List[str]:
         return ["OFFENSIVE", "SAFE"]
 
@@ -62,8 +71,8 @@ class OffensiveDataLoader(DataLoader):
 
         data = []
         labels = []
-        class_index = list(loaded_data.columns).index('class')
-        assert class_index > -1
+        class_index = list(loaded_data.columns).index('class') + 1
+        assert class_index > 0
         for row in tqdm(loaded_data.itertuples(),
                         desc="Loading data",
                         unit_scale=True, mininterval=2, unit=" samples",
@@ -74,8 +83,7 @@ class OffensiveDataLoader(DataLoader):
             text = row.tweet
             text = self._pre_process(text)
             data.append(text)
-            is_offensive = row[class_index] != 2
-            labels.append(1 if is_offensive else 0)
+            labels.append(self._class_mapping[row[class_index]])
 
         if train_size is None:
             if test_size is None:
