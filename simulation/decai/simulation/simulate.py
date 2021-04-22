@@ -86,11 +86,14 @@ class Simulator(object):
         self._feature_index_mapper = feature_index_mapper
         self._logger = logger
         self._time = time_method
+        self._warned_about_saving_plot = False
 
     def save_plot_image(self, plot, plot_save_path):
         try:
             export_png(plot, filename=plot_save_path)
         except Exception as e:
+            if self._warned_about_saving_plot:
+                return
             show_error_details = True
             message = "Could not save picture of the plot."
             try:
@@ -102,6 +105,7 @@ class Simulator(object):
                 self._logger.exception(message, exc_info=e)
             else:
                 self._logger.warning(f"{message} %s", e)
+            self._warned_about_saving_plot = True
 
     def simulate(self,
                  agents: List[Agent],
