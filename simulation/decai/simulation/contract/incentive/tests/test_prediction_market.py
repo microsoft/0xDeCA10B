@@ -68,7 +68,7 @@ class TestPredictionMarket(unittest.TestCase):
         # Commitment Phase
         self.assertIsNone(im.state)
 
-        im.model.init_model(x_init_data, y_init_data)
+        im.model.init_model(x_init_data, y_init_data, save_model=True)
 
         hashes_split = 3
         test_reveal_index = im.initialize_market(Msg(initializer_address, total_bounty),
@@ -192,7 +192,7 @@ class TestPredictionMarket(unittest.TestCase):
         # Commitment Phase
         self.assertIsNone(im.state)
 
-        im.model.init_model(x_init_data, y_init_data)
+        im.model.init_model(x_init_data, y_init_data, save_model=True)
 
         hashes_split = 3
         test_reveal_index = im.initialize_market(Msg(initializer_address, total_bounty),
@@ -316,7 +316,7 @@ class TestPredictionMarket(unittest.TestCase):
 
         # Commitment Phase
         self.assertIsNone(im.state)
-        im.model.init_model(x_init_data, y_init_data)
+        im.model.init_model(x_init_data, y_init_data, save_model=True)
         test_reveal_index = im.initialize_market(Msg(initializer_address, total_bounty),
                                                  test_dataset_hashes,
                                                  min_length_s, min_num_contributions)
