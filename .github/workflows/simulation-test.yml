@@ -32,7 +32,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        conda create --channel conda-forge --name decai-simulation --yes python=${{ matrix.python-version }} bokeh mkl mkl-service numpy phantomjs scikit-learn scipy tensorflow
+        pushd simulation
+        conda create --quiet --channel conda-forge --name decai-simulation --yes python=${{ matrix.python-version }} bokeh mkl mkl-service numpy phantomjs scikit-learn scipy tensorflow
         conda run --name decai-simulation python -m pip install --upgrade pip
         conda run --name decai-simulation pip install -e .[test]
         
