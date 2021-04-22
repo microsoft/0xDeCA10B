@@ -141,9 +141,10 @@ class OffensiveDataLoader(DataLoader):
         indptr = [0]
         indices = []
         for feature_indices in feature_mapped_data:
-            i, d = zip(*feature_indices.items())
-            indices.extend(i)
-            data.extend(d)
+            if len(feature_indices) > 0:
+                i, d = zip(*feature_indices.items())
+                indices.extend(i)
+                data.extend(d)
             indptr.append(len(indices))
         return csr_matrix((data, indices, indptr), dtype=np.uint8)
 
