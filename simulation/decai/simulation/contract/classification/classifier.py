@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from typing import List
 
 from decai.simulation.contract.objects import SmartContract
+from decai.simulation.data.featuremapping.feature_index_mapper import FeatureIndexMapping
 
 
 class Classifier(ABC, SmartContract):
@@ -34,12 +35,13 @@ class Classifier(ABC, SmartContract):
         pass
 
     @abstractmethod
-    def init_model(self, training_data, labels):
+    def init_model(self, training_data, labels, save_model=False):
         """
         Fit the model to a specific dataset.
 
         :param training_data:  The data to use to train the model.
         :param labels: The ground truth labels for `data`.
+        :param save_model: `True` if the model should be saved, `False` otherwise.
         """
         pass
 
@@ -70,12 +72,17 @@ class Classifier(ABC, SmartContract):
         pass
 
     @abstractmethod
-    def export(self, path:str, classifications: List[str] = None, model_type: str = None):
+    def export(self,
+               path: str,
+               classifications: List[str] = None,
+               model_type: str = None,
+               feature_index_mapping: FeatureIndexMapping = None):
         """
         Export the model in a format for the demo Node.js code to load.
 
         :param path: The path to save the exported model to.
         :param classifications: The classifications output by the model.
         :param model_type: The type of the model.
+        :param feature_index_mapping: Mapping of the feature indices. Mainly for sparse models that were converted to dense ones.
         """
         pass

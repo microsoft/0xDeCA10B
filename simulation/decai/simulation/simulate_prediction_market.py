@@ -96,8 +96,8 @@ class Runner(object):
         # Ending criteria:
         min_length_s = 1_000
         min_num_contributions = len(x_remaining)
-
-        self._im.model.init_model(x_init_data, y_init_data)
+        save_model = isinstance(self._im, PredictionMarket) and self._im.reset_model_during_reward_phase
+        self._im.model.init_model(x_init_data, y_init_data, save_model)
         test_reveal_index = self._im.initialize_market(Msg(initializer_address, total_bounty),
                                                        test_dataset_hashes,
                                                        min_length_s, min_num_contributions)

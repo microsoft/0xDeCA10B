@@ -49,8 +49,8 @@ class TestCollaborativeTrainer(unittest.TestCase):
             [1, 1, 0],
         ])
         y = np.array([_ground_truth(x) for x in X])
-        cls.decai.model.init_model([X[0, :], X[1, :]],
-                                   [y[0], y[1]])
+        cls.decai.model.init_model(np.array([X[0, :], X[1, :]]),
+                                   np.array([y[0], y[1]]))
         score = cls.decai.model.evaluate(X, y)
         assert score != 1, "Model shouldn't fit the data yet."
 
@@ -187,7 +187,7 @@ class TestCollaborativeTrainer(unittest.TestCase):
             [1, 1, 1],
         ])
         y = np.array([_ground_truth(x) for x in X])
-        m.init_model(X, y)
+        m.init_model(X, y, save_model=True)
         data = np.array([
             [0, 0, 0],
             [0, 0, 1],

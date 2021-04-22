@@ -25,7 +25,7 @@ class TestFitnessDataLoader(unittest.TestCase):
         train_size = 70
         test_size = 30
         (x_train, y_train), (x_test, y_test) = self.loader.load_data(train_size, test_size)
-        self.assertEqual(x_train.shape[0], train_size)
-        self.assertEqual(y_train.shape[0], train_size)
-        self.assertEqual(x_test.shape[0], test_size)
-        self.assertEqual(y_test.shape[0], test_size)
+        self.assertEqual(train_size, x_train.shape[0])
+        self.assertEqual(train_size, y_train.shape[0])
+        self.assertEqual(test_size, x_test.shape[0])
+        self.assertEqual(test_size, y_test.shape[0])

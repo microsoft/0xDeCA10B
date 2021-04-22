@@ -8,6 +8,7 @@ install_requires = [
     'injector>=0.16.2',
     'joblib>=0.13.2',
     'keras>=2.3',
+    'mmh3~=3.0.0',
     'numpy',
 
     # Required for saving plots.
@@ -24,13 +25,13 @@ test_deps = [
 
 setup(
     name='decai',
-    version='0.1.0',
+    version='1.0.0',
     packages=find_packages(),
     url='https://github.com/microsoft/0xDeCA10B',
     license='MIT',
-    author="Justin Harris",
+    author="Justin D. Harris",
     author_email='',
-    description="Simulate Decentralized & Collaborative AI.",
+    description="Simulate Decentralized & Collaborative AI for Sharing Updatable Models.",
     install_requires=install_requires,
     tests_require=test_deps,
     extras_require=dict(

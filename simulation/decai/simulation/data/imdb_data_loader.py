@@ -3,7 +3,7 @@ from logging import Logger
 from typing import List
 
 import numpy as np
-from injector import ClassAssistedBuilder, inject, Module, provider, singleton
+from injector import ClassAssistedBuilder, Module, inject, provider, singleton
 from keras.datasets import imdb
 
 from .data_loader import DataLoader
@@ -13,7 +13,7 @@ from .data_loader import DataLoader
 @dataclass
 class ImdbDataLoader(DataLoader):
     """
-    Load data from IMDB reviews.
+    Load data for sentiment analysis of IMDB reviews.
 
     https://keras.io/datasets/#imdb-movie-reviews-sentiment-classification
     """
