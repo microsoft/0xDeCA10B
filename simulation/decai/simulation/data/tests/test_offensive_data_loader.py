@@ -5,6 +5,7 @@ from injector import Injector
 
 from decai.simulation.data.data_loader import DataLoader
 from decai.simulation.data.featuremapping.hashing.murmurhash3 import MurmurHash3Module
+from decai.simulation.data.featuremapping.hashing.token_hash import TokenHash
 from decai.simulation.data.offensive_data_loader import OffensiveDataLoader, OffensiveDataModule
 from decai.simulation.logging_module import LoggingModule
 
@@ -21,6 +22,7 @@ class TestOffensiveDataLoader(unittest.TestCase):
         cls.data_loader = inj.get(DataLoader)
         assert isinstance(cls.data_loader, OffensiveDataLoader)
         cls.data_loader = cast(OffensiveDataLoader, cls.data_loader)
+        cls.hash = inj.get(TokenHash)
 
     def test_load(self):
         train_size = 20
@@ -36,7 +38,14 @@ class TestOffensiveDataLoader(unittest.TestCase):
 
         # Test some values to help avoid regressions.
         x_train_values_x, x_train_values_y = x_train[0].nonzero()
-        assert x_train_values_x[0] == 0
-        assert x_train_values_y[0] == 495653056
-        assert x_train_values_x[1] == 0
-        assert x_train_values_y[1] == 443377497
+        self.assertEqual(0, x_train_values_x[0])
+        self.assertEqual(495653056, x_train_values_y[0])
+        self.assertEqual(1, x_train[x_train_values_x[0], x_train_values_y[0]])
+
+        self.assertEqual(0, x_train_values_x[1])
+        self.assertEqual(443377497, x_train_values_y[1])
+        self.assertEqual(1, x_train[x_train_values_x[0], x_train_values_y[0]])
+
+        col = self.hash.hash("you")
+        self.assertEqual(814527388, col)
+        self.assertEqual(2, x_train[1, col])

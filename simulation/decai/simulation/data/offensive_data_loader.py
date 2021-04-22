@@ -1,10 +1,11 @@
 import html
 import itertools
 import os
+from collections import Counter
 from dataclasses import dataclass, field
 from logging import Logger
 from pathlib import Path
-from typing import Iterator, List, Optional, Tuple
+from typing import Dict, Iterator, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -110,10 +111,12 @@ class OffensiveDataLoader(DataLoader):
         tokenize = t.build_analyzer()
         feature_tokens = set(t.get_feature_names())
 
-        def _featurize(text: str) -> Tuple[int]:
-            tokens = (token for token in tokenize(text) if token in feature_tokens)
-            result = tuple(self._token_hash.hash(token) for token in tokens)
-            return result
+        def _featurize(text: str) -> Dict[int, int]:
+            result = Counter(tokenize(text))
+
+            return {self._token_hash.hash(token): count
+                    for token, count in result.items()
+                    if token in feature_tokens}
 
         x_train = map(_featurize, itertools.islice(data, train_size))
         x_train = self._build_sparse_matrix(x_train)
@@ -131,15 +134,16 @@ class OffensiveDataLoader(DataLoader):
         """ Handle some simple pre-processing specific to this dataset. """
         return html.unescape(text)
 
-    def _build_sparse_matrix(self, feature_mapped_data: Iterator):
+    def _build_sparse_matrix(self, feature_mapped_data: Iterator[Dict[int, int]]):
         # Make a sparse matrix following the term-document example from:
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.html
         data = []
         indptr = [0]
         indices = []
         for feature_indices in feature_mapped_data:
-            indices.extend(feature_indices)
-            data.extend((1 for _ in range(len(feature_indices))))
+            i, d = zip(*feature_indices.items())
+            indices.extend(i)
+            data.extend(d)
             indptr.append(len(indices))
         return csr_matrix((data, indices, indptr), dtype=np.uint8)
 
