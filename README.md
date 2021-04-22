@@ -6,7 +6,7 @@
 <!-- Put horizontally since build status badges are normally horizontal. -->
 | [Demo][demo-folder] | [Simulation][simulation-folder] | Security |
 |:-:|:-:|:-:|
-| [![Demo: Test](https://github.com/microsoft/0xDeCA10B/actions/workflows/demo-test.yml/badge.svg?branch=master)](https://github.com/microsoft/0xDeCA10B/actions/workflows/demo-test.yml) | [![Simulation: Test](https://github.com/microsoft/0xDeCA10B/actions/workflows/simulation-test.yml/badge.svg?branch=master)](https://github.com/microsoft/0xDeCA10B/actions/workflows/simulation-test.yml) | [![Build Status](https://dev.azure.com/maluuba/0xDeCA10B/_apis/build/status/Security%20Checks?branchName=master)](https://dev.azure.com/maluuba/0xDeCA10B/_build/latest?definitionId=118&branchName=master) |
+| [![Demo: Test](https://github.com/microsoft/0xDeCA10B/actions/workflows/demo-test.yml/badge.svg?branch=main)](https://github.com/microsoft/0xDeCA10B/actions/workflows/demo-test.yml) | [![Simulation: Test](https://github.com/microsoft/0xDeCA10B/actions/workflows/simulation-test.yml/badge.svg?branch=main)](https://github.com/microsoft/0xDeCA10B/actions/workflows/simulation-test.yml) | [![Build Status](https://dev.azure.com/maluuba/0xDeCA10B/_apis/build/status/Security%20Checks?branchName=main)](https://dev.azure.com/maluuba/0xDeCA10B/_build/latest?definitionId=118&branchName=main) |
 
 **Sharing Updatable Models (SUM) on Blockchain** is a framework to host and train publicly available machine learning models.
 Ideally, using a model to get a prediction is free.

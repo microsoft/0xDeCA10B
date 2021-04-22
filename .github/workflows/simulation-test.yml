@@ -2,12 +2,12 @@ name: "Simulation: Test"
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [ main ]
     paths:
     - 'simulation/**'
     - '.github/workflows/simulation-**'
   pull_request:
-    branches: [ master, main ]
+    branches: [ main ]
     paths:
     - 'simulation/**'
     - '.github/workflows/simulation-**'

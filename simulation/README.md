@@ -1,6 +1,7 @@
-# Decentralized & Collaborative AI Simulation
+# Sharing Updatable Models (SUM) on Blockchain Simulation
+(formerly Decentralized & Collaborative AI on Blockchain Simulation)
 
-[![Build Status](https://dev.azure.com/maluuba/0xDeCA10B/_apis/build/status/simulation-CI?branchName=master)](https://dev.azure.com/maluuba/0xDeCA10B/_build/latest?definitionId=117&branchName=master)
+[![Simulation: Test](https://github.com/microsoft/0xDeCA10B/actions/workflows/simulation-test.yml/badge.svg?branch=main)](https://github.com/microsoft/0xDeCA10B/actions/workflows/simulation-test.yml)
 
 Tools to run simulations for AI models in smart contracts.
 
@@ -30,7 +31,7 @@ Despite the malicious efforts, the accuracy can still be maintained and the hone
 This section explains how to set up locally, alternatively, you can skip ahead and use a Docker image.
 Run:
 ```bash
-conda create --channel conda-forge --name decai-simulation 'python>=3.7' bokeh mkl mkl-service numpy pandas phantomjs scikit-learn scipy tensorflow
+conda create --channel conda-forge --name decai-simulation 'python>=3.9' bokeh mkl mkl-service numpy pandas phantomjs scikit-learn scipy tensorflow
 conda activate decai-simulation
 pip install -e .
 ```
