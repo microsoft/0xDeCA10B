@@ -1,0 +1,51 @@
+name: "Demo: Test"
+
+on:
+  push:
+    branches: [ master, main ]
+    paths:
+    - 'demo/**'
+    - '.github/workflows/demo-**'
+  pull_request:
+    paths:
+    - 'demo/**'
+    - '.github/workflows/demo-**'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: "Demo: Test"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build
+        run: |
+          pushd demo
+          docker pull mcr.microsoft.com/samples/blockchain-ai/0xdeca10b-demo:latest
+          docker build -f Dockerfile \
+            --cache-from mcr.microsoft.com/samples/blockchain-ai/0xdeca10b-demo:latest \
+            -t mcr.microsoft.com/samples/blockchain-ai/0xdeca10b-demo:latest \
+            .
+      - name: Test
+        run: |        
+          docker run --rm --name decai-demo \
+            -v /${PWD}/demo:/root/workspace/demo \
+            -v /root/workspace/demo/node_modules \
+            -v /root/workspace/demo/client/node_modules \
+            mcr.microsoft.com/samples/blockchain-ai/0xdeca10b-demo:latest \
+            /bin/bash -c "./setup_libs.sh && yarn clean && yarn test"
+      - name: Lint
+        run: |
+          # Split lint into a separate task so that it can always run even if the test fails.
+          docker run --rm --name decai-demo \
+            -v /${PWD}/demo:/root/workspace/demo \
+            -v /root/workspace/demo/node_modules \
+            -v /root/workspace/demo/client/node_modules \
+            mcr.microsoft.com/samples/blockchain-ai/0xdeca10b-demo:latest \
+            /bin/bash -c "yarn lint"
+        # Run even if the previous step fails.
+        if: success() || failure()
