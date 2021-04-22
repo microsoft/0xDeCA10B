@@ -2,11 +2,12 @@ name: "Demo: Test"
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [ main ]
     paths:
     - 'demo/**'
     - '.github/workflows/demo-**'
   pull_request:
+    branches: [ main ]
     paths:
     - 'demo/**'
     - '.github/workflows/demo-**'

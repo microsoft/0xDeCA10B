@@ -1,5 +1,7 @@
-# Decentralized & Collaborative AI on Blockchain Demo
-[![Build Status](https://dev.azure.com/maluuba/0xDeCA10B/_apis/build/status/demo-CI?branchName=master)](https://dev.azure.com/maluuba/0xDeCA10B/_build/latest?definitionId=116&branchName=master)
+# Sharing Updatable Models (SUM) on Blockchain Demo
+(formerly Decentralized & Collaborative AI on Blockchain Demo)
+
+[![Demo: Test](https://github.com/microsoft/0xDeCA10B/actions/workflows/demo-test.yml/badge.svg?branch=main)](https://github.com/microsoft/0xDeCA10B/actions/workflows/demo-test.yml)
 
 A dashboard and examples for deploying updatable AI models to Ethereum. A video demo is available There is a video example showing how to deploy <a href="https://aka.ms/0xDeCA10B-demo" target="_blank">here</a>.
 

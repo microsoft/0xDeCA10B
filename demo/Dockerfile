@@ -2,8 +2,8 @@ FROM node:10.17
 
 LABEL maintainer="Justin D. Harris (Microsoft)"
 LABEL org.label-schema.vendor="Microsoft"
-LABEL org.label-schema.url="https://github.com/microsoft/0xDeCA10B/tree/master/demo"
-LABEL org.label-schema.vcs-url="https://github.com/microsoft/0xDeCA10B/tree/master/demo"
+LABEL org.label-schema.url="https://github.com/microsoft/0xDeCA10B/tree/main/demo"
+LABEL org.label-schema.vcs-url="https://github.com/microsoft/0xDeCA10B/tree/main/demo"
 
 WORKDIR /root/workspace/demo
 
