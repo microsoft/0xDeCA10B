@@ -133,7 +133,6 @@ class SciKitClassifier(Classifier):
                 'smoothingFactor': self._model.alpha,
             }
         elif isinstance(self._model, NearestCentroidClassifier):
-            assert feature_index_mapping is None, "TODO"
             if feature_index_mapping is not None:
                 if model_type is None:
                     model_type = 'sparse nearest centroid classifier'
