@@ -6,6 +6,7 @@ on:
 
 jobs:
   build:
+    name: "Demo: Deploy Prod"
     runs-on: ubuntu-20.04
 
     steps:
