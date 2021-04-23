@@ -1,0 +1,15 @@
+.git/
+.vscode/
+
+**/README.md
+**/*.Dockerfile
+**/Dockerfile
+
+saved_models/
+saved_runs/
+training_data/
+
+*.egg-info/
+.pytesst_cache/
+
+**/*~
