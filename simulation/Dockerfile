@@ -1,4 +1,4 @@
-FROM continuumio/miniconda3:4.6.14
+FROM continuumio/miniconda3:4.9.2
 
 LABEL maintainer="Justin Harris (justin.harris@microsoft.com)"
 LABEL org.label-schema.vendor="Microsoft"
@@ -9,7 +9,7 @@ EXPOSE 5006
 
 ENV LC_ALL C.UTF-8
 
-RUN conda create --channel conda-forge --name decai-simulation --yes python=3.9 bokeh mkl mkl-service numpy pandas phantomjs scikit-learn scipy tensorflow
+RUN conda create --quiet --channel conda-forge --name decai-simulation --yes python=3.8 bokeh mkl mkl-service numpy pandas phantomjs scikit-learn scipy tensorflow
 
 RUN conda init bash
 RUN echo "conda activate decai-simulation" >> ~/.bashrc
