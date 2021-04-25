@@ -108,10 +108,9 @@ export class ModelDeployer {
 	async deployNearestCentroidClassifier(model: NearestCentroidModel | SparseNearestCentroidModel, options: any): Promise<Contract> {
 		const { account, toFloat,
 			notify, dismissNotification,
-			saveTransactionHash, saveAddress,
+			saveTransactionHash, saveAddress, initialChunkSize, chunkSize,
 		} = options
-		const initialChunkSize = 200
-		const chunkSize = 250
+	
 		const classifications: string[] = []
 		const centroids: number[][] | number[][][] = []
 		const dataCounts: number[] = []
@@ -332,7 +331,13 @@ export class ModelDeployer {
 		if (options.saveTransactionHash === undefined) {
 			options.saveTransactionHash = (() => { })
 		}
-
+		if (options.initialChunkSize === undefined) {
+			options.initialChunkSize = 200
+		}
+		if (options.chunkSize === undefined) {
+			options.chunkSize = 250
+		}
+		
 		switch (model.type.toLocaleLowerCase('en')) {
 			case 'dense perceptron':
 			case 'sparse perceptron':
