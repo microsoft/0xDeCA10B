@@ -35,12 +35,11 @@ export class ModelDeployer {
 	async deployNaiveBayes(model: NaiveBayesModel, options: any): Promise<Contract> {
 		const { account, toFloat,
 			notify, dismissNotification,
-			saveTransactionHash, saveAddress,
+			saveTransactionHash, saveAddress, initialFeatureChunkSize = 150, featureChunkSize = 350
 		} = options
 
 		const defaultSmoothingFactor = 1
-		const initialFeatureChunkSize = 150
-		const featureChunkSize = 350
+
 		const { classifications, classCounts, featureCounts, totalNumFeatures } = model
 		const smoothingFactor = convertNum(model.smoothingFactor || defaultSmoothingFactor, this.web3, toFloat)
 
@@ -108,7 +107,7 @@ export class ModelDeployer {
 	async deployNearestCentroidClassifier(model: NearestCentroidModel | SparseNearestCentroidModel, options: any): Promise<Contract> {
 		const { account, toFloat,
 			notify, dismissNotification,
-			saveTransactionHash, saveAddress, initialChunkSize, chunkSize,
+			saveTransactionHash, saveAddress, initialChunkSize = 200, chunkSize = 250,
 		} = options
 	
 		const classifications: string[] = []
@@ -201,10 +200,10 @@ export class ModelDeployer {
 	async deployPerceptron(model: DensePerceptronModel | SparsePerceptronModel, options: any): Promise<Contract> {
 		const { account, toFloat,
 			notify, dismissNotification,
-			saveTransactionHash, saveAddress,
+			saveTransactionHash, saveAddress, weightChunkSize = 350
 		} = options
 		const defaultLearningRate = 0.5
-		const weightChunkSize = 300
+
 		const { classifications, featureIndices } = model
 		let weightsArray: any[] = []
 		let sparseWeights: any[][] = []
@@ -330,12 +329,6 @@ export class ModelDeployer {
 		}
 		if (options.saveTransactionHash === undefined) {
 			options.saveTransactionHash = (() => { })
-		}
-		if (options.initialChunkSize === undefined) {
-			options.initialChunkSize = 200
-		}
-		if (options.chunkSize === undefined) {
-			options.chunkSize = 250
 		}
 		
 		switch (model.type.toLocaleLowerCase('en')) {
