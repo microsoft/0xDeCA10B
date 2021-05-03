@@ -3,8 +3,8 @@ const fs = require('fs');
 const initSqlJs = require('sql.js');
 const app = express();
 const port = process.env.PORT || 5387;
-const bodyParser = require('body-parser');
-const jsonParser = bodyParser.json();
+//const bodyParser = require('body-parser');
+const jsonParser = express.json();
 
 const dbPath = 'db.sqlite';
 
