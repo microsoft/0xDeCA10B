@@ -19,8 +19,8 @@ initSqlJs().then(SQL => {
     db = new SQL.Database();
     sqlstr = "CREATE TABLE model (id INTEGER PRIMARY KEY, name TEXT, address TEXT, description TEXT, model_type TEXT, encoder TEXT, accuracy NUMBER);"
       + "CREATE TABLE data (transaction_hash TEXT PRIMARY KEY, text TEXT);"
-      + "CREATE INDEX index_address ON model(address);";
-      + "CREATE Table accuracy_time ( transaction_hash TEXT ,id INTEGER ,accuracy NUMBER , Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP); "
+      + "CREATE INDEX index_address ON model(address);"
+      + "CREATE TABLE time_accuracy ( transaction_hash TEXT ,model_id INTEGER ,accuracy NUMBER , timestamp DATETIME DEFAULT CURRENT_TIMESTAMP ,FOREIGN KEY (model_id) REFERENCES model (id)); ";
     db.run(sqlstr);
   }
 
