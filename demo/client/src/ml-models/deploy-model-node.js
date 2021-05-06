@@ -11,10 +11,9 @@ const { convertData, convertNum } = require('../float-utils-node')
 const _toFloat = 1E9
 
 async function deployDensePerceptron(model, web3, options){
-    const {toFloat, initialChunkSize = 200, chunkSize = 250,
+    const {toFloat, initialChunkSize = 200, chunkSize = 450,
     } = options
     let gasUsed = 0
-    const weightChunkSize = 450
     const { classifications } = model
     const weights = convertData(model.weights, web3, toFloat)
     const intercept = convertNum(model.intercept || model.bias, web3, toFloat)
@@ -25,15 +24,15 @@ async function deployDensePerceptron(model, web3, options){
         throw new Error("featureIndices are not supported yet.")
     }
 
-    console.log(`  Deploying Dense Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights.`)
-    const classifierContract = await DensePerceptron.new(classifications, weights.slice(0, weightChunkSize), intercept, learningRate)
+    console.log(`  Deploying Dense Perceptron classifier with first ${Math.min(weights.length, chunkSize)} weights.`)
+    const classifierContract = await DensePerceptron.new(classifications, weights.slice(0, chunkSize), intercept, learningRate)
     gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
 
     // Add remaining weights.
-    for (let i = weightChunkSize; i < weights.length; i += weightChunkSize) {
+    for (let i = chunkSize; i < weights.length; i += chunkSize) {
         // Do not parallelize so that weights are set in order.
-        const r = await classifierContract.initializeWeights(weights.slice(i, i + weightChunkSize))
-        console.debug(`    Added classifier weights [${i}, ${Math.min(i + weightChunkSize, weights.length)}). gasUsed: ${r.receipt.gasUsed}`)
+        const r = await classifierContract.initializeWeights(weights.slice(i, i + chunkSize))
+        console.debug(`    Added classifier weights [${i}, ${Math.min(i + chunkSize, weights.length)}). gasUsed: ${r.receipt.gasUsed}`)
         gasUsed += r.receipt.gasUsed
     }
 
@@ -46,9 +45,8 @@ async function deployDensePerceptron(model, web3, options){
 }
 
 async function deploySparsePerceptron(model, web3, options){
-    const {toFloat, initialChunkSize = 200, chunkSize = 250,
+    const {toFloat, initialChunkSize = 200, chunkSize = 300,
     } = options
-    const weightChunkSize = 300
     const { classifications } = model
     const weights = convertData(model.weights, web3, toFloat)
     const intercept = convertNum(model.intercept || model.bias, web3, toFloat)
@@ -67,19 +65,19 @@ async function deploySparsePerceptron(model, web3, options){
         }
     }
 
-    console.log(`  Deploying Sparse Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights...`)
-    const classifierContract = await SparsePerceptron.new(classifications, weights.slice(0, weightChunkSize), intercept, learningRate)
+    console.log(`  Deploying Sparse Perceptron classifier with first ${Math.min(weights.length, chunkSize)} weights...`)
+    const classifierContract = await SparsePerceptron.new(classifications, weights.slice(0, chunkSize), intercept, learningRate)
     let gasUsed = (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
-    console.log(`  Deployed Sparse Perceptron classifier with first ${Math.min(weights.length, weightChunkSize)} weights. gasUsed: ${gasUsed}`)
+    console.log(`  Deployed Sparse Perceptron classifier with first ${Math.min(weights.length, chunkSize)} weights. gasUsed: ${gasUsed}`)
 
     // Add remaining weights.
-    for (let i = weightChunkSize; i < weights.length; i += weightChunkSize) {
-        const r = await classifierContract.initializeWeights(i, weights.slice(i, i + weightChunkSize))
-        console.debug(`    Added classifier weights [${i}, ${Math.min(i + weightChunkSize, weights.length)}) gasUsed: ${r.receipt.gasUsed}`)
+    for (let i = chunkSize; i < weights.length; i += chunkSize) {
+        const r = await classifierContract.initializeWeights(i, weights.slice(i, i + chunkSize))
+        console.debug(`    Added classifier weights [${i}, ${Math.min(i + chunkSize, weights.length)}) gasUsed: ${r.receipt.gasUsed}`)
         gasUsed += r.receipt.gasUsed
     }
 
-    const sparseWeightsChunkSize = Math.round(weightChunkSize / 2)
+    const sparseWeightsChunkSize = Math.round(chunkSize / 2)
     for (let i = 0; i < sparseWeights.length; i += sparseWeightsChunkSize) {
         const r = await classifierContract.initializeSparseWeights(
             sparseWeights.slice(i, i + sparseWeightsChunkSize))
@@ -197,21 +195,19 @@ exports.deploySparseNearestCentroidClassifier = async function (model, web3, toF
 }
 
 async function deployNaiveBayes(model, web3, options){
-    const {toFloat, initialChunkSize = 200, chunkSize = 250,
+    const {toFloat, initialChunkSize = 150, chunkSize =350,
     } = options
     let gasUsed = 0
-    const initialFeatureChunkSize = 150
-    const featureChunkSize = 350
     const { classifications, classCounts, featureCounts, totalNumFeatures } = model
     const smoothingFactor = convertNum(model.smoothingFactor, web3, toFloat)
     console.log(`  Deploying Naive Bayes classifier.`)
-    const classifierContract = await NaiveBayesClassifier.new([classifications[0]], [classCounts[0]], [featureCounts[0].slice(0, initialFeatureChunkSize)], totalNumFeatures, smoothingFactor)
+    const classifierContract = await NaiveBayesClassifier.new([classifications[0]], [classCounts[0]], [featureCounts[0].slice(0, initialChunkSize)], totalNumFeatures, smoothingFactor)
     gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
 
     const addClassPromises = []
     for (let i = 1; i < classifications.length; ++i) {
         addClassPromises.push(classifierContract.addClass(
-            classCounts[i], featureCounts[i].slice(0, initialFeatureChunkSize), classifications[i]
+            classCounts[i], featureCounts[i].slice(0, initialChunkSize), classifications[i]
         ).then(r => {
             console.debug(`    Added class ${i}. gasUsed: ${r.receipt.gasUsed}`)
             return r
@@ -224,11 +220,11 @@ async function deployNaiveBayes(model, web3, options){
         // Add remaining feature counts.
         // Tried with promises but got weird unhelpful errors from Truffle (some were like network timeout errors).
         for (let classification = 0; classification < classifications.length; ++classification) {
-            for (let j = initialFeatureChunkSize; j < featureCounts[classification].length; j += featureChunkSize) {
+            for (let j = initialChunkSize; j < featureCounts[classification].length; j += chunkSize) {
                 const r = await classifierContract.initializeCounts(
-                    featureCounts[classification].slice(j, j + featureChunkSize), classification
+                    featureCounts[classification].slice(j, j + chunkSize), classification
                 )
-                console.debug(`    Added features [${j}, ${Math.min(j + featureChunkSize, featureCounts[classification].length)}) for class ${classification}. gasUsed: ${r.receipt.gasUsed}`)
+                console.debug(`    Added features [${j}, ${Math.min(j + chunkSize, featureCounts[classification].length)}) for class ${classification}. gasUsed: ${r.receipt.gasUsed}`)
                 gasUsed += r.receipt.gasUsed
             }
         }
