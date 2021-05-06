@@ -43,20 +43,6 @@ initSqlJs().then(SQL => {
     fs.writeFileSync(dbPath, Buffer.from(db.export()));
   }
 
-  // get the accuracy history for a model
-  function getAccuracyHistory()
-  {
-
-  }
-  
-  // Add a new accuracy record for a model
-   function addAccuracyRecord()
-   {
-
-   }
-
-
-
   // Health
   app.get('/api/health', (req, res) => {
     res.send({ healthy: true });
@@ -166,3 +152,24 @@ initSqlJs().then(SQL => {
 
   app.listen(port, () => console.log(`Listening on port ${port}`));
 });
+
+ // Get the accuracy history for a model
+ function getAccuracyHistory()
+ {
+
+ }
+ 
+ // Add a new accuracy record for a model
+  function addAccuracyRecord(accuracy)
+  {
+   db.run('INSERT INTO accuracy VALUES (?, ?, ?, ?);', [
+     accuracy.transaction_hash,
+     accuracy.block_number,
+     accuracy.model_id,
+     accuracy.accuracy,
+   ]);
+   fs.writeFile(dbPath, Buffer.from(db.export()), () => { });
+  }
+
+
+
