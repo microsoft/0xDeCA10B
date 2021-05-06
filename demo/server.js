@@ -166,9 +166,12 @@ initSqlJs().then(SQL => {
   }
 
  // Get the accuracy history for a model
- function getAccuracyHistory()
+ function getAccuracyHistory(modelId)
  {
-
+  const getAccuracyStmt = db.prepare('SELECT * FROM accuracy WHERE model_id == $modelId ORDER BY timestamp;');
+  const result = getAccuracyStmt.getAsObject({ $modelId: modelId });
+  getAccuracyStmt.free();
+  return result;
  }
  
 
