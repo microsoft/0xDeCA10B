@@ -3,8 +3,8 @@ const fs = require('fs');
 const initSqlJs = require('sql.js');
 const app = express();
 const port = process.env.PORT || 5387;
-const bodyParser = require('body-parser');
-const jsonParser = bodyParser.json();
+//const bodyParser = require('body-parser');
+const jsonParser = express.json();
 
 const dbPath = 'db.sqlite';
 
@@ -19,7 +19,8 @@ initSqlJs().then(SQL => {
     db = new SQL.Database();
     sqlstr = "CREATE TABLE model (id INTEGER PRIMARY KEY, name TEXT, address TEXT, description TEXT, model_type TEXT, encoder TEXT, accuracy NUMBER);"
       + "CREATE TABLE data (transaction_hash TEXT PRIMARY KEY, text TEXT);"
-      + "CREATE INDEX index_address ON model(address);";
+      + "CREATE INDEX index_address ON model(address);"
+      + "CREATE TABLE accuracy (transaction_hash TEXT, block_number INTEGER, model_id INTEGER, accuracy NUMBER, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (model_id) REFERENCES model (id));";
     db.run(sqlstr);
   }
 
@@ -151,3 +152,28 @@ initSqlJs().then(SQL => {
 
   app.listen(port, () => console.log(`Listening on port ${port}`));
 });
+
+ // Add a new accuracy record for a model
+  function addAccuracyRecord(accuracy)
+  {
+   db.run('INSERT INTO accuracy VALUES (?, ?, ?, ?);', [
+     accuracy.transactionHash,
+     accuracy.blockNumber,
+     accuracy.modelId,
+     accuracy.accuracy,
+   ]);
+   fs.writeFile(dbPath, Buffer.from(db.export()), () => { });
+  }
+
+ // Get the accuracy history for a model
+ function getAccuracyHistory(modelId)
+ {
+  const getAccuracyStmt = db.prepare('SELECT * FROM accuracy WHERE model_id == $modelId ORDER BY timestamp;');
+  const result = getAccuracyStmt.getAsObject({ $modelId: modelId });
+  getAccuracyStmt.free();
+  return result;
+ }
+ 
+
+
+
