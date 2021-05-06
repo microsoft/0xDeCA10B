@@ -241,22 +241,22 @@ async function deployNaiveBayes(model, web3, options){
  * @returns The contract for the model, an instance of `Classifier64`
  * along with the the total amount of gas used to deploy the model.
  */
-exports.deployModel = async function (model, web3, toFloat = _toFloat) {
+exports.deployModel = async function (model, web3, options) {
     if (typeof model === 'string') {
         model = JSON.parse(fs.readFileSync(model, 'utf8'))
     }
     switch (model.type) {
         case 'dense perceptron':
-            return deployDensePerceptron(model, web3, toFloat)
+            return deployDensePerceptron(model, web3, options)
         case 'naive bayes':
-            return deployNaiveBayes(model, web3, toFloat)
+            return deployNaiveBayes(model, web3, options)
         case 'dense nearest centroid classifier':
         case 'nearest centroid classifier':
-            return deployNearestCentroidClassifier(model, web3, toFloat)
+            return deployNearestCentroidClassifier(model, web3, options)
         case 'sparse nearest centroid classifier':
-            return exports.deploySparseNearestCentroidClassifier(model, web3, toFloat)
+            return exports.deploySparseNearestCentroidClassifier(model, web3, options)
         case 'sparse perceptron':
-            return deploySparsePerceptron(model, web3, toFloat)
+            return deploySparsePerceptron(model, web3, options)
         default:
             // Should not happen.
             throw new Error(`Unrecognized model type: "${model.type}"`)
