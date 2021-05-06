@@ -20,7 +20,7 @@ initSqlJs().then(SQL => {
     sqlstr = "CREATE TABLE model (id INTEGER PRIMARY KEY, name TEXT, address TEXT, description TEXT, model_type TEXT, encoder TEXT, accuracy NUMBER);"
       + "CREATE TABLE data (transaction_hash TEXT PRIMARY KEY, text TEXT);"
       + "CREATE INDEX index_address ON model(address);"
-      + "CREATE TABLE time_accuracy ( transaction_hash TEXT,block_no INTEGER  , model_id INTEGER ,accuracy NUMBER , timestamp DATETIME DEFAULT CURRENT_TIMESTAMP ,FOREIGN KEY (model_id) REFERENCES model (id)); ";
+      + "CREATE TABLE accuracy (transaction_hash TEXT, block_number INTEGER, model_id INTEGER, accuracy NUMBER, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (model_id) REFERENCES model (id));";
     db.run(sqlstr);
   }
 
@@ -52,7 +52,7 @@ initSqlJs().then(SQL => {
   // Add a new accuracy record for a model
    function addAccuracyRecord()
    {
-     
+
    }
 
 
