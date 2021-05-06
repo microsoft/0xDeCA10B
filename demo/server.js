@@ -43,6 +43,20 @@ initSqlJs().then(SQL => {
     fs.writeFileSync(dbPath, Buffer.from(db.export()));
   }
 
+  // get the accuracy history for a model
+  function getAccuracyHistory()
+  {
+
+  }
+  
+  // Add a new accuracy record for a model
+   function addAccuracyRecord()
+   {
+     
+   }
+
+
+
   // Health
   app.get('/api/health', (req, res) => {
     res.send({ healthy: true });
