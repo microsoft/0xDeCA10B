@@ -10,7 +10,9 @@ const { convertData, convertNum } = require('../float-utils-node')
 
 const _toFloat = 1E9
 
-async function deployDensePerceptron(model, web3, toFloat) {
+async function deployDensePerceptron(model, web3, options){
+    const {toFloat, initialChunkSize = 200, chunkSize = 250,
+    } = options
     let gasUsed = 0
     const weightChunkSize = 450
     const { classifications } = model
@@ -43,7 +45,9 @@ async function deployDensePerceptron(model, web3, toFloat) {
     }
 }
 
-async function deploySparsePerceptron(model, web3, toFloat) {
+async function deploySparsePerceptron(model, web3, options){
+    const {toFloat, initialChunkSize = 200, chunkSize = 250,
+    } = options
     const weightChunkSize = 300
     const { classifications } = model
     const weights = convertData(model.weights, web3, toFloat)
@@ -91,7 +95,9 @@ async function deploySparsePerceptron(model, web3, toFloat) {
     }
 }
 
-async function deployNearestCentroidClassifier(model, web3, toFloat) {
+async function deployNearestCentroidClassifier(model, web3, options){
+    const {toFloat, initialChunkSize = 200, chunkSize = 250,
+    } = options
     let gasUsed = 0
     const classifications = []
     const centroids = []
@@ -190,7 +196,9 @@ exports.deploySparseNearestCentroidClassifier = async function (model, web3, toF
     })
 }
 
-async function deployNaiveBayes(model, web3, toFloat) {
+async function deployNaiveBayes(model, web3, options){
+    const {toFloat, initialChunkSize = 200, chunkSize = 250,
+    } = options
     let gasUsed = 0
     const initialFeatureChunkSize = 150
     const featureChunkSize = 350
