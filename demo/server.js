@@ -180,7 +180,7 @@ initSqlJs().then((SQL) => {
     ]);
     fs.writeFile(dbPath, Buffer.from(db.export()), () => {});
   }
-
+ // Add a new accuracy record for a model
   app.post("/api/accuracy", jsonParser, (req, res) => {
     const body = req.body;
     presistAccuracyRecord(body);
@@ -197,7 +197,8 @@ initSqlJs().then((SQL) => {
     console.log(result);
     return result;
   }
-
+  
+  // Get the accuracy history 
   app.get("/api/accuracy", (req, res) => {
     const getStmt = db.prepare("SELECT * FROM accuracy");
     const accuracyHistory = [];
