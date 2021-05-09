@@ -170,17 +170,22 @@ initSqlJs().then((SQL) => {
 
   app.listen(port, () => console.log(`Listening on port ${port}`));
 
-  // Add a new accuracy record for a model
-  function addAccuracyRecord(accuracy) {
-   
-     db.run('INSERT INTO accuracy VALUES (?, ?, ?, ?,, CURRENT_TIMESTAMP);', [
-       accuracy.transactionHash,
-       accuracy.blockNumber,
-       accuracy.modelId,
-       accuracy.accuracy,
-     ]);
+  // ACCURACY RECORD MANAGEMENT
+  function presistAccuracyRecord(accuracy) {
+    db.run("INSERT INTO accuracy VALUES (?, ?, ?, ?,, CURRENT_TIMESTAMP);", [
+      accuracy.transactionHash,
+      accuracy.blockNumber,
+      accuracy.modelId,
+      accuracy.accuracy,
+    ]);
     fs.writeFile(dbPath, Buffer.from(db.export()), () => {});
   }
+
+  app.post("/api/accuracy", jsonParser, (req, res) => {
+    const body = req.body;
+    presistAccuracyRecord(body);
+    return res.sendStatus(200);
+  });
 
   // Get the accuracy history for a model
   function getAccuracyHistory(modelId) {
@@ -191,10 +196,8 @@ initSqlJs().then((SQL) => {
     getAccuracyStmt.free();
     console.log(result);
     return result;
-   
   }
-  getAccuracyHistory(10);
-  
+
   app.get("/api/accuracy", (req, res) => {
     const getStmt = db.prepare("SELECT * FROM accuracy");
     const accuracyHistory = [];
@@ -210,6 +213,6 @@ initSqlJs().then((SQL) => {
     }
     getStmt.free();
 
-    res.send({accuracyHistory});
+    res.send({ accuracyHistory });
   });
 });
