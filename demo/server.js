@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require('fs');
+const { waitForDebugger } = require('inspector');
 const initSqlJs = require('sql.js');
 const app = express();
 const port = process.env.PORT || 5387;
@@ -161,19 +162,23 @@ initSqlJs().then(SQL => {
     ]);
     fs.writeFile(dbPath, Buffer.from(db.export()), () => {});
   }
+
  // Add a new accuracy record for a model
   app.post('/api/accuracy', jsonParser, (req, res) => {
-    const body = req.body;
+    const body = req.body
     presistAccuracyRecord(body);
     return res.sendStatus(200);
   });
 
   // Get the accuracy history 
-  app.get('/api/accuracy', (req, res) => {
-    const getStmt = db.prepare('SELECT * FROM accuracy');
-    const accuracyHistory = [];
+  app.get('/api/accuracy/model', (req, res) => {
+    const { modelId } = req.query;
+    if (modelId != null) {
+      const getStmt = db.prepare('SELECT * FROM accuracy where model_id == $modelId ORDER BY timestamp;');
+      const accuracyHistory = [];
     while (getStmt.step()) {
       const accuracy = getStmt.get();
+      console.log(accuracy);
       accuracyHistory.push({
         transactionHash: accuracy[0],
         blockNumber: accuracy[1],
@@ -183,6 +188,9 @@ initSqlJs().then(SQL => {
       });
     }
     getStmt.free();
-    res.send({ accuracyHistory });
+    res.send({ accuracyHistory});
+    } else {
+      return res.status(400).send({ message: "Not found." });
+    }
   });
 });
