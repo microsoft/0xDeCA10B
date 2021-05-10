@@ -3,7 +3,6 @@ const fs = require('fs');
 const initSqlJs = require('sql.js');
 const app = express();
 const port = process.env.PORT || 5387;
-//const bodyParser = require('body-parser');
 const jsonParser = express.json();
 
 const dbPath = 'db.sqlite';
@@ -151,29 +150,39 @@ initSqlJs().then(SQL => {
   });
 
   app.listen(port, () => console.log(`Listening on port ${port}`));
-});
 
- // Add a new accuracy record for a model
-  function addAccuracyRecord(accuracy)
-  {
-   db.run('INSERT INTO accuracy VALUES (?, ?, ?, ?);', [
-     accuracy.transactionHash,
-     accuracy.blockNumber,
-     accuracy.modelId,
-     accuracy.accuracy,
-   ]);
-   fs.writeFile(dbPath, Buffer.from(db.export()), () => { });
+   // ACCURACY RECORD MANAGEMENT
+   function presistAccuracyRecord(accuracy) {
+    db.run('INSERT INTO accuracy VALUES (?, ?, ?, ?,, CURRENT_TIMESTAMP);', [
+      accuracy.transactionHash,
+      accuracy.blockNumber,
+      accuracy.modelId,
+      accuracy.accuracy,
+    ]);
+    fs.writeFile(dbPath, Buffer.from(db.export()), () => {});
   }
+ // Add a new accuracy record for a model
+  app.post('/api/accuracy', jsonParser, (req, res) => {
+    const body = req.body;
+    presistAccuracyRecord(body);
+    return res.sendStatus(200);
+  });
 
- // Get the accuracy history for a model
- function getAccuracyHistory(modelId)
- {
-  const getAccuracyStmt = db.prepare('SELECT * FROM accuracy WHERE model_id == $modelId ORDER BY timestamp;');
-  const result = getAccuracyStmt.getAsObject({ $modelId: modelId });
-  getAccuracyStmt.free();
-  return result;
- }
- 
-
-
-
+  // Get the accuracy history 
+  app.get('/api/accuracy', (req, res) => {
+    const getStmt = db.prepare("SELECT * FROM accuracy");
+    const accuracyHistory = [];
+    while (getStmt.step()) {
+      const accuracy = getStmt.get();
+      accuracyHistory.push({
+        transactionHash: accuracy[0],
+        blockNumber: accuracy[1],
+        modelId: accuracy[2],
+        accuracy: accuracy[3],
+        timestamp: accuracy[4],
+      });
+    }
+    getStmt.free();
+    res.send({ accuracyHistory });
+  });
+});
