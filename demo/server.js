@@ -161,15 +161,7 @@ initSqlJs().then(SQL => {
     ]);
     fs.writeFile(dbPath, Buffer.from(db.export()), () => {});
   }
-  function AccuracyRecord() {
-    db.run('INSERT INTO accuracy VALUES ("hello", 1, 30, 90, CURRENT_TIMESTAMP);');
-    db.run('INSERT INTO accuracy VALUES ("hel777lo", 1, 40, 100, CURRENT_TIMESTAMP);');
-    db.run('INSERT INTO accuracy VALUES ("helnnnlo", 1, 60, 60, CURRENT_TIMESTAMP);');
-    db.run('INSERT INTO accuracy VALUES ("hellllo", 1, 70, 80, CURRENT_TIMESTAMP);');
-    db.run('INSERT INTO accuracy VALUES ("bye", 1, 30, 50, CURRENT_TIMESTAMP);');
-
-  }
-  AccuracyRecord();
+  
  // Add a new accuracy record for a model
   app.post('/api/accuracy', jsonParser, (req, res) => {
     const body = req.body
