@@ -154,7 +154,7 @@ initSqlJs().then(SQL => {
 
    // ACCURACY RECORD MANAGEMENT
    function presistAccuracyRecord(accuracy) {
-    db.run('INSERT INTO accuracy VALUES (?, ?, ?, ?,, CURRENT_TIMESTAMP);', [
+    db.run('INSERT INTO accuracy VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP);', [
       accuracy.transactionHash,
       accuracy.blockNumber,
       accuracy.modelId,
@@ -172,9 +172,10 @@ initSqlJs().then(SQL => {
 
   // Get the accuracy history 
   app.get('/api/accuracy/model', (req, res) => {
-    const { modelId } = req.query;
+    const { modelId  } = req.query;
     if (modelId != null) {
-      const getStmt = db.prepare('SELECT * FROM accuracy where model_id == $modelId ORDER BY timestamp;');
+      const str = 'SELECT * FROM accuracy where model_id == ' +modelId+' ORDER BY timestamp;';
+      const getStmt = db.prepare(str);
       const accuracyHistory = [];
     while (getStmt.step()) {
       const accuracy = getStmt.get();
