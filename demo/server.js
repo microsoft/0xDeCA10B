@@ -178,7 +178,6 @@ initSqlJs().then(SQL => {
       const accuracyHistory = [];
     while (getStmt.step()) {
       const accuracy = getStmt.get();
-      console.log(accuracy);
       accuracyHistory.push({
         transactionHash: accuracy[0],
         blockNumber: accuracy[1],
