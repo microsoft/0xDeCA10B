@@ -170,7 +170,7 @@ initSqlJs().then(SQL => {
 
   // Get the accuracy history 
   app.get('/api/accuracy', (req, res) => {
-    const getStmt = db.prepare("SELECT * FROM accuracy");
+    const getStmt = db.prepare('SELECT * FROM accuracy');
     const accuracyHistory = [];
     while (getStmt.step()) {
       const accuracy = getStmt.get();
