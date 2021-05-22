@@ -35,11 +35,11 @@ export class ModelDeployer {
 	async deployNaiveBayes(model: NaiveBayesModel, options: any): Promise<Contract> {
 		const { account, toFloat,
 			notify, dismissNotification,
-			saveTransactionHash, saveAddress, initialChunkSize = 150, chunkSize = 350,
+			saveTransactionHash, saveAddress,
+			initialChunkSize = 150, chunkSize = 350,
 		} = options
 
 		const defaultSmoothingFactor = 1
-
 		const { classifications, classCounts, featureCounts, totalNumFeatures } = model
 		const smoothingFactor = convertNum(model.smoothingFactor || defaultSmoothingFactor, this.web3, toFloat)
 
@@ -107,7 +107,8 @@ export class ModelDeployer {
 	async deployNearestCentroidClassifier(model: NearestCentroidModel | SparseNearestCentroidModel, options: any): Promise<Contract> {
 		const { account, toFloat,
 			notify, dismissNotification,
-			saveTransactionHash, saveAddress, initialChunkSize = 200, chunkSize = 250,
+			saveTransactionHash, saveAddress,
+			initialChunkSize = 200, chunkSize = 250,
 		} = options
 
 		const classifications: string[] = []
@@ -200,7 +201,8 @@ export class ModelDeployer {
 	async deployPerceptron(model: DensePerceptronModel | SparsePerceptronModel, options: any): Promise<Contract> {
 		const { account, toFloat,
 			notify, dismissNotification,
-			saveTransactionHash, saveAddress, chunkSize = 350,
+			saveTransactionHash, saveAddress,
+			chunkSize = 350,
 		} = options
 		const defaultLearningRate = 0.5
 
