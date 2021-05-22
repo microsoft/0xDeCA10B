@@ -273,7 +273,7 @@ contract('CollaborativeTrainer with Perceptron', function (accounts) {
       intercept: 2,
       learningRate: 0.5,
     }
-    const { classifierContract } = await deployModel(model, web3, toFloat)
+    const { classifierContract } = await deployModel(model, web3, { toFloat })
     assert.equal(await classifierContract.intercept().then(parseFloatBN), model.intercept)
     assert.equal(await classifierContract.learningRate().then(parseFloatBN), model.learningRate)
     for (let i = 0; i < model.weights; ++i) {

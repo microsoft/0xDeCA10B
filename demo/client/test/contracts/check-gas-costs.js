@@ -40,7 +40,7 @@ contract('CheckGasUsage', function (accounts) {
     gasUsed += (await web3.eth.getTransactionReceipt(dataHandler.transactionHash)).gasUsed
     console.log(`  Deployed data handler to ${dataHandler.address}. Total gasUsed: ${gasUsed}.`)
 
-    const classifierInfo = await deployModel(modelPath, web3, toFloat)
+    const classifierInfo = await deployModel(modelPath, web3, { toFloat })
     const classifier = classifierInfo.classifierContract
     gasUsed += classifierInfo.gasUsed
     console.log("  Deploying Incentive Mechanism.")
