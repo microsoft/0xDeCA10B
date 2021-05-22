@@ -35,7 +35,7 @@ export class ModelDeployer {
 	async deployNaiveBayes(model: NaiveBayesModel, options: any): Promise<Contract> {
 		const { account, toFloat,
 			notify, dismissNotification,
-			saveTransactionHash, saveAddress, initialChunkSize = 150, chunkSize = 350
+			saveTransactionHash, saveAddress, initialChunkSize = 150, chunkSize = 350,
 		} = options
 
 		const defaultSmoothingFactor = 1
@@ -109,7 +109,7 @@ export class ModelDeployer {
 			notify, dismissNotification,
 			saveTransactionHash, saveAddress, initialChunkSize = 200, chunkSize = 250,
 		} = options
-	
+
 		const classifications: string[] = []
 		const centroids: number[][] | number[][][] = []
 		const dataCounts: number[] = []
@@ -200,7 +200,7 @@ export class ModelDeployer {
 	async deployPerceptron(model: DensePerceptronModel | SparsePerceptronModel, options: any): Promise<Contract> {
 		const { account, toFloat,
 			notify, dismissNotification,
-			saveTransactionHash, saveAddress, chunkSize = 350
+			saveTransactionHash, saveAddress, chunkSize = 350,
 		} = options
 		const defaultLearningRate = 0.5
 
@@ -330,7 +330,7 @@ export class ModelDeployer {
 		if (options.saveTransactionHash === undefined) {
 			options.saveTransactionHash = (() => { })
 		}
-		
+
 		switch (model.type.toLocaleLowerCase('en')) {
 			case 'dense perceptron':
 			case 'sparse perceptron':

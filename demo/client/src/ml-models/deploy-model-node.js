@@ -11,8 +11,7 @@ const { convertData, convertNum } = require('../float-utils-node')
 const _toFloat = 1E9
 
 async function deployDensePerceptron(model, web3, options) {
-    const { toFloat, initialChunkSize = 450, chunkSize = 450,
-    } = options
+    const { toFloat, initialChunkSize = 450, chunkSize = 450 } = options
     let gasUsed = 0
     const { classifications } = model
     const weights = convertData(model.weights, web3, toFloat)
