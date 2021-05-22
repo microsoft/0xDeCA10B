@@ -173,23 +173,25 @@ initSqlJs().then(SQL => {
   app.get('/api/accuracy/model', (req, res) => {
     const { modelId  } = req.query;
     if (modelId != null) {
-      const str = 'SELECT * FROM accuracy where model_id == ' +modelId+' ORDER BY timestamp;';
-      const getStmt = db.prepare(str);
+      const getStmt = db.prepare('SELECT * FROM accuracy where model_id == $modelId ORDER BY timestamp;',
+      {
+        $modelId: modelId
+      })
       const accuracyHistory = [];
-    while (getStmt.step()) {
-      const accuracy = getStmt.get();
-      accuracyHistory.push({
-        transactionHash: accuracy[0],
-        blockNumber: accuracy[1],
-        modelId: accuracy[2],
-        accuracy: accuracy[3],
-        timestamp: accuracy[4],
-      });
-    }
-    getStmt.free();
-    res.send({ accuracyHistory});
+      while (getStmt.step()) {
+        const accuracy = getStmt.get();
+        accuracyHistory.push({
+          transactionHash: accuracy[0],
+          blockNumber: accuracy[1],
+          modelId: accuracy[2],
+          accuracy: accuracy[3],
+          timestamp: accuracy[4],
+        });
+      }
+      getStmt.free();
+      res.send({ accuracyHistory});
     } else {
-      return res.status(400).send({ message: "Not found." });
+      return res.status(400).send({ message: "null" });
     }
   });
 });
