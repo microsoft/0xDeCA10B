@@ -225,7 +225,6 @@ export class ModelDeployer {
 		}
 		const intercept = convertNum(model.intercept, this.web3, toFloat)
 		const learningRate = convertNum(model.learningRate || defaultLearningRate, this.web3, toFloat)
-
 		if (featureIndices !== undefined && featureIndices.length !== weightsArray.length + sparseWeights.length) {
 			return Promise.reject("The number of features must match the number of weights.")
 		}
