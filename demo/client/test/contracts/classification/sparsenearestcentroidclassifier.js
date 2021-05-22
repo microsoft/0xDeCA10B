@@ -39,7 +39,7 @@ contract('SparseNearestCentroidClassifier', function (accounts) {
 				}
 			}
 		}
-		classifier = (await deploySparseNearestCentroidClassifier(model, web3, toFloat)).classifierContract
+		classifier = (await deploySparseNearestCentroidClassifier(model, web3, { toFloat })).classifierContract
 	})
 
 	it("...should get the classifications", function () {

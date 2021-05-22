@@ -10,8 +10,8 @@ const { convertData, convertNum } = require('../float-utils-node')
 
 const _toFloat = 1E9
 
-async function deployDensePerceptron(model, web3, options){
-    const {toFloat, initialChunkSize = 200, chunkSize = 450,
+async function deployDensePerceptron(model, web3, options) {
+    const { toFloat, initialChunkSize = 450, chunkSize = 450,
     } = options
     let gasUsed = 0
     const { classifications } = model
@@ -24,12 +24,12 @@ async function deployDensePerceptron(model, web3, options){
         throw new Error("featureIndices are not supported yet.")
     }
 
-    console.log(`  Deploying Dense Perceptron classifier with first ${Math.min(weights.length, chunkSize)} weights.`)
-    const classifierContract = await DensePerceptron.new(classifications, weights.slice(0, chunkSize), intercept, learningRate)
+    console.log(`  Deploying Dense Perceptron classifier with first ${Math.min(weights.length, initialChunkSize)} weights.`)
+    const classifierContract = await DensePerceptron.new(classifications, weights.slice(0, initialChunkSize), intercept, learningRate)
     gasUsed += (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
 
     // Add remaining weights.
-    for (let i = chunkSize; i < weights.length; i += chunkSize) {
+    for (let i = initialChunkSize; i < weights.length; i += chunkSize) {
         // Do not parallelize so that weights are set in order.
         const r = await classifierContract.initializeWeights(weights.slice(i, i + chunkSize))
         console.debug(`    Added classifier weights [${i}, ${Math.min(i + chunkSize, weights.length)}). gasUsed: ${r.receipt.gasUsed}`)
@@ -44,9 +44,8 @@ async function deployDensePerceptron(model, web3, options){
     }
 }
 
-async function deploySparsePerceptron(model, web3, options){
-    const {toFloat, initialChunkSize = 200, chunkSize = 300,
-    } = options
+async function deploySparsePerceptron(model, web3, options) {
+    const { toFloat, initialChunkSize = 300, chunkSize = 300 } = options
     const { classifications } = model
     const weights = convertData(model.weights, web3, toFloat)
     const intercept = convertNum(model.intercept || model.bias, web3, toFloat)
@@ -65,13 +64,13 @@ async function deploySparsePerceptron(model, web3, options){
         }
     }
 
-    console.log(`  Deploying Sparse Perceptron classifier with first ${Math.min(weights.length, chunkSize)} weights...`)
-    const classifierContract = await SparsePerceptron.new(classifications, weights.slice(0, chunkSize), intercept, learningRate)
+    console.log(`  Deploying Sparse Perceptron classifier with first ${Math.min(weights.length, initialChunkSize)} weights...`)
+    const classifierContract = await SparsePerceptron.new(classifications, weights.slice(0, initialChunkSize), intercept, learningRate)
     let gasUsed = (await web3.eth.getTransactionReceipt(classifierContract.transactionHash)).gasUsed
-    console.log(`  Deployed Sparse Perceptron classifier with first ${Math.min(weights.length, chunkSize)} weights. gasUsed: ${gasUsed}`)
+    console.log(`  Deployed Sparse Perceptron classifier with first ${Math.min(weights.length, initialChunkSize)} weights. gasUsed: ${gasUsed}`)
 
     // Add remaining weights.
-    for (let i = chunkSize; i < weights.length; i += chunkSize) {
+    for (let i = initialChunkSize; i < weights.length; i += chunkSize) {
         const r = await classifierContract.initializeWeights(i, weights.slice(i, i + chunkSize))
         console.debug(`    Added classifier weights [${i}, ${Math.min(i + chunkSize, weights.length)}) gasUsed: ${r.receipt.gasUsed}`)
         gasUsed += r.receipt.gasUsed
@@ -93,9 +92,8 @@ async function deploySparsePerceptron(model, web3, options){
     }
 }
 
-async function deployNearestCentroidClassifier(model, web3, options){
-    const {toFloat, initialChunkSize = 200, chunkSize = 250,
-    } = options
+async function deployNearestCentroidClassifier(model, web3, options) {
+    const { toFloat } = options
     let gasUsed = 0
     const classifications = []
     const centroids = []
@@ -139,10 +137,9 @@ async function deployNearestCentroidClassifier(model, web3, options){
     })
 }
 
-exports.deploySparseNearestCentroidClassifier = async function (model, web3, toFloat) {
+exports.deploySparseNearestCentroidClassifier = async function (model, web3, options) {
+    const { toFloat, initialChunkSize = 200, chunkSize = 250 } = options
     let gasUsed = 0
-    const initialChunkSize = 200
-    const chunkSize = 250
     const classifications = []
     const centroids = []
     const dataCounts = []
@@ -194,9 +191,8 @@ exports.deploySparseNearestCentroidClassifier = async function (model, web3, toF
     })
 }
 
-async function deployNaiveBayes(model, web3, options){
-    const {toFloat, initialChunkSize = 150, chunkSize =350,
-    } = options
+async function deployNaiveBayes(model, web3, options) {
+    const { toFloat, initialChunkSize = 150, chunkSize = 350 } = options
     let gasUsed = 0
     const { classifications, classCounts, featureCounts, totalNumFeatures } = model
     const smoothingFactor = convertNum(model.smoothingFactor, web3, toFloat)
@@ -244,6 +240,9 @@ async function deployNaiveBayes(model, web3, options){
 exports.deployModel = async function (model, web3, options) {
     if (typeof model === 'string') {
         model = JSON.parse(fs.readFileSync(model, 'utf8'))
+    }
+    if (options.toFloat === undefined) {
+        options.toFloat = _toFloat
     }
     switch (model.type) {
         case 'dense perceptron':
