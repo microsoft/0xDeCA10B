@@ -195,7 +195,7 @@ initSqlJs().then(SQL => {
         res.send({ message: "Not Valid modelId" });
       }
     } else {
-      return res.status(400).send({ message: "null modelId" });
+      return res.status(400).send({ message: "Null" });
     }
   });
 });
