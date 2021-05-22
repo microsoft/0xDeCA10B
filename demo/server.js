@@ -189,9 +189,13 @@ initSqlJs().then(SQL => {
         });
       }
       getStmt.free();
-      res.send({ accuracyHistory});
+      if (accuracyHistory.length) {
+        res.send({ accuracyHistory });
+      } else {
+        res.send({ message: "Not Valid modelId" });
+      }
     } else {
-      return res.status(400).send({ message: "null" });
+      return res.status(400).send({ message: "null modelId" });
     }
   });
 });
