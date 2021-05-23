@@ -192,10 +192,10 @@ initSqlJs().then(SQL => {
       if (accuracyHistory.length) {
         res.send({ accuracyHistory });
       } else {
-        res.send({ message: "Not Valid modelId" });
+        res.send({ message: "No Result Found : Please enter a valid modelId" });
       }
     } else {
-      return res.status(400).send({ message: "Null" });
+      return res.status(400).send({ message: "modelId missing" });
     }
   });
 });
