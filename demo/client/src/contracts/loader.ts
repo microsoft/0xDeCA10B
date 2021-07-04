@@ -58,7 +58,7 @@ export class ContractLoader {
 		this.web3 = web3
 	}
 
-	getContractInstance(options: any): Contract {
+	getContractInstance(options: { abi: any, address: string }): Contract {
 		return new this.web3.eth.Contract(options.abi, options.address)
 	}
 

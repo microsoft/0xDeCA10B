@@ -88,13 +88,15 @@ export class ModelDeployer {
 					for (let j = initialChunkSize; j < featureCounts[classification].length; j += chunkSize) {
 						const notification = notify(`Please accept the prompt to upload the features [${j},${Math.min(j + chunkSize, featureCounts[classification].length)}) for the "${classifications[classification]}" class`)
 						await newContractInstance.methods.initializeCounts(
-							featureCounts[classification].slice(j, j + chunkSize), classification).send().on('transactionHash', () => {
-							dismissNotification(notification)
-						}).on('error', (err: any) => {
-							dismissNotification(notification)
-							notify(`Error setting feature indices for [${j},${Math.min(j + chunkSize, featureCounts[classification].length)}) for the "${classifications[classification]}" class`, { variant: 'error' })
-							throw err
-						})
+							featureCounts[classification].slice(j, j + chunkSize), classification).send()
+							.on('transactionHash', () => {
+								dismissNotification(notification)
+							})
+							.on('error', (err: any) => {
+								dismissNotification(notification)
+								notify(`Error setting feature indices for [${j},${Math.min(j + chunkSize, featureCounts[classification].length)}) for the "${classifications[classification]}" class`, { variant: 'error' })
+								throw err
+							})
 					}
 				}
 				notify(`The model contract has been deployed to ${newContractInstance.options.address}`, { variant: 'success' })
@@ -182,13 +184,15 @@ export class ModelDeployer {
 					const notification = notify(`Please accept the prompt to upload the values for dimensions [${j},${Math.min(j + chunkSize, centroids[classification].length)}) for the "${classifications[classification]}" class`)
 					// Not parallel since order matters.
 					await newContractInstance.methods.extendCentroid(
-						centroids[classification].slice(j, j + chunkSize), classification).send().on('transactionHash', () => {
-						dismissNotification(notification)
-					}).on('error', (err: any) => {
-						dismissNotification(notification)
-						notify(`Error setting feature indices for [${j},${Math.min(j + chunkSize, centroids[classification].length)}) for the "${classifications[classification]}" class`, { variant: 'error' })
-						throw err
-					})
+						centroids[classification].slice(j, j + chunkSize), classification).send()
+						.on('transactionHash', () => {
+							dismissNotification(notification)
+						})
+						.on('error', (err: any) => {
+							dismissNotification(notification)
+							notify(`Error setting feature indices for [${j},${Math.min(j + chunkSize, centroids[classification].length)}) for the "${classifications[classification]}" class`, { variant: 'error' })
+							throw err
+						})
 				}
 			}
 
@@ -210,7 +214,7 @@ export class ModelDeployer {
 		let weightsArray: any[] = []
 		const sparseWeights: any[][] = []
 
-		if (model.hasOwnProperty('sparseWeights')) {
+		if ('sparseWeights' in model) {
 			const sparseModel = model as SparsePerceptronModel
 			if (typeof sparseModel.sparseWeights === 'object' && sparseModel.sparseWeights !== null) {
 				for (const [featureIndexKey, weight] of Object.entries(sparseModel.sparseWeights)) {
@@ -319,24 +323,26 @@ export class ModelDeployer {
 		if (options.toFloat === undefined) {
 			options.toFloat = ModelDeployer.toFloat
 		}
+
+		const noop: () => void = () => { return }
 		if (options.notify === undefined) {
-			options.notify = (() => { })
+			options.notify = noop
 		}
 		if (options.dismissNotification === undefined) {
-			options.dismissNotification = (() => { })
+			options.dismissNotification = noop
 		}
 		if (options.saveAddress === undefined) {
-			options.saveAddress = (() => { })
+			options.saveAddress = noop
 		}
 		if (options.saveTransactionHash === undefined) {
-			options.saveTransactionHash = (() => { })
+			options.saveTransactionHash = noop
 		}
 
 		switch (model.type.toLocaleLowerCase('en')) {
 			case 'dense perceptron':
 			case 'sparse perceptron':
 			case 'perceptron':
-				if (model.hasOwnProperty('sparseWeights')) {
+				if ('sparseWeights' in model) {
 					return this.deployPerceptron(model as SparsePerceptronModel, options)
 				} else {
 					return this.deployPerceptron(model as DensePerceptronModel, options)

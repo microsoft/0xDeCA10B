@@ -187,7 +187,11 @@ npx truffle test test/contracts/*.js test/contracts/**/*.js --network skipMigrat
 ```
 
 # Linting
-### Solidity Files
+Run `yarn lint`.
+
+Run `yarn lint-fix` to automatically resolve some issues.
+
+## Solidity Files
 We use [Ethlint][ethlint] for linting and enforce it on pull requests.
 To check the contract code run:
 ```bash

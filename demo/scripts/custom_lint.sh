@@ -6,12 +6,14 @@ if [ "${1}" == "--fix" ]; then
 	# eslint . --fix --ext .js,.jsx,.ts,.tsx
 	# Some files are ready.
 	eslint --fix server.js
+	eslint . --fix --ext .ts,.tsx
 	solium --dir client/src/contracts/ --fix
 else
 	# Not ready yet:
 	# eslint . --ext .js,.jsx,.ts,.tsx
 	# Some files are ready.
 	eslint server.js
+	eslint . --ext .ts,.tsx
 	solium --dir client/src/contracts/ --fix-dry-run
 fi
 
