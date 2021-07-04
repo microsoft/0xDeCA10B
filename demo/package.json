@@ -8,7 +8,8 @@
     "clean": "rm -rf blockchain_db db.sqlite client/src/contracts/compiled/*.json",
     "client": "cd client && yarn start",
     "prod-client": "cd client && yarn start-prod",
-    "lint": "solium --dir client/src/contracts/ --fix-dry-run",
+    "lint": "bash scripts/custom_lint.sh",
+    "lint-fix": "bash scripts/custom_lint.sh --fix",
     "server": "nodemon server.js --ignore client/",
     "start-prod-back-end": "node server.js",
     "test": "cd client && yarn test"
@@ -17,9 +18,17 @@
     "body-parser": "^1.18.3",
     "express": "^4.16.4",
     "ganache-cli": "^6.12.1",
-    "sql.js": "^1.1.0"
+    "sql.js": "^1.1.0",
+    "typescript": "^4.3.5"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^4.28.1",
+    "@typescript-eslint/parser": "^4.28.1",
+    "eslint": "^7.30.0",
+    "eslint-plugin-react": "^7.24.0",
     "ethlint": "^1.2.5",
     "nodemon": "^2.0.2"
   }

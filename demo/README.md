@@ -18,9 +18,24 @@ This section explains how to set up locally on Linux/WSL, alternatively, you can
 The following steps are made for Linux/WSL and require `npm` with `node` version 10.
 Other later versions of node might work too but some node-gyp issues occurred with version 14.
 
+You will need to have `make` installed. On Debian (e.g. Ubuntu) you can do:
+```bash
+sudo apt install build-essential
+```
+
 Run
 ```bash
 ./setup.sh
+```
+
+Troubleshooting: 
+
+## Troubleshooting Setup
+If you have problems running the setup steps related to node-gyp, then you might need to set Python 2.7 to be your default.
+Recommendation: Temporarily set up a Python 2.7 Conda environment (just for the installation) and activate it:
+```bash
+conda create --name python2 python=2
+conda activate python2
 ```
 
 ## Docker Setup
@@ -68,9 +83,6 @@ docker push 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca
 ```
 
 (Microsoft Devs) To update the production website, see the instructions at the top of [service.Dockerfile](./service.Dockerfile).
-
-## Troubleshooting Setup
-If you have problems running the setup steps related to node-gyp, then you might need to set Python 2.7 to be your default. Recommendation: Set up a Python 2.7 Conda environment and activate it.
 
 ## Update
 To update dependencies after already setting up:
