@@ -168,12 +168,24 @@ If you get the spinning issue again, then also try following the steps above wit
 [truffle-react]: https://truffleframework.com/boxes/react
 
 # Testing
-To simply run all tests:
+To run all automated tests:
 ```bash
 yarn test
 ```
 
 A local blockchain will be started and stopped so it's best not to have a blockchain running at the same address and port (e.g. one running through `yarn blockchain`).
+
+## Manual Testing
+Not all tests are automated (yet, maybe one we'll automate them all).
+Some things that should be manually tested in the UI after completing the deployment:
+* Pick a model
+* PREDICT: Verify that you can use the model to classify some data
+* TRAIN: Add "incorrect" data as user "Bad"
+* Add "correct" data as user "Good"
+* REFUND: Verify that "Good" can get a refund for the "correct" data
+* REWARD: Verify that "Good" can report "Bad"'s "incorrect" data
+* Add a new model
+
 
 ## Running Specific Tests
 To run specific smart contract tests and save time by not waiting for Truffle migrations:
@@ -193,10 +205,7 @@ Run `yarn lint-fix` to automatically resolve some issues.
 
 ## Solidity Files
 We use [Ethlint][ethlint] for linting and enforce it on pull requests.
-To check the contract code run:
-```bash
-yarn lint
-```
+The above `yarn lint` and `yarn lint-fix` commands will also check Solidity files.
 
 [deploy-video]: https://aka.ms/0xDeCA10B-deploy
 [demo-video]: https://aka.ms/0xDeCA10B-demo
