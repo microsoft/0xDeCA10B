@@ -2,10 +2,16 @@ set -e
 
 if [ "${1}" == "--fix" ]; then
 	is_fix="true"
-	eslint . --fix --ext .js,.jsx,.ts,.tsx
+	# Not ready yet:
+	# eslint . --fix --ext .js,.jsx,.ts,.tsx
+	# Some files are ready.
+	eslint --fix server.js
 	solium --dir client/src/contracts/ --fix
 else
-	eslint . --ext .js,.jsx,.ts,.tsx
+	# Not ready yet:
+	# eslint . --ext .js,.jsx,.ts,.tsx
+	# Some files are ready.
+	eslint server.js
 	solium --dir client/src/contracts/ --fix-dry-run
 fi
 

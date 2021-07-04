@@ -1,5 +1,10 @@
 module.exports = {
 	root: true,
+	env: {
+		browser: true,
+		node: true,
+		es6: true,
+	},
 	parser: '@typescript-eslint/parser',
 	plugins: [
 		'@typescript-eslint',
@@ -13,6 +18,8 @@ module.exports = {
 		'@typescript-eslint/no-explicit-any': 'off',
 		'@typescript-eslint/no-non-null-assertion': 'off',
 		'@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: "^_" }],
+		// Messes up .js files.
+		'@typescript-eslint/no-var-requires': 'off',
 		'@typescript-eslint/type-annotation-spacing': ['error'],
 		'array-bracket-spacing': ['error', 'never'],
 		'arrow-spacing': ['error'],

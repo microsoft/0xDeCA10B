@@ -2,7 +2,7 @@ import axios from 'axios'
 import { DataStore, DataStoreHealthStatus, ModelInformation, ModelsResponse, OriginalData, RemoveResponse } from './data-store'
 
 export class ServiceDataStore implements DataStore {
-	url: string = ''
+	url = ''
 
 	constructor(url?: string) {
 		if (url !== undefined) {
