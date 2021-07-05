@@ -18,7 +18,8 @@ This section explains how to set up locally on Linux/WSL, alternatively, you can
 The following steps are made for Linux/WSL and require `npm` with `node` version 10.
 Other later versions of node might work too but some node-gyp issues occurred with version 14.
 
-You will need to have `make` installed. On Debian (e.g. Ubuntu) you can do:
+You will need to have `make` installed.
+On Debian (e.g. Ubuntu) you can do:
 ```bash
 sudo apt install build-essential
 ```
@@ -28,10 +29,8 @@ Run
 ./setup.sh
 ```
 
-Troubleshooting: 
-
 ## Troubleshooting Setup
-If you have problems running the setup steps related to node-gyp, then you might need to set Python 2.7 to be your default.
+If you have problems running the setup steps related to node-gyp, then you might need to set Python 2.7 to be your default (just during the installation).
 Recommendation: Temporarily set up a Python 2.7 Conda environment (just for the installation) and activate it:
 ```bash
 conda create --name python2 python=2
