@@ -94,7 +94,10 @@ To update dependencies after already setting up:
 There is a video example showing how to deploy <a href="https://aka.ms/0xDeCA10B-deploy" target="_blank">here</a>.
 
 ## Blockchain
-Start the blockchain (Ganache) in one terminal.
+Models and data are stored on a local blockchain.
+
+
+Start the blockchain (uses `ganache-cli`) in one terminal.
 Run:
 ```bash
 yarn blockchain
@@ -107,7 +110,9 @@ Do once:
 * Use that private key to create a new account in MetaMask.
 
 ## Server
-This is used by default in development mode but not in production.
+(Optional) The server is used to store model meta-data and original data when for training models.
+
+The server is used by default in development mode but not in production mode.
 
 If you want to store meta-data in a local database file instead of just within the browser, then start the server in one terminal.
 This step allows you to see models listed when you open the dashboard for the first time.
@@ -120,7 +125,9 @@ yarn server
 ```
 
 ## Client
-Then in another terminal.
+The website is the "client", it allows you to interract with the blockchain and optional server.
+
+In another terminal.
 Run:
 ```bash
 yarn client
