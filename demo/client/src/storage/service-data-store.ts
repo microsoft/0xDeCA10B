@@ -2,7 +2,7 @@ import axios from 'axios'
 import { DataStore, DataStoreHealthStatus, ModelInformation, ModelsResponse, OriginalData, RemoveResponse } from './data-store'
 
 export class ServiceDataStore implements DataStore {
-	url: string = ''
+	url = ''
 
 	constructor(url?: string) {
 		if (url !== undefined) {
@@ -78,7 +78,7 @@ export class ServiceDataStore implements DataStore {
 		})
 	}
 
-	removeModel(modelInformation: ModelInformation): Promise<RemoveResponse> {
+	removeModel(_modelInformation: ModelInformation): Promise<RemoveResponse> {
 		// Requires permission validation from the server.
 		throw new Error("Not implemented")
 	}

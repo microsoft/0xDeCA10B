@@ -58,11 +58,11 @@ contract('SparseNearestCentroidClassifier', function (accounts) {
 	it("...should get the squared magnitudes", async function () {
 		const squaredMagnitude0 = await classifier.getSquaredMagnitude(0)
 		let expected = web3.utils.toBN(toFloat).mul(web3.utils.toBN(toFloat))
-		assert(squaredMagnitude0.eq(expected), `${squaredMagnitude0} != ${expected}`);
+		assert(squaredMagnitude0.eq(expected), `${squaredMagnitude0} != ${expected}`)
 
 		const squaredMagnitude1 = await classifier.getSquaredMagnitude(1)
 		expected = web3.utils.toBN(toFloat).mul(web3.utils.toBN(toFloat))
-		assert(squaredMagnitude1.eq(expected), `${squaredMagnitude1} != ${expected}`);
+		assert(squaredMagnitude1.eq(expected), `${squaredMagnitude1} != ${expected}`)
 	})
 
 	it("...should predict the classification", async function () {

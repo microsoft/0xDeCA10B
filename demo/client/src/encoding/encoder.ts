@@ -17,7 +17,7 @@ export enum Encoder {
 	USE = "universal sentence encoder",
 }
 
-export function normalizeEncoderName(encoderName: string) {
+export function normalizeEncoderName(encoderName: string): string {
 	if (!encoderName) {
 		return encoderName
 	}

@@ -88,9 +88,11 @@ export class ModelDeployer {
 					for (let j = initialChunkSize; j < featureCounts[classification].length; j += chunkSize) {
 						const notification = notify(`Please accept the prompt to upload the features [${j},${Math.min(j + chunkSize, featureCounts[classification].length)}) for the "${classifications[classification]}" class`)
 						await newContractInstance.methods.initializeCounts(
-							featureCounts[classification].slice(j, j + chunkSize), classification).send().on('transactionHash', () => {
+							featureCounts[classification].slice(j, j + chunkSize), classification).send()
+							.on('transactionHash', () => {
 								dismissNotification(notification)
-							}).on('error', (err: any) => {
+							})
+							.on('error', (err: any) => {
 								dismissNotification(notification)
 								notify(`Error setting feature indices for [${j},${Math.min(j + chunkSize, featureCounts[classification].length)}) for the "${classifications[classification]}" class`, { variant: 'error' })
 								throw err
@@ -115,7 +117,7 @@ export class ModelDeployer {
 		const centroids: number[][] | number[][][] = []
 		const dataCounts: number[] = []
 		let numDimensions = null
-		for (let [classification, centroidInfo] of Object.entries(model.centroids)) {
+		for (const [classification, centroidInfo] of Object.entries(model.centroids)) {
 			classifications.push(classification)
 			dataCounts.push(centroidInfo.dataCount)
 			if (Array.isArray(centroidInfo.centroid) && model.type !== 'sparse nearest centroid classifier') {
@@ -130,7 +132,7 @@ export class ModelDeployer {
 			} else {
 				const sparseCentroid: number[][] = []
 				// `centroidInfo.centroid` could be an array or dict.
-				for (let [featureIndexKey, value] of Object.entries(centroidInfo.centroid)) {
+				for (const [featureIndexKey, value] of Object.entries(centroidInfo.centroid)) {
 					const featureIndex = parseInt(featureIndexKey)
 					sparseCentroid.push([featureIndex, convertNum(value, this.web3, toFloat)])
 				}
@@ -182,9 +184,11 @@ export class ModelDeployer {
 					const notification = notify(`Please accept the prompt to upload the values for dimensions [${j},${Math.min(j + chunkSize, centroids[classification].length)}) for the "${classifications[classification]}" class`)
 					// Not parallel since order matters.
 					await newContractInstance.methods.extendCentroid(
-						centroids[classification].slice(j, j + chunkSize), classification).send().on('transactionHash', () => {
+						centroids[classification].slice(j, j + chunkSize), classification).send()
+						.on('transactionHash', () => {
 							dismissNotification(notification)
-						}).on('error', (err: any) => {
+						})
+						.on('error', (err: any) => {
 							dismissNotification(notification)
 							notify(`Error setting feature indices for [${j},${Math.min(j + chunkSize, centroids[classification].length)}) for the "${classifications[classification]}" class`, { variant: 'error' })
 							throw err
@@ -208,12 +212,12 @@ export class ModelDeployer {
 
 		const { classifications, featureIndices } = model
 		let weightsArray: any[] = []
-		let sparseWeights: any[][] = []
+		const sparseWeights: any[][] = []
 
-		if (model.hasOwnProperty('sparseWeights')) {
+		if ('sparseWeights' in model) {
 			const sparseModel = model as SparsePerceptronModel
 			if (typeof sparseModel.sparseWeights === 'object' && sparseModel.sparseWeights !== null) {
-				for (let [featureIndexKey, weight] of Object.entries(sparseModel.sparseWeights)) {
+				for (const [featureIndexKey, weight] of Object.entries(sparseModel.sparseWeights)) {
 					const featureIndex = parseInt(featureIndexKey, 10)
 					sparseWeights.push([featureIndex, convertNum(weight, this.web3, toFloat)])
 				}
@@ -319,24 +323,26 @@ export class ModelDeployer {
 		if (options.toFloat === undefined) {
 			options.toFloat = ModelDeployer.toFloat
 		}
+
+		const noop: () => void = () => { return }
 		if (options.notify === undefined) {
-			options.notify = (() => { })
+			options.notify = noop
 		}
 		if (options.dismissNotification === undefined) {
-			options.dismissNotification = (() => { })
+			options.dismissNotification = noop
 		}
 		if (options.saveAddress === undefined) {
-			options.saveAddress = (() => { })
+			options.saveAddress = noop
 		}
 		if (options.saveTransactionHash === undefined) {
-			options.saveTransactionHash = (() => { })
+			options.saveTransactionHash = noop
 		}
 
 		switch (model.type.toLocaleLowerCase('en')) {
 			case 'dense perceptron':
 			case 'sparse perceptron':
 			case 'perceptron':
-				if (model.hasOwnProperty('sparseWeights')) {
+				if ('sparseWeights' in model) {
 					return this.deployPerceptron(model as SparsePerceptronModel, options)
 				} else {
 					return this.deployPerceptron(model as DensePerceptronModel, options)
