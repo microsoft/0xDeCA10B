@@ -3,7 +3,7 @@
 set -ex
 
 if [ "${CI}" == "true" ]; then
-    # Don't do globally in Azure pipeline because of permissions issues.
+    # Don't do globally in CI because of possible permissions issues.
     npm install yarn
 else
     npm install -g yarn

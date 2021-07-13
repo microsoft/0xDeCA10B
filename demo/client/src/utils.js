@@ -1,3 +1,3 @@
-const util = require('util');
+const util = require('util')
 
-exports.setTimeoutPromise = util.promisify(setTimeout);
+exports.setTimeoutPromise = util.promisify(setTimeout)

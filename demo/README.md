@@ -18,9 +18,23 @@ This section explains how to set up locally on Linux/WSL, alternatively, you can
 The following steps are made for Linux/WSL and require `npm` with `node` version 10.
 Other later versions of node might work too but some node-gyp issues occurred with version 14.
 
+You will need to have `make` installed.
+On Debian (e.g. Ubuntu) you can do:
+```bash
+sudo apt install build-essential
+```
+
 Run
 ```bash
 ./setup.sh
+```
+
+## Troubleshooting Setup
+If you have problems running the setup steps related to node-gyp, then you might need to set Python 2.7 to be your default (just during the installation).
+Recommendation: Temporarily set up a Python 2.7 Conda environment (just for the installation) and activate it:
+```bash
+conda create --name python2 python=2
+conda activate python2
 ```
 
 ## Docker Setup
@@ -69,9 +83,6 @@ docker push 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca
 
 (Microsoft Devs) To update the production website, see the instructions at the top of [service.Dockerfile](./service.Dockerfile).
 
-## Troubleshooting Setup
-If you have problems running the setup steps related to node-gyp, then you might need to set Python 2.7 to be your default. Recommendation: Set up a Python 2.7 Conda environment and activate it.
-
 ## Update
 To update dependencies after already setting up:
 ```bash
@@ -82,7 +93,10 @@ To update dependencies after already setting up:
 There is a video example showing how to deploy <a href="https://aka.ms/0xDeCA10B-deploy" target="_blank">here</a>.
 
 ## Blockchain
-Start the blockchain (Ganache) in one terminal.
+Models and data are stored on a local blockchain.
+
+
+Start the blockchain (uses `ganache-cli`) in one terminal.
 Run:
 ```bash
 yarn blockchain
@@ -95,7 +109,9 @@ Do once:
 * Use that private key to create a new account in MetaMask.
 
 ## Server
-This is used by default in development mode but not in production.
+(Optional) The server is used to store model meta-data and original data when for training models.
+
+The server is used by default in development mode but not in production mode.
 
 If you want to store meta-data in a local database file instead of just within the browser, then start the server in one terminal.
 This step allows you to see models listed when you open the dashboard for the first time.
@@ -108,7 +124,9 @@ yarn server
 ```
 
 ## Client
-Then in another terminal.
+The website is the "client", it allows you to interract with the blockchain and optional server.
+
+In another terminal.
 Run:
 ```bash
 yarn client
@@ -156,12 +174,24 @@ If you get the spinning issue again, then also try following the steps above wit
 [truffle-react]: https://truffleframework.com/boxes/react
 
 # Testing
-To simply run all tests:
+To run all automated tests:
 ```bash
 yarn test
 ```
 
 A local blockchain will be started and stopped so it's best not to have a blockchain running at the same address and port (e.g. one running through `yarn blockchain`).
+
+## Manual Testing
+Not all tests are automated (yet, maybe one we'll automate them all).
+Some things that should be manually tested in the UI after completing the deployment:
+* Pick a model
+* PREDICT: Verify that you can use the model to classify some data
+* TRAIN: Add "incorrect" data as user "Bad"
+* Add "correct" data as user "Good"
+* REFUND: Verify that "Good" can get a refund for the "correct" data
+* REWARD: Verify that "Good" can report "Bad"'s "incorrect" data
+* Add a new model
+
 
 ## Running Specific Tests
 To run specific smart contract tests and save time by not waiting for Truffle migrations:
@@ -175,12 +205,13 @@ npx truffle test test/contracts/*.js test/contracts/**/*.js --network skipMigrat
 ```
 
 # Linting
-### Solidity Files
+Run `yarn lint`.
+
+Run `yarn lint-fix` to automatically resolve some issues.
+
+## Solidity Files
 We use [Ethlint][ethlint] for linting and enforce it on pull requests.
-To check the contract code run:
-```bash
-yarn lint
-```
+The above `yarn lint` and `yarn lint-fix` commands will also check Solidity files.
 
 [deploy-video]: https://aka.ms/0xDeCA10B-deploy
 [demo-video]: https://aka.ms/0xDeCA10B-demo

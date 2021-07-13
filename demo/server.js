@@ -5,18 +5,18 @@ const app = express();
 const port = process.env.PORT || 5387;
 const jsonParser = express.json();
 
-const dbPath = 'db.sqlite';
+const dbPath = 'db.sqlite'
 
 initSqlJs().then(SQL => {
-  let db;
-  if (fs.existsSync(dbPath)) {
-    const fileBuffer = fs.readFileSync(dbPath);
-    console.log(`Loading DB from "${dbPath}".`);
-    db = new SQL.Database(fileBuffer);
-  } else {
-    console.log("Creating a new DB.");
-    db = new SQL.Database();
-    sqlstr = "CREATE TABLE model (id INTEGER PRIMARY KEY, name TEXT, address TEXT, description TEXT, model_type TEXT, encoder TEXT, accuracy NUMBER);"
+	let db
+	if (fs.existsSync(dbPath)) {
+		const fileBuffer = fs.readFileSync(dbPath)
+		console.log(`Loading DB from "${dbPath}".`)
+		db = new SQL.Database(fileBuffer)
+	} else {
+		console.log("Creating a new DB.")
+		db = new SQL.Database()
+		const sqlstr = "CREATE TABLE model (id INTEGER PRIMARY KEY, name TEXT, address TEXT, description TEXT, model_type TEXT, encoder TEXT, accuracy NUMBER);"
       + "CREATE TABLE data (transaction_hash TEXT PRIMARY KEY, text TEXT);"
       + "CREATE INDEX index_address ON model(address);"
       + "CREATE TABLE accuracy (transaction_hash TEXT, block_number INTEGER, model_id INTEGER, accuracy NUMBER, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (model_id) REFERENCES model (id));";

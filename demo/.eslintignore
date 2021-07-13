@@ -1,0 +1,10 @@
+build/
+node_modules/
+dist/
+coverage/
+
+# Client
+client/build/
+client/node_modules/
+client/dist/
+client/coverage/

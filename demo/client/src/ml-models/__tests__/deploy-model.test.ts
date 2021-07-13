@@ -92,7 +92,7 @@ describe("ModelDeployer", () => {
 			})
 
 		let i = -1
-		for (let [classification, centroidInfo] of Object.entries(model.centroids)) {
+		for (const [classification, centroidInfo] of Object.entries(model.centroids)) {
 			++i
 			assert.strictEqual(await m.methods.classifications(i).call(), classification)
 			assertEqualNumbers(await m.methods.getNumSamples(i).call(), centroidInfo.dataCount)
@@ -119,7 +119,7 @@ describe("ModelDeployer", () => {
 			})
 
 		let i = -1
-		for (let [classification, centroidInfo] of Object.entries(model.centroids)) {
+		for (const [classification, centroidInfo] of Object.entries(model.centroids)) {
 			++i
 			assert.strictEqual(await m.methods.classifications(i).call(), classification)
 			assertEqualNumbers(await m.methods.getNumSamples(i).call(), centroidInfo.dataCount)
@@ -152,7 +152,7 @@ describe("ModelDeployer", () => {
 			})
 
 		let i = -1
-		for (let [classification, centroidInfo] of Object.entries(model.centroids)) {
+		for (const [classification, centroidInfo] of Object.entries(model.centroids)) {
 			++i
 			assert.strictEqual(await m.methods.classifications(i).call(), classification)
 			assertEqualNumbers(await m.methods.getNumSamples(i).call(), centroidInfo.dataCount)
