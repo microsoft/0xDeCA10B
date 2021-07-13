@@ -106,7 +106,7 @@ initSqlJs().then(SQL => {
 			delete model.model_type
 			res.send({ model })
 		} else {
-			return res.status(400).send({ message: "Not found." })
+			return res.status(404).send({ message: "Not found." })
 		}
 	})
 
@@ -173,7 +173,7 @@ initSqlJs().then(SQL => {
 
 	// Get the accuracy history 
 	app.get('/api/accuracy/model', (req, res) => {
-		const { modelId  } = req.query
+		const { modelId } = req.query
 		if (modelId != null) {
 			const getStmt = db.prepare('SELECT * FROM accuracy where model_id == $modelId ORDER BY timestamp;',
 				{
@@ -194,10 +194,10 @@ initSqlJs().then(SQL => {
 			if (accuracyHistory.length) {
 				res.send({ accuracyHistory })
 			} else {
-				res.send({ message: "No Result Found : Please enter a valid modelId" })
+				res.status(403).send({ message: "No results found: Please try a different modelId." })
 			}
 		} else {
-			return res.status(400).send({ message: "modelId missing" })
+			return res.status(400).send({ message: "`modelId` was not given in the request." })
 		}
 	})
 })
