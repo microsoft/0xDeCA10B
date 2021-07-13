@@ -130,6 +130,7 @@ initSqlJs().then(SQL => {
 			data.transactionHash,
 			data.originalData.text,
 		])
+		// eslint-disable-next-line @typescript-eslint/no-empty-function
 		fs.writeFile(dbPath, Buffer.from(db.export()), () => { })
 	}
 
@@ -159,6 +160,7 @@ initSqlJs().then(SQL => {
 			accuracy.modelId,
 			accuracy.accuracy,
 		])
+		// eslint-disable-next-line @typescript-eslint/no-empty-function
 		fs.writeFile(dbPath, Buffer.from(db.export()), () => {})
 	}
   
