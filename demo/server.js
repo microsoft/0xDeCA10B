@@ -194,7 +194,7 @@ initSqlJs().then(SQL => {
 			if (accuracyHistory.length) {
 				res.send({ accuracyHistory })
 			} else {
-				res.status(403).send({ message: "No results found: Please try a different modelId." })
+				res.status(404).send({ message: "No results found: Please try a different modelId." })
 			}
 		} else {
 			return res.status(400).send({ message: "`modelId` was not given in the request." })
