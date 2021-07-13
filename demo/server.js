@@ -3,8 +3,7 @@ const fs = require('fs')
 const initSqlJs = require('sql.js')
 const app = express()
 const port = process.env.PORT || 5387
-const bodyParser = require('body-parser')
-const jsonParser = bodyParser.json()
+const jsonParser = express.json()
 
 const dbPath = 'db.sqlite'
 
@@ -20,6 +19,7 @@ initSqlJs().then(SQL => {
 		const sqlstr = "CREATE TABLE model (id INTEGER PRIMARY KEY, name TEXT, address TEXT, description TEXT, model_type TEXT, encoder TEXT, accuracy NUMBER);"
       + "CREATE TABLE data (transaction_hash TEXT PRIMARY KEY, text TEXT);"
       + "CREATE INDEX index_address ON model(address);"
+      + "CREATE TABLE accuracy (transaction_hash TEXT, block_number INTEGER, model_id INTEGER, accuracy NUMBER, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (model_id) REFERENCES model (id));"
 		db.run(sqlstr)
 	}
 
@@ -106,7 +106,7 @@ initSqlJs().then(SQL => {
 			delete model.model_type
 			res.send({ model })
 		} else {
-			return res.status(400).send({ message: "Not found." })
+			return res.status(404).send({ message: "Not found." })
 		}
 	})
 
@@ -151,4 +151,53 @@ initSqlJs().then(SQL => {
 	})
 
 	app.listen(port, () => console.log(`Listening on port ${port}`))
+
+	// ACCURACY RECORD MANAGEMENT
+	function presistAccuracyRecord(accuracy) {
+		db.run('INSERT INTO accuracy VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP);', [
+			accuracy.transactionHash,
+			accuracy.blockNumber,
+			accuracy.modelId,
+			accuracy.accuracy,
+		])
+		// eslint-disable-next-line @typescript-eslint/no-empty-function
+		fs.writeFile(dbPath, Buffer.from(db.export()), () => {})
+	}
+  
+	// Add a new accuracy record for a model
+	app.post('/api/accuracy', jsonParser, (req, res) => {
+		const body = req.body
+		presistAccuracyRecord(body)
+		return res.sendStatus(200)
+	})
+
+	// Get the accuracy history 
+	app.get('/api/accuracy/model', (req, res) => {
+		const { modelId } = req.query
+		if (modelId != null) {
+			const getStmt = db.prepare('SELECT * FROM accuracy where model_id == $modelId ORDER BY timestamp;',
+				{
+					$modelId: modelId
+				})
+			const accuracyHistory = []
+			while (getStmt.step()) {
+				const accuracy = getStmt.get()
+				accuracyHistory.push({
+					transactionHash: accuracy[0],
+					blockNumber: accuracy[1],
+					modelId: accuracy[2],
+					accuracy: accuracy[3],
+					timestamp: accuracy[4],
+				})
+			}
+			getStmt.free()
+			if (accuracyHistory.length) {
+				res.send({ accuracyHistory })
+			} else {
+				res.status(404).send({ message: "No results found: Please try a different modelId." })
+			}
+		} else {
+			return res.status(400).send({ message: "`modelId` was not given in the request." })
+		}
+	})
 })
