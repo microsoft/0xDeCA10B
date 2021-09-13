@@ -1,6 +1,6 @@
 FROM continuumio/miniconda3:4.9.2
 
-LABEL maintainer="Justin Harris (justin.harris@microsoft.com)"
+LABEL maintainer="Justin Harris (https://github.com/juharris)"
 LABEL org.label-schema.vendor="Microsoft"
 LABEL org.label-schema.url="https://github.com/microsoft/0xDeCA10B/tree/main/simulation"
 LABEL org.label-schema.vcs-url="https://github.com/microsoft/0xDeCA10B/tree/main/simulation"

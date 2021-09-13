@@ -1,0 +1,42 @@
+name: "Push Docker Images"
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+    - '.github/workflows/docker.yml'
+    - 'demo/**'
+    - 'simulation/**'
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: "Build & Push"
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: "Demo: Docker Build & Push"
+        run: |
+          cd demo
+          docker login --username 0xDeCA10Bcontainerreg 0xdeca10bcontainerreg.azurecr.io --password ${{ secrets._0XDECA10B_AZURECR_PASSWORD }}
+          
+          name="0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-demo"
+          version=`grep version package.json | head -n1 | awk -F: '{ print $2 }' | sed 's/[",[:space:]]\+//g'`
+
+          docker build --file Dockerfile -t ${name} -t ${name}:${version} .          
+          docker push ${name}:latest
+          docker push ${name}:${version}
+
+      - name: "Simulation: Docker Build & Push"
+        run: |
+          cd simulation
+          docker login --username 0xDeCA10Bcontainerreg 0xdeca10bcontainerreg.azurecr.io --password ${{ secrets._0XDECA10B_AZURECR_PASSWORD }}
+          
+          name="0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-simulation"
+          version=`grep 'version=' setup.py | head -n1 | awk '{ split($0,a,"="); print a[2] }' | sed "s/[\',[:space:]]//g"`
+
+          docker build --file Dockerfile -t ${name} -t ${name}:${version} .          
+          docker push ${name}:latest
+          docker push ${name}:${version}

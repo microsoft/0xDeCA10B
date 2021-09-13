@@ -2,6 +2,9 @@ from distutils.core import setup
 
 from setuptools import find_packages
 
+# When publishing the Docker image, a script checks for the first line with "version=" to get the version.
+version='1.0.0'
+
 install_requires = [
     'bokeh>=0.13',
     'expiringdict>=1.1.4',
@@ -25,7 +28,7 @@ test_deps = [
 
 setup(
     name='decai',
-    version='1.0.0',
+    version=version,
     packages=find_packages(),
     url='https://github.com/microsoft/0xDeCA10B',
     license='MIT',

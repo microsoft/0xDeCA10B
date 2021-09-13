@@ -10,7 +10,7 @@
 
 FROM appsvc/node:10-lts
 
-LABEL maintainer="Justin D. Harris (Microsoft)"
+LABEL maintainer="Justin D. Harris (https://github.com/juharris)"
 LABEL org.label-schema.vendor="Microsoft"
 LABEL org.label-schema.url="https://github.com/microsoft/0xDeCA10B/tree/main/demo"
 LABEL org.label-schema.vcs-url="https://github.com/microsoft/0xDeCA10B/tree/main/demo"
