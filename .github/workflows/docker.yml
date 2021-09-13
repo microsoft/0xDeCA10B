@@ -21,11 +21,11 @@ jobs:
         run: |
           cd demo
           docker login --username 0xDeCA10Bcontainerreg 0xdeca10bcontainerreg.azurecr.io --password ${{ secrets._0XDECA10B_AZURECR_PASSWORD }}
-          
+
           name="0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-demo"
           version=`grep version package.json | head -n1 | awk -F: '{ print $2 }' | sed 's/[",[:space:]]\+//g'`
 
-          docker build --file Dockerfile -t ${name} -t ${name}:${version} .          
+          docker build --file Dockerfile -t ${name} -t ${name}:${version} .
           docker push ${name}:latest
           docker push ${name}:${version}
 
@@ -33,10 +33,10 @@ jobs:
         run: |
           cd simulation
           docker login --username 0xDeCA10Bcontainerreg 0xdeca10bcontainerreg.azurecr.io --password ${{ secrets._0XDECA10B_AZURECR_PASSWORD }}
-          
+
           name="0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-simulation"
           version=`grep 'version=' setup.py | head -n1 | awk '{ split($0,a,"="); print a[2] }' | sed "s/[\',[:space:]]//g"`
 
-          docker build --file Dockerfile -t ${name} -t ${name}:${version} .          
+          docker build --file Dockerfile -t ${name} -t ${name}:${version} .
           docker push ${name}:latest
           docker push ${name}:${version}

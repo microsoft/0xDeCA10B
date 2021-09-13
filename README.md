@@ -30,7 +30,7 @@ This repository contains:
 
 # FAQ/Concerns
 
-## Aren't smart contracts just for simple code? 
+## Aren't smart contracts just for simple code?
 There are many options.
 We can restrict the framework to simple models: Perceptron, Naive Bayes, Nearest Centroid, etc.
 We can also combine off-chain computation with on-chain computation in a few ways such as:

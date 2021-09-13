@@ -32,7 +32,7 @@ jobs:
             -t mcr.microsoft.com/samples/blockchain-ai/0xdeca10b-demo:latest \
             .
       - name: Test
-        run: |        
+        run: |
           docker run --rm --name decai-demo \
             -v /${PWD}/demo:/root/workspace/demo \
             -v /root/workspace/demo/node_modules \

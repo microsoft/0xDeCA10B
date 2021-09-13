@@ -2,7 +2,7 @@ from distutils.core import setup
 
 from setuptools import find_packages
 
-# When publishing the Docker image, a script checks for the first line with "version=" to get the version.
+# When publishing the Docker image, a script checks for the first line with "version" and an equals sign to get the version.
 version='1.0.0'
 
 install_requires = [

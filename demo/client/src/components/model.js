@@ -341,7 +341,7 @@ class Model extends React.Component {
 	}
 
 	/**
-	 * @param {Array[Number]} data 
+	 * @param {Array[Number]} data
 	 * @returns Normalized `data` using the result of the norm from the classifier contract.
 	 * The result is in the mapped space (multiplied by `this.state.toFloat`.
 	 */
@@ -513,7 +513,7 @@ class Model extends React.Component {
 				if (isForTaking) {
 					// Prediction must be wrong.
 					canAttemptRefund = prediction !== data.classification
-					// Take the floor since that is what Solidity will do.      
+					// Take the floor since that is what Solidity will do.
 					const amountShouldGet = Math.floor(data.initialDeposit * this.state.numGood / this.state.totalGoodDataCount)
 					if (amountShouldGet !== 0) {
 						claimableAmount = amountShouldGet
@@ -585,7 +585,6 @@ class Model extends React.Component {
 	}
 
 	/**
-	 * 
 	 * @param {string} transactionHash The transaction hash for the transacation that added the data.
 	 * @returns A representation of the original data. If the storage type is 'none' or the data cannot be found then `undefined` is returned.
 	 */

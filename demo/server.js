@@ -163,7 +163,7 @@ initSqlJs().then(SQL => {
 		// eslint-disable-next-line @typescript-eslint/no-empty-function
 		fs.writeFile(dbPath, Buffer.from(db.export()), () => {})
 	}
-  
+
 	// Add a new accuracy record for a model
 	app.post('/api/accuracy', jsonParser, (req, res) => {
 		const body = req.body
@@ -171,7 +171,7 @@ initSqlJs().then(SQL => {
 		return res.sendStatus(200)
 	})
 
-	// Get the accuracy history 
+	// Get the accuracy history
 	app.get('/api/accuracy/model', (req, res) => {
 		const { modelId } = req.query
 		if (modelId != null) {
