@@ -9,8 +9,8 @@ on:
   pull_request:
     branches: [ main ]
     paths:
-    - 'simulation/**'
     - '.github/workflows/simulation-**'
+    - 'simulation/**'
 
 jobs:
   build:

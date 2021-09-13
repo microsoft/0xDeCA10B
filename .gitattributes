@@ -1,6 +1,8 @@
 .gitattributes text eol=lf
 .gitignore text eol=lf
 
+.eslintignore text eol=lf
+
 # Override default for linguist-documentation.
 demo/* linguist-documentation=false
 
@@ -11,6 +13,7 @@ demo/* linguist-documentation=false
 
 # Docker
 Dockerfile text eol=lf
+*.Dockerfile text eol=lf
 .dockerignore text eol=lf
 
 # HTML/JS
