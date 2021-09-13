@@ -15,6 +15,11 @@ jobs:
         run: |
           cd demo
           docker login --username 0xDeCA10Bcontainerreg 0xdeca10bcontainerreg.azurecr.io --password ${{ secrets._0XDECA10B_AZURECR_PASSWORD }}
-          docker build --file service.Dockerfile -t 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-demo-prod .          
-          docker push 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-demo-prod:latest
-          
+
+          name="0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-demo-prod"
+          version=`grep version package.json | head -n1 | awk -F: '{ print $2 }' | sed 's/[",[:space:]]\+//g'`
+
+          docker build --file service.Dockerfile -t ${name} -t ${name}:${version} .
+          docker push ${name}:latest
+          docker push ${name}:${version}
+

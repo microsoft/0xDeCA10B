@@ -64,7 +64,7 @@ docker push 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca
 Run:
 ```bash
 bokeh serve decai/simulation/simulate_imdb_perceptron.py
-``` 
+```
 
 Then open the browser to the address the above command tells you.
 It should be something like: [http://localhost:5006/simulate_imdb_perceptron](http://localhost:5006/simulate_imdb_perceptron).
@@ -92,7 +92,7 @@ So instead of `PerceptronModule` put `NeuralNetworkModule`.
 Run `bokeh serve decai/simulation/simulate_imdb_neural_network.py` and open your browse to the displayed URL to try it out.
 
 # Testing
-Setup the testing environment: 
+Setup the testing environment:
 ```bash
 pip install -e .[test]
 ```

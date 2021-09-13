@@ -264,8 +264,7 @@ export class ModelDeployer {
 					throw new Error(`Unrecognized model type: "${model.type}"`)
 				}
 				// Subtract 1 from the count because the first chunk has already been uploaded.
-				const notification = notify(`Please accept the prompt to upload classifier 
-					weights [${i},${Math.min(i + chunkSize, weightsArray.length)}) (${i / chunkSize}/${Math.ceil(weightsArray.length / chunkSize) - 1})`)
+				const notification = notify(`Please accept the prompt to upload classifier weights [${i},${Math.min(i + chunkSize, weightsArray.length)}) (${i / chunkSize}/${Math.ceil(weightsArray.length / chunkSize) - 1})`)
 				await transaction.send({
 					from: account,
 					gas: this.gasLimit,

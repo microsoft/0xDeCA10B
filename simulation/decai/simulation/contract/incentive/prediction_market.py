@@ -35,7 +35,7 @@ class MarketPhase(Enum):
 
     REWARD_RESTART = 4
     """
-    Same as `REWARD` but contributions have just been filtered out 
+    Same as `REWARD` but contributions have just been filtered out
     and the iteration needs to restart with the remaining contributions.
     """
 
@@ -63,7 +63,7 @@ class _Contribution:
     """
     Initially this is the amount deposited with this contribution.
     If contributions are not grouped by contributor, then while calculating rewards this gets updated to be the balance
-    for this particular contribution, to know if it should get kicked out of the reward phase.  
+    for this particular contribution, to know if it should get kicked out of the reward phase.
     """
 
     score: Optional[int] = field(default=None, init=False)
@@ -121,7 +121,7 @@ class PredictionMarket(IncentiveMechanism):
         self.min_stake = 1
         """
         The minimum required amount to deposit.
-        Should be at least 1 to handle the worst case where the contribution takes the accuracy from 1 to 0. 
+        Should be at least 1 to handle the worst case where the contribution takes the accuracy from 1 to 0.
         """
 
         self.state = None
