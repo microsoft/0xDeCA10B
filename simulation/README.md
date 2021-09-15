@@ -37,10 +37,20 @@ pip install -e .
 ```
 
 ## Docker Setup
-You can use a Docker image by running:
+1. Clone this repo.
+
+2. Navigate into the folder containing this README.md file:
+```bash
+cd 0xDeCA10B/simulation
+```
+
+3. You can use a Docker image by running:
 ```bash
 docker run --rm -it -p 5006:5006 -v ${PWD}:/root/workspace/0xDeCA10B/simulation --name decai-simulation mcr.microsoft.com/samples/blockchain-ai/0xdeca10b-simulation bash
 ```
+
+4. You have completed the setup steps.
+Next, refer to the Running Simulations steps lower down on this page.
 
 ### Building the Docker Image
 If you want to build your own fresh image:
