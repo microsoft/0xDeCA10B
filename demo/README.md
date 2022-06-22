@@ -30,7 +30,8 @@ Run
 ```
 
 ## Troubleshooting Setup
-Try using the Docker container. If you don't want to, make sure you're using Node 10 LTS.
+Try using the Docker container.
+If you don't want to, make sure you're using Node 10 LTS.
 
 If you have problems running the setup steps related to node-gyp, then you might need to set Python 2.7 to be your default (just during the installation).
 Recommendation: Temporarily set up a Python 2.7 Conda environment (just for the installation) and activate it:
