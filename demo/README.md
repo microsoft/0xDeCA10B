@@ -42,8 +42,9 @@ conda activate python2
 You might also need to do:
 ```bash
 export NODE_GYP_FORCE_PYTHON=`which python`
-export PYTHON=`which python`
 ```
+
+If you get issues with `git` when running the setup or `yarn install`, then running `git config --global url."https://".insteadOf git://` might help.
 
 ## Docker Setup
 1. Clone this repo.
@@ -139,6 +140,8 @@ Run:
 ```bash
 yarn client
 ```
+
+Go to http://localhost:3000 in your browser to interact with the models.
 
 ## Troubleshooting Deployment
 ### Blockchain Issues

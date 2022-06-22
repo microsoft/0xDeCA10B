@@ -10,7 +10,7 @@
     "prod-client": "cd client && yarn start-prod",
     "lint": "bash scripts/custom_lint.sh",
     "lint-fix": "bash scripts/custom_lint.sh --fix",
-    "server": "nodemon server.js --ignore client/",
+    "server": "nodemon --ignore client/ server.js",
     "start-prod-back-end": "node server.js",
     "test": "cd client && yarn test"
   },
