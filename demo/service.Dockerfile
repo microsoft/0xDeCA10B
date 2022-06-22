@@ -23,6 +23,8 @@ RUN apt-get update && apt-get install --fix-missing --yes build-essential git lo
 COPY client ./client
 COPY package.json server.js setup.sh setup_libs.sh yarn.lock ./
 
+# Avoid issues with pulling Git repos during the build.
+RUN git config --global url."https://".insteadOf git://
 RUN NODE_ENV='production' bash setup.sh
 
 RUN cd client && npx --no-install truffle compile

@@ -1,6 +1,6 @@
 {
   "name": "decai-demo-client",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "license": "MIT",
   "private": true,
   "proxy": "http://localhost:5387/",
@@ -21,7 +21,7 @@
     "canvas": "^2.6.0",
     "dotenv": "^8.2.0",
     "immutability-helper": "^3.0.1",
-    "moment": "^2.24.0",
+    "moment": "^2.29.2",
     "murmurhash-js": "^1.0.0",
     "notistack": "^0.9.7",
     "react": "^16.14.0",
