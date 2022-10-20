@@ -30,12 +30,22 @@ Run
 ```
 
 ## Troubleshooting Setup
+Try using the Docker container.
+If you don't want to, make sure you're using Node 10 LTS.
+
 If you have problems running the setup steps related to node-gyp, then you might need to set Python 2.7 to be your default (just during the installation).
 Recommendation: Temporarily set up a Python 2.7 Conda environment (just for the installation) and activate it:
 ```bash
 conda create --name python2 python=2
 conda activate python2
 ```
+
+You might also need to do:
+```bash
+export NODE_GYP_FORCE_PYTHON=`which python`
+```
+
+If you get issues with `git` when running the setup or `yarn install`, then running `git config --global url."https://".insteadOf git://` might help.
 
 ## Docker Setup
 1. Clone this repo.
@@ -131,6 +141,8 @@ Run:
 ```bash
 yarn client
 ```
+
+Go to http://localhost:3000 in your browser to interact with the models.
 
 ## Troubleshooting Deployment
 ### Blockchain Issues

@@ -988,7 +988,7 @@ class Model extends React.Component {
 			// Correct the orientation.
 			loadImage(`data:${file.type};base64,${btoa(binaryStr)}`, (canvas) => {
 				const imgElement = document.getElementById('input-image')
-				imgElement.src = canvas.toDataURL()
+				imgElement.src = canvas.src
 			}, { orientation: true })
 		}
 		reader.readAsBinaryString(file)
