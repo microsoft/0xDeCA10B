@@ -5,17 +5,20 @@ pragma solidity ^0.6;
  * @dev Custom math operations.
  */
 library Math {
-
-    // Copied from https://github.com/ethereum/dapp-bin/pull/50/files.
-    function sqrt(uint x) internal pure returns (uint y) {
+    /**
+     * @return The square root of `x` using the Babylonian method.
+     */
+    // Copied from https://github.com/ethereum/dapp-bin/pull/50 and modified slightly.
+    function sqrt(uint x) internal pure returns (uint) {
         if (x == 0) return 0;
         else if (x <= 3) return 1;
         uint z = (x + 1) / 2;
-        y = x;
+        uint y = x;
         while (z < y)
         {
             y = z;
             z = (x / z + z) / 2;
         }
+        return y;
     }
 }
