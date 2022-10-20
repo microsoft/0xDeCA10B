@@ -19,5 +19,6 @@ library Math {
             y = z;
             z = (x / z + z) / 2;
         }
+        return y;
     }
 }
