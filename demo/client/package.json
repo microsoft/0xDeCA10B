@@ -21,7 +21,7 @@
     "canvas": "^2.9.1",
     "dotenv": "^8.2.0",
     "immutability-helper": "^3.0.1",
-    "moment": "^2.24.0",
+    "moment": "^2.29.4",
     "murmurhash-js": "^1.0.0",
     "notistack": "^0.9.7",
     "react": "^16.14.0",
