@@ -13,7 +13,7 @@ library Math {
         if (x == 0) return 0;
         else if (x <= 3) return 1;
         uint z = (x + 1) / 2;
-        y = x;
+        uint y = x;
         while (z < y)
         {
             y = z;
