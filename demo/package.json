@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "body-parser": "^1.18.3",
-    "express": "^4.16.4",
+    "express": "^4.17.3",
     "ganache-cli": "^6.12.1",
     "sql.js": "^1.1.0",
     "typescript": "^4.3.5"
