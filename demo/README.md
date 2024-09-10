@@ -45,10 +45,21 @@ conda activate python2
 cd 0xDeCA10B/demo
 ```
 
+<!-- Probably won't work because we deleted some Azure resources.
 3. You can use a Docker image by running:
 ```bash
 docker run --rm -it -p 3000:3000 -p 5387:5387 -p 7545:7545 -v ${PWD}:/root/workspace/demo -v /root/workspace/demo/node_modules -v /root/workspace/demo/client/node_modules --name decai-demo mcr.microsoft.com/samples/blockchain-ai/0xdeca10b-demo bash
+-->
 
+3. ### Using a Docker Image
+```bash
+docker build -t decai-demo .
+
+docker run --rm -it -p 3000:3000 -p 5387:5387 -p 7545:7545 -v ${PWD}:/root/workspace/demo -v /root/workspace/demo/node_modules -v /root/workspace/demo/client/node_modules --name decai-demo decai-demo bash
+```
+
+In the container:
+```bash
 # If this is your first time setting up then run:
 ./setup_libs.sh
 
@@ -61,12 +72,8 @@ Next, refer to the Deploy steps lower down on this page.
 
 If you want to use a different version of the Docker image, then you can find the available tags for the Docker image [here](https://mcr.microsoft.com/v2/samples/blockchain-ai/0xdeca10b-demo/tags/list) and check the details for the latest tag [here](https://mcr.microsoft.com/v2/samples/blockchain-ai/0xdeca10b-demo/manifests/latest).
 
-### Building the Docker Image
-(Optional)
-If you want to build your own fresh image:
-```bash
-docker build -t decai-demo .
-```
+
+<!-- Won't work because we deleted some Azure resources.
 
 #### (Microsoft Devs) Updating the Public Image
 First get permission to push 0xdeca10bcontainerreg.azurecr.io.
@@ -88,6 +95,7 @@ To update dependencies after already setting up:
 ```bash
 ./setup.sh
 ```
+-->
 
 # Deploy
 There is a video example showing how to deploy <a href="https://aka.ms/0xDeCA10B-deploy" target="_blank">here</a>.

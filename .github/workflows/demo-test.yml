@@ -26,6 +26,7 @@ jobs:
       - name: Build
         run: |
           pushd demo
+          # We no longer push Docker images because we deleted some Azure resources, so mcr.microsoft.com might stop working.
           docker pull mcr.microsoft.com/samples/blockchain-ai/0xdeca10b-demo:latest
           docker build -f Dockerfile \
             --cache-from mcr.microsoft.com/samples/blockchain-ai/0xdeca10b-demo:latest \
