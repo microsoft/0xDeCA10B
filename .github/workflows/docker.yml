@@ -1,3 +1,4 @@
+# Disabled because we deleted the Azure resources.
 name: "Push Docker Images"
 
 on:

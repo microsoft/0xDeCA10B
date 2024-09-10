@@ -44,20 +44,24 @@ pip install -e .
 cd 0xDeCA10B/simulation
 ```
 
+<!-- Probably won't work because we deleted some Azure resources.
 3. You can use a Docker image by running:
 ```bash
 docker run --rm -it -p 5006:5006 -v ${PWD}:/root/workspace/0xDeCA10B/simulation --name decai-simulation mcr.microsoft.com/samples/blockchain-ai/0xdeca10b-simulation bash
+```
+-->
+
+3. ### Using a Docker Image
+```bash
+docker build -t decai-simulation .
+
+docker run --rm -it -p 5006:5006 -v ${PWD}:/root/workspace/0xDeCA10B/simulation --name decai-simulation decai-simulation bash
 ```
 
 4. You have completed the setup steps.
 Next, refer to the Running Simulations steps lower down on this page.
 
-### Building the Docker Image
-If you want to build your own fresh image:
-```bash
-docker build -t decai-simulation .
-```
-
+<!-- Won't work because we deleted some Azure resources.
 #### (Microsoft Devs) Updating the Public Image
 First get permission to push 0xdeca10bcontainerreg.azurecr.io.
 
@@ -69,6 +73,7 @@ docker tag decai-simulation 0xdeca10bcontainerreg.azurecr.io/public/samples/bloc
 docker push 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-simulation:${newVersion}
 docker push 0xdeca10bcontainerreg.azurecr.io/public/samples/blockchain-ai/0xdeca10b-simulation:latest
 ```
+-->
 
 # Running Simulations
 Run:
