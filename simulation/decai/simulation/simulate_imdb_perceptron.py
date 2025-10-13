@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 from typing import Optional
 
@@ -82,5 +83,7 @@ def main():
 
 
 # Run with `bokeh serve PATH`.
-if __name__.startswith('bk_script_'):
+if re.match('bk_script_|bokeh_app_', __name__):
     main()
+else:
+    print("`__name__` didn't match the pattern. Bokeh app will not run.")
